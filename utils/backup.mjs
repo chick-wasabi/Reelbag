@@ -34,7 +34,18 @@ export function validateBackup(raw) {
       (r.folderId !== null && !folders.some((f) => f.id === r.folderId))
     )
       fail();
-    return { title: text(r.title, 200), url: parsed.url, folderId: r.folderId };
+    if (
+      (r.isPinned !== undefined && typeof r.isPinned !== "boolean") ||
+      (r.isFavorite !== undefined && typeof r.isFavorite !== "boolean")
+    )
+      fail();
+    return {
+      title: text(r.title, 200),
+      url: parsed.url,
+      folderId: r.folderId,
+      isPinned: r.isPinned ?? false,
+      isFavorite: r.isFavorite ?? false,
+    };
   });
   return { version: 3, folders, reels };
 }

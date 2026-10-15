@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Brand from "../components/Brand";
 import Sidebar from "../components/Sidebar";
-import FoldersPanel from "../components/FoldersPanel";
+import RecoverySettingsModal from "../components/RecoverySettingsModal";
 import MoveReelModal from "../components/MoveReelModal";
 import AuthScreen from "../components/AuthScreen";
 import FolderBar from "../components/FolderBar";
@@ -65,6 +65,7 @@ export default function Home() {
   const apply = useCallback((next) => {
     setData(next);
     setSelected((previous) =>
+      ["all", "pinned", "favorites"].includes(previous) ||
       next.folders.some((f) => f.id === previous && (!f.pin || f.unlocked))
         ? previous
         : "all",
@@ -256,7 +257,12 @@ export default function Home() {
     const query = search.trim().toLowerCase();
     return (data?.reels || []).filter(
       (r) =>
-        (selected === "all" || r.folderId === selected) &&
+        (selected === "all" ||
+          (selected === "pinned"
+            ? r.isPinned
+            : selected === "favorites"
+              ? r.isFavorite
+              : r.folderId === selected)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
   }, [data, selected, search]);
@@ -287,7 +293,8 @@ export default function Home() {
             reelCount={data.reels.length}
             selected={selected}
             onSelect={selectFolder}
-            onFolders={() => setModal({ type: "folders" })}
+            pinnedCount={data.reels.filter((reel) => reel.isPinned).length}
+            favoriteCount={data.reels.filter((reel) => reel.isFavorite).length}
             onCreate={() => setModal({ type: "folder" })}
             onSettings={() => setModal({ type: "settings" })}
             onLogout={logout}
@@ -352,6 +359,15 @@ export default function Home() {
                       reel={reel}
                       folder={data.folders.find((f) => f.id === reel.folderId)}
                       onEdit={() => setModal({ type: "reel", reel })}
+                      onToggle={async (flag) => {
+                        try {
+                          await mutate(`reels/${reel.id}/flags`, "PATCH", {
+                            [flag]: !reel[flag],
+                          });
+                        } catch (err) {
+                          setError(err.message);
+                        }
+                      }}
                       onMove={() => setModal({ type: "moveReel", reel })}
                       onDelete={() => setModal({ type: "deleteReel", reel })}
                     />
@@ -368,7 +384,11 @@ export default function Home() {
                   <p>
                     {search
                       ? "Try another title."
-                      : "Add a reel, or open a folder above."}
+                      : selected === "pinned"
+                        ? "Pin a reel to find it here."
+                        : selected === "favorites"
+                          ? "Star a reel to add it to your favorites."
+                          : "Add a reel, or open a folder above."}
                   </p>
                   <button
                     className="button-secondary"
@@ -376,7 +396,11 @@ export default function Home() {
                       search ? setSearch("") : setModal({ type: "reel" })
                     }
                   >
-                    {search ? "Clear search" : "Add your first reel"}
+                    {search
+                      ? "Clear search"
+                      : ["pinned", "favorites"].includes(selected)
+                        ? "Browse all reels"
+                        : "Add your first reel"}
                   </button>
                 </section>
               )}
@@ -393,19 +417,14 @@ export default function Home() {
         </div>
       )}
 
-      {data?.user && modal?.type === "folders" && (
-        <Modal title="Folders" onClose={() => setModal(null)}>
-          <FoldersPanel
-            folders={data.folders}
-            counts={folderCounts}
-            onSelect={(id) => {
-              setModal(null);
-              selectFolder(id);
-            }}
-            onCreate={() => setModal({ type: "folder" })}
-            onEdit={editFolder}
-          />
-        </Modal>
+      {data?.user && modal?.type === "recoverySettings" && (
+        <RecoverySettingsModal
+          onClose={() => setModal(null)}
+          onSaved={(message) => {
+            setModal(null);
+            setNotice(message);
+          }}
+        />
       )}
       {data?.user && modal?.type === "moveReel" && (
         <MoveReelModal
@@ -421,7 +440,11 @@ export default function Home() {
           draft={modal.draft}
           initialUrl={modal.initialUrl}
           folders={data.folders}
-          folderId={selected === "all" ? null : selected}
+          folderId={
+            data.folders.some((folder) => folder.id === selected)
+              ? selected
+              : null
+          }
           onSave={saveReel}
           onClose={() => setModal(null)}
           onCreateFolder={(draft) =>
@@ -461,6 +484,7 @@ export default function Home() {
         <Modal title="Settings" onClose={() => setModal(null)}>
           <SettingsPanel
             user={data.user}
+            onRecovery={() => setModal({ type: "recoverySettings" })}
             onImport={(backup) => setModal({ type: "import", backup })}
             onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
           />

@@ -37,7 +37,7 @@ async function connect(context) {
       body: `window.instgrm={Embeds:{process(){document.querySelectorAll('blockquote.instagram-media').forEach(el=>{
         const frame=document.createElement('iframe');frame.className='instagram-media';frame.title='Instagram video embed';
         frame.setAttribute('data-test-processed','true');frame.setAttribute('data-caption-mode',String(el.hasAttribute('data-instgrm-captioned')));
-        frame.style.height='1100px';frame.srcdoc=${JSON.stringify(`<html><head><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}header{height:58px;padding:20px;background:#1c252c}main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:radial-gradient(ellipse at 20% 25%,#8fae6040,transparent 60%),linear-gradient(150deg,#293c39,#132026 50%,#30394a)}button{width:62px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:50%;font-size:25px;margin:auto;cursor:pointer}p{color:#91aaa0;font-size:12px;letter-spacing:3px;margin-top:24px}footer{height:220px;background:#1c252c;padding:20px}</style></head><body><header>Instagram profile</header><main><button aria-label="Play video" onclick="this.textContent='Playing';this.setAttribute('aria-label','Playing video')">▶</button><p>VIDEO PREVIEW</p></main><footer>Likes · Comments · Caption</footer></body></html>`)};
+        frame.style.height='1100px';frame.srcdoc=${JSON.stringify(`<html><head><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}header{height:58px;padding:20px;background:#1c252c}main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:radial-gradient(ellipse at 20% 25%,#8fae6040,transparent 60%),linear-gradient(150deg,#293c39,#132026 50%,#30394a)}button{width:62px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:50%;font-size:25px;margin:auto;cursor:pointer}p{color:#91aaa0;font-size:12px;letter-spacing:3px;margin-top:24px}footer{height:220px;background:white;color:#333;padding:20px;margin-top:-100px;position:relative}</style></head><body><header>Instagram profile</header><main><button aria-label="Play video" onclick="this.textContent='Playing';this.setAttribute('aria-label','Playing video')">▶</button><p>VIDEO PREVIEW</p></main><footer>Likes · Comments · Caption</footer></body></html>`)};
         el.replaceWith(frame);
       });}}};`,
     }),
@@ -271,12 +271,16 @@ test("folder PINs are verified by SQL-backed API and protected content is absent
       .getByLabel("Folders", { exact: true })
       .selectOption({ label: "🔒 Pranks" });
     await other.getByLabel("Folder PIN", { exact: true }).fill("0000");
-    await other.getByRole("button", { name: "Open folder", exact: true }).click();
+    await other
+      .getByRole("button", { name: "Open folder", exact: true })
+      .click();
     await expect(other.getByRole("dialog").getByRole("alert")).toContainText(
       "doesn’t match",
     );
     await other.getByLabel("Folder PIN", { exact: true }).fill("4567");
-    await other.getByRole("button", { name: "Open folder", exact: true }).click();
+    await other
+      .getByRole("button", { name: "Open folder", exact: true })
+      .click();
     await expect(
       other.getByRole("heading", { name: "Secret prank" }),
     ).toBeVisible();
@@ -428,11 +432,9 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
       .getByRole("button", { name: "Open folder Inspiration", exact: true })
       .locator(".sidebar-count"),
   ).toHaveText("1");
-  const card = page
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", { name: "Video to remake", exact: true }),
-    });
+  const card = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Video to remake", exact: true }),
+  });
   await expect(card.locator("iframe.instagram-media")).toHaveAttribute(
     "data-caption-mode",
     "false",
@@ -441,7 +443,15 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   await expect(clip).toHaveClass(/is-cropped/);
   const clipped = await clip.boundingBox();
   const frame = await card.locator("iframe").boundingBox();
-  expect(Math.abs(clipped.width / clipped.height - 9 / 16)).toBeLessThan(0.01);
+  const stage = await card.locator(".embed-stage").boundingBox();
+  expect(Math.abs(stage.width / stage.height - 9 / 16)).toBeLessThan(0.01);
+  expect(Math.abs(stage.height - clipped.height - 120)).toBeLessThan(1);
+  await expect(clip).toHaveCSS("overflow", "hidden");
+  const footer = await card
+    .frameLocator("iframe")
+    .locator("footer")
+    .boundingBox();
+  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height);
   expect(frame.y).toBeLessThan(clipped.y);
   expect(frame.y + frame.height).toBeGreaterThan(clipped.y + clipped.height);
   await card
@@ -465,13 +475,15 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
     .getByRole("button", { name: "Expand sidebar", exact: true })
     .click();
   await expect(sidebar).toHaveCSS("width", "264px");
-  await page
-    .getByRole("button", { name: "Browse folders", exact: true })
-    .click();
   await expect(
-    page.getByRole("dialog", { name: "Folders", exact: true }),
+    sidebar.getByRole("button", { name: "Browse folders", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    sidebar.getByRole("button", { name: "Pinned", exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(
+    sidebar.getByRole("button", { name: "Favorites", exact: true }),
+  ).toBeVisible();
   await card.getByLabel("Actions for Video to remake", { exact: true }).click();
   await card
     .getByRole("button", { name: "Show full embed", exact: true })
@@ -518,4 +530,145 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
     path: "/tmp/reelbag-vault-mobile.png",
     fullPage: true,
   });
+});
+
+test("optional custom recovery accepts a typo, password eye toggles work, and recovery can be disabled", async ({
+  page,
+}) => {
+  const name = username();
+  const updated = "Updated-password-9876";
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+  await page.getByLabel("Username", { exact: true }).fill(name);
+  await page.getByLabel("Password or PIN", { exact: true }).fill(secret);
+  await page
+    .getByRole("button", { name: "Show password or pin", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Password or PIN", { exact: true }),
+  ).toHaveAttribute("type", "text");
+  await page
+    .getByRole("button", { name: "Hide password or pin", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Password or PIN", { exact: true }),
+  ).toHaveAttribute("type", "password");
+  await page.getByLabel("Set up account recovery (optional)").check();
+  await page
+    .getByLabel("Security question", { exact: true })
+    .selectOption("custom");
+  await page
+    .getByLabel("Custom question", { exact: true })
+    .fill("My first dream car?");
+  await page.getByLabel("Recovery answer", { exact: true }).fill("Bugatti");
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Add Reel", exact: true }),
+  ).toBeVisible();
+  await addReel(page, "Keep after recovery", "RECOVER", "");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Forgot password?", exact: true })
+    .click();
+  await page.getByLabel("Username", { exact: true }).fill(name);
+  await page
+    .getByRole("button", { name: "Find recovery question", exact: true })
+    .click();
+  await expect(
+    page.getByText("My first dream car?", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Your recovery answer", { exact: true })
+    .fill("  BUGATI!!  ");
+  await page.getByLabel("New password", { exact: true }).fill(updated);
+  await page.getByLabel("Confirm new password", { exact: true }).fill(updated);
+  await page
+    .getByRole("button", { name: "Reset password", exact: true })
+    .click();
+  await expect(page.locator(".success-text")).toContainText("Password reset");
+  await page.getByLabel("Password or PIN", { exact: true }).fill(updated);
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Keep after recovery", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Account recovery", exact: true })
+    .click();
+  await page.getByLabel("Current password", { exact: true }).fill(updated);
+  await page.getByLabel("Enable recovery question").uncheck();
+  await page
+    .getByRole("button", { name: "Disable recovery", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const state = await page.evaluate(
+    async (username) =>
+      (
+        await fetch("/api/auth/recovery/question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        })
+      ).json(),
+    name,
+  );
+  expect(state.question).toBeNull();
+});
+
+test("pins reorder the grid, stars filter favorites, and both flags survive reload and work on phones", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await addReel(page, "Older inspiration", "PIN_OLD", "");
+  await addReel(page, "Latest inspiration", "PIN_NEW", "");
+  await expect(
+    page.getByRole("article").first().getByRole("heading"),
+  ).toHaveText("Latest inspiration");
+  await page
+    .getByRole("button", { name: "Pin Older inspiration", exact: true })
+    .click();
+  await expect(
+    page.getByRole("article").first().getByRole("heading"),
+  ).toHaveText("Older inspiration");
+  await page
+    .getByRole("button", { name: "Favorite Older inspiration", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Unfavorite Older inspiration",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Pinned", exact: true }).click();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page.getByRole("button", { name: "Favorites", exact: true }).click();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page.reload();
+  await expect(
+    page.getByRole("article").first().getByRole("heading"),
+  ).toHaveText("Older inspiration");
+  await expect(
+    page.getByRole("button", { name: "Unpin Older inspiration", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Folders", { exact: true }).selectOption("favorites");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Unfavorite Older inspiration", exact: true })
+    .click();
+  await expect(page.getByRole("article")).toHaveCount(0);
+  await expect(page.getByLabel("Folders", { exact: true })).toHaveValue(
+    "favorites",
+  );
+  await page.getByLabel("Folders", { exact: true }).selectOption("pinned");
+  await page
+    .getByRole("button", { name: "Unpin Older inspiration", exact: true })
+    .click();
+  await expect(page.getByRole("article")).toHaveCount(0);
+  await expect(page.getByLabel("Folders", { exact: true })).toHaveValue(
+    "pinned",
+  );
 });

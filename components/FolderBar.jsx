@@ -22,6 +22,8 @@ export default function FolderBar({
           onChange={(e) => onSelect(e.target.value)}
         >
           <option value="all">All reels</option>
+          <option value="pinned">Pinned</option>
+          <option value="favorites">Favorites</option>
           {folders.map((f) => (
             <option key={f.id} value={f.id}>
               {f.pin && !unlocked.has(f.id) ? "🔒 " : ""}

@@ -3,7 +3,8 @@ import {
   Folder,
   FolderPlus,
   Grid2X2,
-  Layers3,
+  Pin,
+  Star,
   LockKeyhole,
   LogOut,
   PanelLeftClose,
@@ -20,7 +21,8 @@ export default function Sidebar({
   reelCount,
   selected,
   onSelect,
-  onFolders,
+  pinnedCount,
+  favoriteCount,
   onCreate,
   onSettings,
   onLogout,
@@ -66,16 +68,30 @@ export default function Sidebar({
             {reelCount}
           </span>
         </button>
-        <button
-          className={`sidebar-link ${selected !== "all" ? "active" : ""}`}
-          onClick={onFolders}
-          aria-label="Browse folders"
-          aria-haspopup="dialog"
-          title="Folders"
-        >
-          <Layers3 size={18} />
-          <span className="sidebar-label">Folders</span>
-        </button>
+        {[
+          { id: "pinned", label: "Pinned", icon: Pin, count: pinnedCount },
+          {
+            id: "favorites",
+            label: "Favorites",
+            icon: Star,
+            count: favoriteCount,
+          },
+        ].map((item) => (
+          <button
+            key={item.id}
+            className={`sidebar-link ${selected === item.id ? "active" : ""}`}
+            onClick={() => onSelect(item.id)}
+            aria-label={item.label}
+            aria-current={selected === item.id ? "page" : undefined}
+            title={item.label}
+          >
+            <item.icon size={18} />
+            <span className="sidebar-label">{item.label}</span>
+            <span className="sidebar-count" aria-hidden="true">
+              {item.count}
+            </span>
+          </button>
+        ))}
         <div className="sidebar-folder-heading">
           <span className="sidebar-label">YOUR FOLDERS</span>
           <button

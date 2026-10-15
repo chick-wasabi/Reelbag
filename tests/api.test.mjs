@@ -460,3 +460,279 @@ test("a session-store failure returns a safe API error instead of an uncaught re
   assert.match(result.data.error, /database unavailable/i);
   assert.doesNotMatch(JSON.stringify(result.data), /Sensitive driver details/);
 });
+
+test("optional recovery resets with a normalized typo, revokes every device, and never exposes answers", async () => {
+  const username = name();
+  const original = "Secure-original-1234";
+  const signup = await call("auth/signup", "POST", {
+    username,
+    password: original,
+    securityQuestion: "First dream car?",
+    securityAnswer: "Bugatti",
+  });
+  assert.equal(signup.status, 200, JSON.stringify(signup.data));
+  const second = await call("auth/login", "POST", {
+    username,
+    password: original,
+  });
+  const question = await call("auth/recovery/question", "POST", { username });
+  assert.equal(question.data.question, "First dream car?");
+  assert.doesNotMatch(
+    JSON.stringify(question.data),
+    /security_answer|salt|deletions/,
+  );
+  const failed = await call("auth/recovery/reset", "POST", {
+    username,
+    answer: "Ferrari",
+    newPassword: "New-strong-9876",
+  });
+  assert.equal(failed.status, 401);
+  assert.equal((await call("library", "GET", null, signup.cookie)).status, 200);
+  const reset = await call("auth/recovery/reset", "POST", {
+    username,
+    answer: " bugati!! ",
+    newPassword: "New-strong-9876",
+  });
+  assert.equal(reset.status, 200, JSON.stringify(reset.data));
+  assert.equal((await call("library", "GET", null, signup.cookie)).status, 401);
+  assert.equal((await call("library", "GET", null, second.cookie)).status, 401);
+  assert.equal(
+    (await call("auth/login", "POST", { username, password: original })).status,
+    401,
+  );
+  const login = await call("auth/login", "POST", {
+    username,
+    password: "New-strong-9876",
+  });
+  assert.equal(login.status, 200);
+  assert.doesNotMatch(
+    JSON.stringify((await call("library", "GET", null, login.cookie)).data),
+    /security_answer|security_question|deletions/,
+  );
+  const [row] = await app.db.query(
+    "SELECT security_answer FROM users WHERE username=$1",
+    [username],
+  );
+  assert.doesNotMatch(row.security_answer, /bugatti/i);
+});
+
+test("accounts can skip recovery or configure and disable it with current-password verification", async () => {
+  const user = await account();
+  assert.equal(
+    (await call("auth/recovery/question", "POST", { username: user.username }))
+      .data.question,
+    null,
+  );
+  assert.equal(
+    (
+      await call("auth/recovery/reset", "POST", {
+        username: user.username,
+        answer: "anything",
+        newPassword: "New-strong-1234",
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/recovery",
+        "POST",
+        {
+          currentPassword: "wrong-password",
+          enabled: true,
+          securityQuestion: "A game?",
+          securityAnswer: "PortalTwo",
+        },
+        user.cookie,
+      )
+    ).status,
+    403,
+  );
+  const setup = await call(
+    "account/recovery",
+    "POST",
+    {
+      currentPassword: user.password,
+      enabled: true,
+      securityQuestion: "A game?",
+      securityAnswer: "PortalTwo",
+    },
+    user.cookie,
+  );
+  assert.equal(setup.status, 200, JSON.stringify(setup.data));
+  assert.equal(
+    (await call("auth/recovery/question", "POST", { username: user.username }))
+      .data.question,
+    "A game?",
+  );
+  assert.equal(
+    (
+      await call(
+        "account/recovery",
+        "POST",
+        { currentPassword: user.password, enabled: false },
+        user.cookie,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call("auth/recovery/question", "POST", { username: user.username }))
+      .data.question,
+    null,
+  );
+});
+
+test("recovery throttling persists across instances and rejects cross-origin resets", async () => {
+  const username = name();
+  const signup = await call("auth/signup", "POST", {
+    username,
+    password: "Secure-original-1234",
+    securityQuestion: "First car?",
+    securityAnswer: "Bugatti",
+  });
+  assert.equal(signup.status, 200);
+  const payload = {
+    username,
+    answer: "totallywrong",
+    newPassword: "New-strong-1234",
+  };
+  assert.equal(
+    (
+      await call("auth/recovery/reset", "POST", payload, null, {
+        origin: "https://evil.com",
+      })
+    ).status,
+    403,
+  );
+  for (let i = 0; i < 5; i++)
+    assert.equal(
+      (await call("auth/recovery/reset", "POST", payload)).status,
+      401,
+    );
+  const fresh = createApi({
+    db: createDatabase(app.adapter),
+    secureCookies: false,
+  });
+  assert.equal(
+    (await call("auth/recovery/reset", "POST", payload, null, {}, fresh))
+      .status,
+    429,
+  );
+});
+
+test("pin and favorite flags persist, sort pinned reels first, and enforce ownership and folder locks", async () => {
+  const user = await account();
+  const outsider = await account();
+  await call(
+    "reels",
+    "POST",
+    {
+      title: "Older",
+      url: "https://instagram.com/reel/OLDER/",
+      folderId: null,
+    },
+    user.cookie,
+  );
+  const newer = await call(
+    "reels",
+    "POST",
+    {
+      title: "Newer",
+      url: "https://instagram.com/reel/NEWER/",
+      folderId: null,
+    },
+    user.cookie,
+  );
+  const olderId = newer.data.reels.find((r) => r.title === "Older").id;
+  const pinned = await call(
+    `reels/${olderId}/flags`,
+    "PATCH",
+    { isPinned: true, isFavorite: true },
+    user.cookie,
+  );
+  assert.equal(pinned.status, 200, JSON.stringify(pinned.data));
+  assert.equal(pinned.data.reels[0].id, olderId);
+  assert.equal(pinned.data.reels[0].isFavorite, true);
+  assert.equal(
+    (
+      await call(
+        `reels/${olderId}/flags`,
+        "PATCH",
+        { isPinned: false },
+        outsider.cookie,
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await call(
+        `reels/${olderId}/flags`,
+        "PATCH",
+        { isPinned: "yes" },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  const device = await call("auth/login", "POST", {
+    username: user.username,
+    password: user.password,
+  });
+  assert.equal(
+    (await call("library", "GET", null, device.cookie)).data.reels[0].isPinned,
+    true,
+  );
+  const exported = await call("library/export", "GET", null, user.cookie);
+  assert.equal(exported.data.reels[0].isPinned, true);
+  const copy = await call(
+    "library/import",
+    "POST",
+    exported.data,
+    outsider.cookie,
+  );
+  assert.ok(copy.data.reels.some((r) => r.isPinned && r.isFavorite));
+  const locked = await call(
+    "folders",
+    "POST",
+    { name: "Private", protected: true, pin: "4567" },
+    user.cookie,
+  );
+  const id = locked.data.folderId;
+  const hidden = await call(
+    "reels",
+    "POST",
+    {
+      title: "Hidden",
+      url: "https://instagram.com/reel/HIDDEN/",
+      folderId: id,
+    },
+    user.cookie,
+  );
+  const hiddenId = hidden.data.reels.find((r) => r.title === "Hidden").id;
+  assert.equal(
+    (
+      await call(
+        `reels/${hiddenId}/flags`,
+        "PATCH",
+        { isFavorite: true },
+        device.cookie,
+      )
+    ).status,
+    423,
+  );
+  await call(`folders/${id}/lock`, "POST", {}, user.cookie);
+  assert.equal(
+    (
+      await call(
+        `reels/${hiddenId}/flags`,
+        "PATCH",
+        { isPinned: true },
+        user.cookie,
+      )
+    ).status,
+    423,
+  );
+});

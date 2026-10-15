@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ExternalLink,
+  Pin,
+  Star,
   MoreHorizontal,
   FolderInput,
   Scan,
@@ -47,10 +49,26 @@ function loadInstagram() {
   return embedPromise;
 }
 
-export default function ReelCard({ reel, folder, onEdit, onMove, onDelete }) {
+export default function ReelCard({
+  reel,
+  folder,
+  onEdit,
+  onMove,
+  onDelete,
+  onToggle,
+}) {
   const ref = useRef(null);
   const menu = useRef(null);
   const [fullEmbed, setFullEmbed] = useState(false);
+  const [toggling, setToggling] = useState(false);
+  async function toggle(flag) {
+    setToggling(true);
+    try {
+      await onToggle(flag);
+    } finally {
+      setToggling(false);
+    }
+  }
   function closeMenu() {
     if (menu.current) {
       menu.current.open = false;
@@ -134,6 +152,26 @@ export default function ReelCard({ reel, folder, onEdit, onMove, onDelete }) {
           >
             <ExternalLink size={15} />
           </a>
+          <button
+            className={`icon-button flag-toggle ${reel.isPinned ? "is-pinned" : ""}`}
+            aria-label={`${reel.isPinned ? "Unpin" : "Pin"} ${reel.title}`}
+            aria-pressed={Boolean(reel.isPinned)}
+            title={reel.isPinned ? "Unpin reel" : "Pin reel"}
+            disabled={toggling}
+            onClick={() => toggle("isPinned")}
+          >
+            <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
+          </button>
+          <button
+            className={`icon-button flag-toggle ${reel.isFavorite ? "is-favorite" : ""}`}
+            aria-label={`${reel.isFavorite ? "Unfavorite" : "Favorite"} ${reel.title}`}
+            aria-pressed={Boolean(reel.isFavorite)}
+            title={reel.isFavorite ? "Remove favorite" : "Add favorite"}
+            disabled={toggling}
+            onClick={() => toggle("isFavorite")}
+          >
+            <Star size={16} fill={reel.isFavorite ? "currentColor" : "none"} />
+          </button>
           <details ref={menu} className="reel-menu">
             <summary
               className="icon-button"
@@ -191,29 +229,31 @@ export default function ReelCard({ reel, folder, onEdit, onMove, onDelete }) {
         className={`embed-shell ${fullEmbed ? "is-full" : "is-cropped"}`}
         key={`${reel.url}-${attempt}`}
       >
-        {visible ? (
-          <blockquote
-            className="instagram-media"
-            data-instgrm-permalink={reel.url}
-            data-instgrm-version="14"
-            data-instgrm-captioned="false"
-          >
-            <a
-              href={reel.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="embed-fallback"
+        <div className="embed-stage">
+          {visible ? (
+            <blockquote
+              className="instagram-media"
+              data-instgrm-permalink={reel.url}
+              data-instgrm-version="14"
+              data-instgrm-captioned="false"
             >
+              <a
+                href={reel.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="embed-fallback"
+              >
+                <Instagram size={29} />
+                <span>View reel on Instagram</span>
+              </a>
+            </blockquote>
+          ) : (
+            <div className="embed-fallback">
               <Instagram size={29} />
-              <span>View reel on Instagram</span>
-            </a>
-          </blockquote>
-        ) : (
-          <div className="embed-fallback">
-            <Instagram size={29} />
-            <span>Loading preview…</span>
-          </div>
-        )}
+              <span>Loading preview…</span>
+            </div>
+          )}
+        </div>
       </div>
       {failed && (
         <div className="embed-error">

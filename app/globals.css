@@ -292,8 +292,15 @@ select option {
 }
 /* Instagram is cross-origin: only the outer iframe is cropped. */
 .embed-shell.is-cropped {
-  aspect-ratio: 9 / 16;
   --embed-header: 58px;
+  --embed-bottom-cut: 120px;
+}
+.embed-stage {
+  position: relative;
+}
+.embed-shell.is-cropped .embed-stage {
+  aspect-ratio: 9 / 16;
+  margin-bottom: calc(-1 * var(--embed-bottom-cut));
 }
 .embed-shell.is-cropped iframe.instagram-media {
   position: absolute !important;
@@ -1072,4 +1079,64 @@ select option {
   .folder-select select {
     max-width: 160px;
   }
+}
+
+.password-input {
+  position: relative;
+  margin-top: 9px;
+}
+.password-input input {
+  padding-right: 46px;
+}
+.password-input button {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 7px;
+  color: #8b9d80;
+}
+.password-input button:hover {
+  color: #d2e8c0;
+  background: #c3ef960a;
+}
+.recovery-fields {
+  padding: 17px;
+  border: 1px solid #c3ef9617;
+  border-radius: 11px;
+  background: #c3ef9603;
+}
+.recovery-fields select {
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+.recovery-question {
+  color: #cbdfba;
+  border-left: 2px solid #a5c787;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.success-text {
+  font-size: 12px;
+  color: #c3e7a7;
+  border: 1px solid #c3ef9626;
+  background: #c3ef9606;
+  padding: 12px;
+  border-radius: 8px;
+  line-height: 1.7;
+}
+.reel-actions .is-pinned {
+  color: #bfdd99;
+}
+.reel-actions .is-favorite {
+  color: #e6c479;
+}
+.reel-actions .flag-toggle:hover {
+  background: #c3ef9610;
 }
