@@ -295,8 +295,6 @@ select option {
 .embed-shell {
   position: relative;
   width: 100%;
-  aspect-ratio: 9 / 16;
-  max-height: 480px;
   overflow: hidden;
   margin: 0 0 8px;
   border-radius: 12px;
@@ -304,10 +302,8 @@ select option {
 }
 .reel-iframe {
   position: absolute;
-  top: -55px;
   left: 0;
   width: 100%;
-  height: calc(100% + 165px);
   border: 0;
   display: block;
   background: #0f172a;
@@ -799,9 +795,11 @@ select option {
   padding-right: 12px;
 }
 .sidebar-collapsed .sidebar-brand {
-  padding: 12px 0 30px;
+  padding: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 .sidebar-collapsed .brand-wordmark,
 .sidebar-collapsed .brand-tagline,
@@ -810,8 +808,11 @@ select option {
   display: none;
 }
 .sidebar-collapsed .sidebar-toggle {
-  top: -22px;
-  right: -3px;
+  position: static;
+  width: 100%;
+  height: auto;
+  padding: 12px 0;
+  margin-bottom: 8px;
 }
 .sidebar-collapsed .sidebar-link {
   justify-content: center;

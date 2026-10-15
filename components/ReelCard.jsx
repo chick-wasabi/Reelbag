@@ -162,11 +162,11 @@ export default function ReelCard({
           </details>
         </div>
       </div>
-      <div className="embed-shell" aria-label={`Video player: ${reel.title}`}>
+      <div className="embed-shell relative overflow-hidden rounded-xl bg-slate-900 w-full h-[450px] md:h-[480px]" aria-label={`Video player: ${reel.title}`}>
         {visible && embedUrl ? (
           <iframe
             key={`${embedUrl}-${attempt}`}
-            className="reel-iframe"
+            className="reel-iframe absolute top-[-50px] left-0 w-full h-[calc(100%+210px)] object-cover"
             src={`${embedUrl}${attempt > 0 ? "?autoplay=1&muted=0" : ""}`}
             title={`Instagram Reel: ${reel.title}`}
             // Do not allow popups or top navigation, including on user gestures.

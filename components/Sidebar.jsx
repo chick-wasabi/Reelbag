@@ -38,7 +38,7 @@ export default function Sidebar({
       <div className="sidebar-brand">
         <Brand slogan compact={collapsed} />
         <button
-          className="sidebar-toggle icon-button"
+          className={`sidebar-toggle icon-button ${collapsed ? "w-full flex items-center justify-center py-3 mb-2" : ""}`}
           onClick={onToggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!collapsed}

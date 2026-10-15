@@ -484,18 +484,16 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
   expect(Math.abs(clipped.width - (cardBox.width - 2))).toBeLessThan(1);
   expect(clipped.height).toBeLessThanOrEqual(480);
   await expect(clip).toHaveCSS("overflow", "hidden");
-  const footer = await card
-    .frameLocator("iframe")
-    .locator("footer")
-    .boundingBox();
-  const profile = await card
-    .frameLocator("iframe")
-    .locator("header")
-    .boundingBox();
-  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height - 1);
-  expect(profile.y + profile.height).toBeLessThanOrEqual(clipped.y + 1);
-  expect(frame.y).toBe(clipped.y - 55);
-  expect(Math.abs(frame.height - clipped.height - 165)).toBeLessThan(1);
+  expect(frame.y).toBe(clipped.y - 50);
+  expect(Math.abs(frame.height - clipped.height - 210)).toBeLessThan(1);
+  for (const width of [390, 768, 1536]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(clip).toHaveCSS("height", width < 768 ? "450px" : "480px");
+    const viewportBox = await clip.boundingBox();
+    const iframeBox = await iframe.boundingBox();
+    expect(iframeBox.y).toBe(viewportBox.y - 50);
+    expect(iframeBox.height - viewportBox.height).toBe(210);
+  }
   const player = card.frameLocator("iframe");
   await player.getByRole("button", { name: "Play video", exact: true }).click();
   await player
@@ -517,6 +515,11 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
   await expect(sidebar).toHaveCSS("width", "84px");
+  const toggleIcon = await sidebar.getByRole("button", { name: "Expand sidebar", exact: true }).locator("svg").boundingBox();
+  const navIcon = await sidebar.getByRole("button", { name: "All Reels", exact: true }).locator("svg").boundingBox();
+  expect(Math.abs(toggleIcon.x + toggleIcon.width / 2 - navIcon.x - navIcon.width / 2)).toBeLessThan(1);
+  await expect(sidebar.locator(".sidebar-toggle")).toHaveCSS("position", "static");
+
   await page
     .getByRole("button", { name: "Expand sidebar", exact: true })
     .click();
