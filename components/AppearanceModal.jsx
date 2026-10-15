@@ -1,12 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
-export default function AppearanceModal({ value, onSave, onClose }) {
+export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
   const [draft, setDraft] = useState(value || DEFAULT_APPEARANCE);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    onPreview(draft);
+  }, [draft, onPreview]);
+  useEffect(() => () => onPreview(null), [onPreview]);
+
   const update = (key, value) => {
     setDraft((previous) => ({ ...previous, [key]: value }));
     setSaved(false);
@@ -84,7 +89,8 @@ export default function AppearanceModal({ value, onSave, onClose }) {
         </label>
         <p className="fine-print !mt-0">
           Grid choices apply on wide desktops. Phones and tablets keep
-          responsive columns. Preferences sync to your account.
+          responsive columns. Changes preview instantly; save to sync them to
+          your account. Closing without saving restores your saved theme.
         </p>
         {error && (
           <p className="error-text" role="alert">

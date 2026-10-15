@@ -535,8 +535,20 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     .click();
   await expect(iframe).toHaveAttribute(
     "src",
-    "https://www.instagram.com/reel/REMAKE/embed/?autoplay=1",
+    "https://www.instagram.com/reel/REMAKE/embed/?autoplay=1&muted=0",
   );
+  await expect(
+    player.getByRole("button", { name: "Pause video", exact: true }),
+  ).toBeVisible();
+  const replayRequest = page.waitForRequest(
+    (request) =>
+      request.url() ===
+      "https://www.instagram.com/reel/REMAKE/embed/?autoplay=1&muted=0",
+  );
+  await card
+    .getByRole("button", { name: "Replay Video to remake", exact: true })
+    .click();
+  await replayRequest;
   await expect(
     player.getByRole("button", { name: "Pause video", exact: true }),
   ).toBeVisible();
@@ -890,4 +902,107 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
     page.getByRole("heading", { name: "Appearance reel", exact: true }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("accent previews recolor outlined logos, sidebar, favicon, buttons and focus rings and cancel cleanly", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await folder(page, "Theme folder");
+  await openProfileItem(page, "Appearance & Settings");
+  for (const [hex, rgb] of [
+    ["#3b82f6", "rgb(59, 130, 246)"],
+    ["#a855f7", "rgb(168, 85, 247)"],
+  ]) {
+    await page.getByLabel("Accent color", { exact: true }).fill(hex);
+    await expect(page.locator(".reel-fab")).toHaveCSS("background-color", rgb);
+    for (const scope of [".sidebar", ".mobile-brand"]) {
+      await expect(page.locator(`${scope} .logo-bookmark`)).toHaveCSS(
+        "fill",
+        rgb,
+      );
+      await expect(page.locator(`${scope} .logo-frame`)).toHaveCSS(
+        "stroke",
+        rgb,
+      );
+      await expect(page.locator(`${scope} .logo-frame`)).toHaveCSS(
+        "fill",
+        "rgb(16, 18, 20)",
+      );
+      await expect(page.locator(`${scope} .logo-play`)).toHaveCSS(
+        "fill",
+        "rgb(16, 18, 20)",
+      );
+      await expect(page.locator(`${scope} .brand-dot`)).toHaveCSS("color", rgb);
+    }
+    await expect(page.locator(".sidebar .folder-link > svg")).toHaveCSS(
+      "stroke",
+      rgb,
+    );
+    await expect(page.locator(".sidebar-link.active .sidebar-count")).toHaveCSS(
+      "background-color",
+      rgb,
+    );
+    await expect(
+      page.getByRole("button", { name: "Save appearance", exact: true }),
+    ).toHaveCSS("background-color", rgb);
+    await page.getByLabel("Theme", { exact: true }).focus();
+    await expect(page.getByLabel("Theme", { exact: true })).toHaveCSS(
+      "outline-color",
+      rgb,
+    );
+    expect(
+      await page
+        .locator(".sidebar")
+        .evaluate((el) => getComputedStyle(el).backgroundImage),
+    ).toContain(rgb.slice(4, -1));
+    const favicon = await page
+      .locator('link[data-reelbag-theme="true"]')
+      .getAttribute("href");
+    expect(decodeURIComponent(favicon)).toContain(`stroke="${hex}"`);
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      hex,
+    );
+  }
+  await page.screenshot({
+    path: "/tmp/reelbag-purple-preview.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(181, 243, 109)",
+  );
+  const library = await page.evaluate(async () =>
+    (await fetch("/api/library")).json(),
+  );
+  expect(library.user.appearance.accent).toBe("#b5f36d");
+  await expect(page.locator('link[data-reelbag-theme="true"]')).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openProfileItem(page, "Appearance & Settings");
+  await page.getByLabel("Accent color", { exact: true }).fill("#3b82f6");
+  await expect(page.locator(".mobile-brand .logo-bookmark")).toHaveCSS(
+    "fill",
+    "rgb(59, 130, 246)",
+  );
+  await page
+    .getByRole("button", { name: "Save appearance", exact: true })
+    .click();
+  await expect(
+    page.getByText("Appearance saved.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.reload();
+  await expect(page.locator(".mobile-brand .logo-bookmark")).toHaveCSS(
+    "fill",
+    "rgb(59, 130, 246)",
+  );
+  await openProfileItem(page, "Sign Out");
+  await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
+  await expect(page.locator(".brand-mark .logo-bookmark")).toHaveCSS(
+    "fill",
+    "rgb(181, 243, 109)",
+  );
 });

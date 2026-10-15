@@ -20,6 +20,7 @@ import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
+import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
 
@@ -37,7 +38,9 @@ export default function Home() {
   const epoch = useRef(0);
   const pending = useRef(0);
   const userId = data?.user?.id;
-  const appearance = data?.user?.appearance || DEFAULT_APPEARANCE;
+  const [appearancePreview, setAppearancePreview] = useState(null);
+  const appearance =
+    appearancePreview || data?.user?.appearance || DEFAULT_APPEARANCE;
   useEffect(() => {
     const root = document.documentElement;
     const rgb = appearance.accent
@@ -57,7 +60,7 @@ export default function Home() {
       channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
     root.style.setProperty(
       "--on-accent",
-      luminance > 0.179 ? "#11150d" : "#ffffff",
+      luminance > 0.179 ? LOGO_DARK : "#ffffff",
     );
     root.style.setProperty(
       "--grid-gap",
@@ -66,7 +69,21 @@ export default function Home() {
       ],
     );
     root.dataset.theme = appearance.theme;
+    const favicon = document.createElement("link");
+    favicon.rel = "icon";
+    favicon.type = "image/svg+xml";
+    favicon.setAttribute("sizes", "any");
+    favicon.dataset.reelbagTheme = "true";
+    favicon.href = `data:image/svg+xml,${encodeURIComponent(createLogoSvg(appearance.accent))}`;
+    document.head.appendChild(favicon);
+    const browserTheme = document.querySelector('meta[name="theme-color"]');
+    const previousTheme = browserTheme?.getAttribute("content");
+    browserTheme?.setAttribute("content", appearance.accent);
+
     return () => {
+      favicon.remove();
+      if (previousTheme != null)
+        browserTheme?.setAttribute("content", previousTheme);
       for (const name of [
         "--accent",
         "--accent-rgb",
@@ -513,7 +530,8 @@ export default function Home() {
       )}
       {data?.user && modal?.type === "appearance" && (
         <AppearanceModal
-          value={appearance}
+          value={data.user.appearance || DEFAULT_APPEARANCE}
+          onPreview={setAppearancePreview}
           onClose={() => setModal(null)}
           onSave={(appearance) =>
             mutate("account/profile", "PATCH", { appearance })
