@@ -22,7 +22,7 @@ Turn “I should save this” into a library you’ll actually use.
 
 ## 💬 Great Reels deserve better than a buried link
 
-You find an amazing recipe, a crazy bike stunt, a workout routine, or a hilarious clip on Instagram. You tap **Save** or drop the link into a private WhatsApp chat. A week later, it’s buried under hundreds of messages.
+You find an amazing recipe, a crazy bike reel, a workout routine, or a hilarious clip on Instagram. You tap **Save** or drop the link into a private WhatsApp chat. A week later, it’s buried under hundreds of messages.
 
 Now you’re opening old links one by one, trying to remember which video had that transition, that recipe, or that perfect travel spot. Inspiration shouldn’t take this much searching.
 
