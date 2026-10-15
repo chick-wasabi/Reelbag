@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Bookmark,
-  Check,
-  LogOut,
-  Plus,
-  Search,
-  Settings,
-  X,
-} from "lucide-react";
+import { Bookmark, Check, Plus, X } from "lucide-react";
 import Brand from "../components/Brand";
 import Sidebar from "../components/Sidebar";
 import RecoverySettingsModal from "../components/RecoverySettingsModal";
@@ -22,7 +14,8 @@ import Modal from "../components/Modal";
 import PinForm from "../components/PinForm";
 import ReelCard from "../components/ReelCard";
 import ReelModal from "../components/ReelModal";
-import SettingsPanel from "../components/SettingsPanel";
+import Header from "../components/Header";
+import SettingsModal from "../components/SettingsModal";
 import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
 
@@ -299,23 +292,16 @@ export default function Home() {
             onSettings={() => setModal({ type: "settings" })}
             onLogout={logout}
             username={data.user.username}
+            avatarUrl={data.user.avatarUrl}
           />
           <div className="workspace">
-            <header className="topbar">
-              <div className="mobile-brand">
-                <Brand slogan />
-              </div>
-              <label className="search-box">
-                <Search size={17} />
-                <span className="sr-only">Search reels</span>
-                <input
-                  type="search"
-                  placeholder="Search reels…"
-                  value={search}
-                  maxLength={200}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
+            <Header
+              user={data.user}
+              search={search}
+              onSearch={setSearch}
+              onSettings={() => setModal({ type: "settings" })}
+            />
+            <div className="stream-navigation">
               <FolderBar
                 folders={data.folders}
                 selected={selected}
@@ -324,32 +310,7 @@ export default function Home() {
                 onCreate={() => setModal({ type: "folder" })}
                 onEdit={editFolder}
               />
-              <button
-                className="button-primary add-reel"
-                onClick={() => setModal({ type: "reel" })}
-              >
-                <Plus size={17} />
-                <span>Add Reel</span>
-              </button>
-              <div className="header-actions mobile-header-actions">
-                <button
-                  className="icon-button"
-                  aria-label="Settings"
-                  title="Settings"
-                  onClick={() => setModal({ type: "settings" })}
-                >
-                  <Settings size={19} />
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label="Sign out"
-                  title="Sign out"
-                  onClick={logout}
-                >
-                  <LogOut size={18} />
-                </button>
-              </div>
-            </header>
+            </div>
             <main className="stream" id="main-content">
               {reels.length ? (
                 <div
@@ -411,7 +372,7 @@ export default function Home() {
             </main>
           </div>
           <button
-            className="mobile-fab"
+            className="reel-fab"
             aria-label="Add Reel"
             onClick={() => setModal({ type: "reel" })}
           >
@@ -485,14 +446,17 @@ export default function Home() {
         </Modal>
       )}
       {data?.user && modal?.type === "settings" && (
-        <Modal title="Settings" onClose={() => setModal(null)}>
-          <SettingsPanel
-            user={data.user}
-            onRecovery={() => setModal({ type: "recoverySettings" })}
-            onImport={(backup) => setModal({ type: "import", backup })}
-            onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
-          />
-        </Modal>
+        <SettingsModal
+          user={data.user}
+          onClose={() => setModal(null)}
+          onSaveProfile={(profile) =>
+            mutate("account/profile", "PATCH", profile)
+          }
+          onLogout={logout}
+          onRecovery={() => setModal({ type: "recoverySettings" })}
+          onImport={(backup) => setModal({ type: "import", backup })}
+          onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
+        />
       )}
       {data?.user && modal?.type === "import" && (
         <Modal

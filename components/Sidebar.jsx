@@ -11,6 +11,7 @@ import {
   PanelLeftOpen,
   Settings,
 } from "lucide-react";
+import Avatar from "./Avatar";
 import Brand from "./Brand";
 
 export default function Sidebar({
@@ -27,6 +28,7 @@ export default function Sidebar({
   onSettings,
   onLogout,
   username,
+  avatarUrl,
 }) {
   return (
     <aside
@@ -151,7 +153,7 @@ export default function Sidebar({
           <span className="sidebar-label">Logout</span>
         </button>
         <div className="sidebar-account">
-          <span className="account-dot" />
+          <Avatar url={avatarUrl} name={`${username}'s avatar`} size={34} />
           <span className="sidebar-label">
             {username}
             <small>Cloud library</small>

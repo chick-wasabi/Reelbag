@@ -31,6 +31,12 @@ async function connect(context) {
       body: await response.text(),
     });
   });
+  await context.route("https://api.dicebear.com/**", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#b5f36d"/><path d="M10 12h5v5h-5zm15 0h5v5h-5zM12 26h16v4H12z" fill="#15181a"/></svg>',
+    }),
+  );
   await context.route("https://www.instagram.com/reel/*/embed/", (route) =>
     route.fulfill({
       contentType: "text/html",
@@ -87,6 +93,23 @@ async function addReel(page, title, code, folderId) {
   await page.getByRole("button", { name: "Save reel", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+async function selectFilter(page, name) {
+  const sidebar = page.getByRole("complementary", {
+    name: "Desktop workspace",
+  });
+  if (await sidebar.isVisible()) {
+    const label =
+      name === "All reels"
+        ? "All Reels"
+        : ["Pinned", "Favorites"].includes(name)
+          ? name
+          : `Open folder ${name}`;
+    await sidebar.getByRole("button", { name: label, exact: true }).click();
+  } else
+    await page
+      .getByRole("button", { name: `Filter ${name}`, exact: true })
+      .click();
+}
 async function folder(page, name, pin) {
   await page.getByRole("button", { name: "New folder", exact: true }).click();
   await page.getByLabel("Folder name", { exact: true }).fill(name);
@@ -132,7 +155,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
   await page.getByRole("button", { name: "Edit folder", exact: true }).click();
   await page.getByLabel("Folder name", { exact: true }).fill("Bike Edits");
   await page.getByRole("button", { name: "Save folder", exact: true }).click();
-  await page.getByLabel("Folders", { exact: true }).selectOption("all");
+  await selectFilter(page, "All reels");
   await addReel(page, "Recipe idea", "RECIPE", "");
   await expect(
     page
@@ -170,9 +193,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
     path: "/tmp/reelbag-cloud-mobile.png",
     fullPage: true,
   });
-  await page
-    .getByLabel("Folders", { exact: true })
-    .selectOption({ label: "Bike Edits" });
+  await selectFilter(page, "Bike Edits");
   await page.getByRole("button", { name: "Edit folder", exact: true }).click();
   await page
     .getByRole("button", { name: "Delete folder", exact: true })
@@ -274,9 +295,7 @@ test("folder PINs are verified by SQL-backed API and protected content is absent
     );
     expect(library.reels).toHaveLength(0);
     expect(JSON.stringify(library)).not.toMatch(/pin_code|password_hash/);
-    await other
-      .getByLabel("Folders", { exact: true })
-      .selectOption({ label: "🔒 Pranks" });
+    await selectFilter(other, "Pranks");
     await other.getByLabel("Folder PIN", { exact: true }).fill("0000");
     await other
       .getByRole("button", { name: "Open folder", exact: true })
@@ -295,9 +314,7 @@ test("folder PINs are verified by SQL-backed API and protected content is absent
     await expect(
       other.getByRole("heading", { name: "Secret prank" }),
     ).toBeVisible();
-    await other
-      .getByLabel("Folders", { exact: true })
-      .selectOption({ label: "Pranks" });
+    await selectFilter(other, "Pranks");
     await other
       .getByRole("button", { name: "Lock folder", exact: true })
       .click();
@@ -314,7 +331,9 @@ test("portable cloud backups append without credentials and legacy browser impor
 }) => {
   await register(page);
   await addReel(page, "Recipe", "BACKUP", "");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open settings", exact: true })
+    .click();
   const promise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON Backup" }).click();
   const download = await promise;
@@ -376,7 +395,9 @@ test("portable cloud backups append without credentials and legacy browser impor
   const original = await page.evaluate(() =>
     localStorage.getItem("reelbag.v2"),
   );
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open settings", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Import previous browser library" })
     .click();
@@ -415,7 +436,7 @@ test("server write errors keep reel drafts available and never show an unsaved c
   await expect(page.getByRole("article")).toHaveCount(0);
 });
 
-test("sidebar collapses, folder counts follow moves, mobile hides navigation, and cropped embeds remain playable", async ({
+test("sidebar collapses, folder counts follow moves, and full native embeds replay without navigating", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1536, height: 1000 });
@@ -457,9 +478,9 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   const clip = card.locator(".embed-shell");
   const clipped = await clip.boundingBox();
   const frame = await iframe.boundingBox();
-  expect(Math.abs(clipped.width / clipped.height - 9 / 16)).toBeLessThan(0.01);
-  expect(clipped.height).toBeLessThanOrEqual(520);
-  await expect(clip).toHaveCSS("overflow", "hidden");
+  expect(clipped.width).toBeLessThanOrEqual(380);
+  expect(clipped.height).toBeGreaterThanOrEqual(480);
+  await expect(clip).toHaveCSS("overflow", "visible");
   const footer = await card
     .frameLocator("iframe")
     .locator("footer")
@@ -468,10 +489,10 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
     .frameLocator("iframe")
     .locator("header")
     .boundingBox();
-  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height - 1);
-  expect(profile.y + profile.height).toBeLessThanOrEqual(clipped.y + 1);
-  expect(frame.y).toBeLessThan(clipped.y);
-  expect(frame.y + frame.height).toBeGreaterThan(clipped.y + clipped.height);
+  expect(footer.y).toBeLessThan(clipped.y + clipped.height);
+  expect(profile.y).toBeGreaterThanOrEqual(clipped.y);
+  expect(frame.y).toBe(clipped.y);
+  expect(frame.height).toBe(clipped.height);
   const player = card.frameLocator("iframe");
   await player.getByRole("button", { name: "Play video", exact: true }).click();
   await player
@@ -506,9 +527,8 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   await expect(
     sidebar.getByRole("button", { name: "Favorites", exact: true }),
   ).toBeVisible();
-  await card.getByLabel("Actions for Video to remake", { exact: true }).click();
   await card
-    .getByRole("button", { name: "Restart Video to remake", exact: true })
+    .getByRole("button", { name: "Replay Video to remake", exact: true })
     .click();
   await expect(
     player.getByRole("button", { name: "Play video", exact: true }),
@@ -540,11 +560,9 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   await page.setViewportSize({ width: 412, height: 915 });
   await expect(sidebar).toBeHidden();
   const mobileClip = await clip.boundingBox();
-  expect(Math.abs(mobileClip.width / mobileClip.height - 9 / 16)).toBeLessThan(
-    0.01,
-  );
-  expect(mobileClip.height).toBeLessThanOrEqual(520);
-  await expect(page.locator(".mobile-fab")).toBeVisible();
+  expect(mobileClip.width).toBeLessThanOrEqual(380);
+  expect(mobileClip.height).toBeGreaterThanOrEqual(480);
+  await expect(page.locator(".reel-fab")).toBeVisible();
   await expect(page.locator(".mobile-brand .brand-tagline")).toBeVisible();
   expect(
     await page.evaluate(
@@ -618,7 +636,9 @@ test("optional custom recovery accepts a typo, password eye toggles work, and re
   await expect(
     page.getByRole("heading", { name: "Keep after recovery", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open settings", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Account recovery", exact: true })
     .click();
@@ -679,21 +699,101 @@ test("pins reorder the grid, stars filter favorites, and both flags survive relo
     page.getByRole("button", { name: "Unpin Older inspiration", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByLabel("Folders", { exact: true }).selectOption("favorites");
+  await selectFilter(page, "Favorites");
   await expect(page.getByRole("article")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Unfavorite Older inspiration", exact: true })
     .click();
   await expect(page.getByRole("article")).toHaveCount(0);
-  await expect(page.getByLabel("Folders", { exact: true })).toHaveValue(
-    "favorites",
-  );
-  await page.getByLabel("Folders", { exact: true }).selectOption("pinned");
+  await expect(
+    page.getByRole("button", { name: "Filter Favorites", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await selectFilter(page, "Pinned");
   await page
     .getByRole("button", { name: "Unpin Older inspiration", exact: true })
     .click();
   await expect(page.getByRole("article")).toHaveCount(0);
-  await expect(page.getByLabel("Folders", { exact: true })).toHaveValue(
-    "pinned",
+  await expect(
+    page.getByRole("button", { name: "Filter Pinned", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
+test("30 avatars, profile syncing, public password hints, clean header and branded FAB", async ({
+  page,
+}) => {
+  const name = username();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+  await page.getByLabel("Username", { exact: true }).fill(name);
+  await page.getByLabel("Password or PIN", { exact: true }).fill(secret);
+  await page.getByText("Choose your avatar", { exact: true }).click();
+  await expect(
+    page.getByRole("group", { name: "30 pixel avatars" }).getByRole("button"),
+  ).toHaveCount(30);
+  await page
+    .getByRole("button", { name: "Choose Wizard avatar", exact: true })
+    .click();
+  await page
+    .getByLabel("Password hint (optional)", { exact: true })
+    .fill("My original road trip clue");
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+  await expect(page.locator(".reel-fab")).toBeVisible();
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(181, 243, 109)",
   );
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("button")).toHaveCount(2);
+  await expect(header.getByRole("button", { name: "Add Reel" })).toHaveCount(0);
+  await expect(header.getByRole("combobox")).toHaveCount(0);
+  await expect(header.locator("img")).toHaveAttribute(
+    "src",
+    /seed=pixel_wizard/,
+  );
+  await header
+    .getByRole("button", { name: "Edit profile", exact: true })
+    .click();
+  await page.getByText("Choose your avatar", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Choose Cyber bot avatar", exact: true })
+    .click();
+  await page
+    .getByLabel("Password hint (optional)", { exact: true })
+    .fill("My updated road trip clue");
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.reload();
+  await expect(page.getByRole("banner").locator("img")).toHaveAttribute(
+    "src",
+    /seed=pixel_cyber_bot/,
+  );
+  await expect(page.locator(".sidebar-account img")).toHaveAttribute(
+    "src",
+    /seed=pixel_cyber_bot/,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".reel-fab")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open settings", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sign out", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Forgot password?", exact: true })
+    .click();
+  await page.getByLabel("Username", { exact: true }).fill(name);
+  await page
+    .getByRole("button", { name: "Find recovery question", exact: true })
+    .click();
+  await expect(
+    page.getByText("Password hint: My updated road trip clue", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reset password", exact: true }),
+  ).toBeDisabled();
 });

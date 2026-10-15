@@ -736,3 +736,111 @@ test("pin and favorite flags persist, sort pinned reels first, and enforce owner
     423,
   );
 });
+
+test("avatar and optional hint persist across devices with validation, isolation, and no backup leakage", async () => {
+  const { AVATARS, DEFAULT_AVATAR } = await import("../utils/avatars.mjs");
+  assert.equal(AVATARS.length, 30);
+  assert.equal(new Set(AVATARS.map((a) => a.url)).size, 30);
+  const username = name();
+  const password = "Secure-profile-9876";
+  const user = await call("auth/signup", "POST", {
+    username,
+    password,
+    avatarUrl: AVATARS[2].url,
+    passwordHint: "My private road trip clue",
+  });
+  assert.equal(user.status, 200);
+  assert.equal(user.data.user.avatarUrl, AVATARS[2].url);
+  assert.equal(
+    (await call("auth/session", "GET", null, user.cookie)).data.user
+      .passwordHint,
+    "My private road trip clue",
+  );
+  const question = await call("auth/recovery/question", "POST", { username });
+  assert.deepEqual(question.data, {
+    question: null,
+    hint: "My private road trip clue",
+  });
+  assert.equal(
+    (await call("account/profile", "PATCH", { avatarUrl: AVATARS[1].url }))
+      .status,
+    401,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/profile",
+        "PATCH",
+        { avatarUrl: "https://evil.example/avatar.svg" },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/profile",
+        "PATCH",
+        { passwordHint: "a".repeat(161) },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  const updated = await call(
+    "account/profile",
+    "PATCH",
+    { avatarUrl: AVATARS[1].url, passwordHint: "Another clue" },
+    user.cookie,
+  );
+  assert.equal(updated.status, 200);
+  const device = await call("auth/login", "POST", { username, password });
+  assert.equal(device.data.user.avatarUrl, AVATARS[1].url);
+  assert.equal(
+    (await call("library", "GET", null, device.cookie)).data.user.passwordHint,
+    "Another clue",
+  );
+  const other = await account();
+  assert.equal(other.data.user.avatarUrl, DEFAULT_AVATAR);
+  assert.equal(other.data.user.passwordHint, null);
+  const backup = await call("library/export", "GET", null, user.cookie);
+  assert.doesNotMatch(
+    JSON.stringify(backup.data),
+    /Another clue|passwordHint|avatarUrl|password_hint/,
+  );
+  assert.equal(
+    (
+      await call("auth/signup", "POST", {
+        username: name(),
+        password,
+        passwordHint: password,
+      })
+    ).status,
+    400,
+  );
+});
+
+test("recovery returns a configured hint and clears the obsolete hint after reset", async () => {
+  const username = name();
+  const user = await call("auth/signup", "POST", {
+    username,
+    password: "Secure-hint-9876",
+    passwordHint: "The old password clue",
+    securityQuestion: "Dream car?",
+    securityAnswer: "Bugatti",
+  });
+  assert.equal(user.status, 200);
+  const challenge = await call("auth/recovery/question", "POST", { username });
+  assert.equal(challenge.data.hint, "The old password clue");
+  const reset = await call("auth/recovery/reset", "POST", {
+    username,
+    answer: "bugati",
+    newPassword: "Secure-next-9876",
+  });
+  assert.equal(reset.status, 200);
+  assert.equal(
+    (await call("auth/recovery/question", "POST", { username })).data.hint,
+    null,
+  );
+});

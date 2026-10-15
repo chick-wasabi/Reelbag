@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder, FolderPlus, LockKeyhole, Pencil } from "lucide-react";
+import { FolderPlus, LockKeyhole, Pencil } from "lucide-react";
 
 export default function FolderBar({
   folders,
@@ -13,25 +13,28 @@ export default function FolderBar({
   const current = folders.find((f) => f.id === selected);
   return (
     <div className="folder-controls">
-      <label className="folder-select">
-        <Folder size={16} />
-        <span className="sr-only">Folders</span>
-        <select
-          aria-label="Folders"
-          value={selected}
-          onChange={(e) => onSelect(e.target.value)}
-        >
-          <option value="all">All reels</option>
-          <option value="pinned">Pinned</option>
-          <option value="favorites">Favorites</option>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.pin && !unlocked.has(f.id) ? "🔒 " : ""}
-              {f.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <nav className="folder-tabs" aria-label="Reel filters">
+        {[
+          { id: "all", name: "All reels" },
+          { id: "pinned", name: "Pinned" },
+          { id: "favorites", name: "Favorites" },
+          ...folders,
+        ].map((folder) => (
+          <button
+            key={folder.id}
+            className={selected === folder.id ? "active" : ""}
+            aria-label={`Filter ${folder.name}`}
+            aria-pressed={selected === folder.id}
+            onClick={() => onSelect(folder.id)}
+          >
+            {folder.pin && !unlocked.has(folder.id) && (
+              <LockKeyhole size={13} />
+            )}
+            {folder.name}
+          </button>
+        ))}
+      </nav>
+      {current && <span className="current-folder-name">{current.name}</span>}
       {current && (
         <button
           className="icon-button"

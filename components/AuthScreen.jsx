@@ -2,12 +2,16 @@
 import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { api } from "../utils/api.mjs";
+import AvatarPicker from "./AvatarPicker";
+import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
 import PasswordField from "./PasswordField";
 import RecoveryFields, { QUESTIONS } from "./RecoveryFields";
 
 export default function AuthScreen({ onSuccess }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
+  const [passwordHint, setPasswordHint] = useState("");
   const [password, setPassword] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [question, setQuestion] = useState(QUESTIONS[0]);
@@ -43,11 +47,11 @@ export default function AuthScreen({ onSuccess }) {
             method: "POST",
             body: { username },
           });
-          if (!result.question)
-            throw new Error(
-              "Recovery is unavailable for this username. Check the username or log in with your password.",
+          setChallenge(result);
+          if (!result.question && !result.hint)
+            setError(
+              "No recovery question or password hint is available for this username.",
             );
-          setChallenge(result.question);
         } else {
           if (newPassword !== confirm)
             throw new Error("The new passwords don’t match.");
@@ -66,6 +70,7 @@ export default function AuthScreen({ onSuccess }) {
           body: {
             username,
             password,
+            ...(signup ? { avatarUrl, passwordHint } : {}),
             ...(signup && recovery
               ? {
                   securityQuestion:
@@ -148,6 +153,25 @@ export default function AuthScreen({ onSuccess }) {
         )}
         {signup && (
           <>
+            <AvatarPicker
+              value={avatarUrl}
+              onChange={setAvatarUrl}
+              disabled={busy}
+            />
+            <label className="field-label">
+              Password hint (optional)
+              <input
+                value={passwordHint}
+                onChange={(e) => setPasswordHint(e.target.value)}
+                maxLength={160}
+                disabled={busy}
+                placeholder="A clue only you would understand"
+              />
+            </label>
+            <p className="fine-print !mt-0">
+              Visible to anyone who knows your username. Never include your
+              password or recovery answer.
+            </p>
             <label className="checkbox-label">
               <input
                 type="checkbox"
@@ -170,9 +194,20 @@ export default function AuthScreen({ onSuccess }) {
             )}
           </>
         )}
-        {recovering && challenge && (
+        {recovering && challenge?.hint && (
+          <p className="recovery-question" role="status">
+            Password hint: {challenge.hint}
+          </p>
+        )}
+        {recovering && challenge && !challenge.question && (
+          <p className="muted-copy">
+            Password reset requires a recovery question set up beforehand. Use
+            your hint to remember your password, then return to login.
+          </p>
+        )}
+        {recovering && challenge?.question && (
           <>
-            <p className="recovery-question">{challenge}</p>
+            <p className="recovery-question">{challenge.question}</p>
             <PasswordField
               label="Your recovery answer"
               minLength={1}
@@ -208,7 +243,10 @@ export default function AuthScreen({ onSuccess }) {
             {message}
           </p>
         )}
-        <button className="button-primary w-full" disabled={busy}>
+        <button
+          className="button-primary w-full"
+          disabled={busy || (recovering && challenge && !challenge.question)}
+        >
           {busy ? (
             <Loader2 size={17} className="animate-spin" />
           ) : (

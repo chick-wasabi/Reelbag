@@ -148,17 +148,6 @@ export default function ReelCard({
                 Move Folder
               </button>
               <button
-                onClick={() => {
-                  closeMenu();
-                  setFailed(false);
-                  setAttempt((value) => value + 1);
-                }}
-                aria-label={`Restart ${reel.title}`}
-              >
-                <RefreshCw size={15} />
-                Restart video
-              </button>
-              <button
                 className="danger"
                 onClick={() => {
                   closeMenu();
@@ -195,6 +184,19 @@ export default function ReelCard({
             <span>{embedUrl ? "Loading preview…" : "Invalid Reel link"}</span>
           </div>
         )}
+      </div>
+      <div className="reel-playback-actions">
+        <button
+          className="replay-button"
+          aria-label={`Replay ${reel.title}`}
+          onClick={() => {
+            setFailed(false);
+            setAttempt((value) => value + 1);
+          }}
+        >
+          <RefreshCw size={15} />
+          Replay
+        </button>
       </div>
       {failed && (
         <div className="embed-error">
