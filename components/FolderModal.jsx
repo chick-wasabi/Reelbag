@@ -1,17 +1,111 @@
-'use client';
-import { useState } from 'react';
-import { Check, Folder } from 'lucide-react';
-import Modal from './Modal';
-import { COLORS, uid } from '../utils/storage';
+"use client";
 
-export default function FolderModal({ folder, onSave, onClose }) {
-  const [name, setName] = useState(folder?.name || ''); const [color, setColor] = useState(folder?.color || 'violet'); const [error, setError] = useState('');
-  return <Modal title={folder ? 'Edit collection' : 'Make room for an idea'} description="A collection is a folder for the things you want to try." onClose={onClose}>
-    <form className="space-y-5" onSubmit={e => { e.preventDefault(); try { onSave({ id: folder?.id || uid(), name: name.trim(), color }); } catch (err) { setError(err.message); } }}>
-      <label className="field-label">Collection name<input data-autofocus required maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder="Weekend adventures"/></label>
-      <fieldset><legend className="field-label mb-3">Folder color</legend><div className="flex gap-3">{COLORS.map(c => <button key={c} type="button" className={`color-dot color-${c} ${color === c ? 'selected' : ''}`} onClick={() => setColor(c)} aria-label={c} aria-pressed={color === c}>{color === c && <Check size={16}/>}</button>)}</div></fieldset>
-      {error && <p role="alert" className="error-text">{error}</p>}
-      <button className="button-primary w-full" disabled={!name.trim()}><Folder size={16}/>{folder ? 'Save changes' : 'Create collection'}</button>
-    </form>
-  </Modal>;
+import { useState } from "react";
+import { Folder, LockKeyhole } from "lucide-react";
+import Modal from "./Modal";
+import { hashPin, uid } from "../utils/storage";
+
+export default function FolderModal({ folder, onSave, onClose, onDelete }) {
+  const [name, setName] = useState(folder?.name || "");
+  const [protectedFolder, setProtected] = useState(Boolean(folder?.pin));
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      if (protectedFolder && (pin || !folder?.pin) && !/^\d{4}$/.test(pin))
+        throw new Error("Folder PINs must be exactly 4 digits.");
+      const credential = protectedFolder
+        ? pin
+          ? await hashPin(pin)
+          : folder.pin
+        : null;
+      await onSave({
+        id: folder?.id || uid(),
+        name: name.trim(),
+        pin: credential,
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      title={folder ? "Edit folder" : "New folder"}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+    >
+      <form onSubmit={submit} className="form-stack">
+        <label className="field-label">
+          Folder name
+          <input
+            data-autofocus
+            required
+            maxLength={60}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Bike Riding"
+            disabled={busy}
+          />
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={protectedFolder}
+            onChange={(e) => setProtected(e.target.checked)}
+            disabled={busy}
+          />
+          <LockKeyhole size={16} />
+          Protect with a PIN
+        </label>
+        {protectedFolder && (
+          <label className="field-label">
+            {folder?.pin
+              ? "New 4-digit PIN (leave blank to keep)"
+              : "4-digit folder PIN"}
+            <input
+              required={!folder?.pin}
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              pattern="[0-9]{4}"
+              minLength={4}
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              disabled={busy}
+            />
+          </label>
+        )}
+        {error && (
+          <p role="alert" className="error-text">
+            {error}
+          </p>
+        )}
+        <button
+          className="button-primary w-full"
+          disabled={busy || !name.trim()}
+        >
+          <Folder size={16} />
+          {busy ? "Saving…" : folder ? "Save folder" : "Create folder"}
+        </button>
+        {folder && (
+          <button
+            type="button"
+            className="button-quiet danger w-full"
+            disabled={busy}
+            onClick={onDelete}
+          >
+            Delete folder
+          </button>
+        )}
+      </form>
+    </Modal>
+  );
 }

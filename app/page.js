@@ -1,129 +1,583 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, Bookmark, Check, ChevronDown, ChevronRight, Clapperboard, Folder, FolderPlus, Grid2X2, HelpCircle, LayoutGrid, LockKeyhole, LogOut, Menu, MoreHorizontal, Pencil, Plus, Search, Settings, ShieldCheck, Smartphone, Sparkles, Trash2, X } from 'lucide-react';
-import AccountModal from '../components/AccountModal';
-import FolderModal from '../components/FolderModal';
-import ReelModal from '../components/ReelModal';
-import ReelCard from '../components/ReelCard';
-import Modal from '../components/Modal';
-import { emptyData, exportData, loadData, parseReelUrl, readBackup, saveData, STATUSES, STORAGE_KEY, validateData } from '../utils/storage';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bookmark,
+  Check,
+  LockKeyhole,
+  Plus,
+  Search,
+  Settings,
+  X,
+} from "lucide-react";
+import FolderBar from "../components/FolderBar";
+import FolderModal from "../components/FolderModal";
+import MigrationWizard from "../components/MigrationWizard";
+import Modal from "../components/Modal";
+import PinForm from "../components/PinForm";
+import ReelCard from "../components/ReelCard";
+import ReelModal from "../components/ReelModal";
+import SettingsPanel from "../components/SettingsPanel";
+import {
+  LEGACY_KEY,
+  loadData,
+  loadLegacyData,
+  parseReelUrl,
+  saveData,
+  STORAGE_KEY,
+} from "../utils/storage";
 
-function Brand({ small = false }) {
-  return <div className={`brand ${small ? 'brand-small' : ''}`}><span className="brand-mark"><Bookmark size={small ? 20 : 23} strokeWidth={2.4}/></span><span>reelbag<span className="text-accent">.</span></span></div>;
+function Brand() {
+  return (
+    <span className="brand">
+      <span className="brand-mark">
+        <Bookmark size={20} strokeWidth={2} />
+      </span>
+      Reelbag<span className="brand-dot">.</span>
+    </span>
+  );
 }
 
 export default function Home() {
-  const [data, setData] = useState(null); const [loadError, setLoadError] = useState(''); const [splash, setSplash] = useState(true);
-  const [activeId, setActiveId] = useState(null); const [selectedFolder, setSelectedFolder] = useState('all'); const [status, setStatus] = useState('all'); const [search, setSearch] = useState(''); const [sort, setSort] = useState('newest');
-  const [modal, setModal] = useState(null); const [mobileNav, setMobileNav] = useState(false); const [notice, setNotice] = useState(''); const [error, setError] = useState(''); const [pendingImport, setPendingImport] = useState(null); const [sharedUrl, setSharedUrl] = useState(''); const [importing, setImporting] = useState(false);
-  const fileInput = useRef(null);
-  const profile = data?.profiles.find(p => p.id === activeId);
+  const [data, setData] = useState(null);
+  const [legacy, setLegacy] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
+  const [unlocked, setUnlocked] = useState(new Set());
+  const [selected, setSelected] = useState("all");
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [sharedUrl, setSharedUrl] = useState("");
 
   useEffect(() => {
-    // Read browser-only storage after the first paint, preserving the server snapshot.
-    const frame = requestAnimationFrame(() => {
-      try { setData(loadData()); } catch (err) { setLoadError(`Your saved library could not be opened. ${err.message}`); }
-      const params = new URLSearchParams(window.location.search);
-      const candidate = params.get('url') || params.get('text')?.match(/https?:\/\/[^\s]+/)?.[0];
-      if (candidate && parseReelUrl(candidate)) setSharedUrl(parseReelUrl(candidate).url);
-    });
-    const timer = setTimeout(() => setSplash(false), 1000);
-    function storageChanged(event) {
-      if (event.key !== STORAGE_KEY && event.key !== null) return;
-      try { setData(loadData()); setActiveId(null); setModal(null); setNotice('Your library changed in another tab. Unlock a profile to continue.'); }
-      catch (err) { setLoadError(err.message); setActiveId(null); }
+    function read() {
+      try {
+        setData(loadData());
+        setLegacy(loadLegacyData());
+        setLoadError("");
+      } catch (err) {
+        setLoadError(err.message);
+      }
     }
-    window.addEventListener('storage', storageChanged);
-    return () => { cancelAnimationFrame(frame); clearTimeout(timer); window.removeEventListener('storage', storageChanged); };
+    const frame = requestAnimationFrame(() => {
+      read();
+      const params = new URLSearchParams(window.location.search);
+      const input =
+        params.get("url") ||
+        params.get("text")?.match(/https?:\/\/[^\s]+/)?.[0];
+      if (parseReelUrl(input)) setSharedUrl(parseReelUrl(input).url);
+    });
+    function changed(event) {
+      if (![STORAGE_KEY, LEGACY_KEY, null].includes(event.key)) return;
+      read();
+      setAuthenticated(false);
+      setUnlocked(new Set());
+      setSelected("all");
+      setSearch("");
+      setModal(null);
+      setNotice("Library updated in another tab. Please unlock again.");
+    }
+    window.addEventListener("storage", changed);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("storage", changed);
+    };
   }, []);
-  useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 5000); return () => clearTimeout(timer); }, [notice]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   function commit(next) {
-    const saved = saveData(next, data.revision); setData(saved); setError(''); return saved;
+    const saved = saveData(next, data.revision);
+    setData(saved);
+    setError("");
+    return saved;
   }
-  function changeProfile(next) { commit({ ...data, profiles: data.profiles.map(p => p.id === next.id ? next : p) }); }
-  function notify(message) { setNotice(message); }
-  function selectFolder(id) { setSelectedFolder(id); setMobileNav(false); }
-  function openAddReel() { setModal({ type: 'reel' }); }
-  function guard(action) { try { action(); } catch (err) { setError(err.message); } }
-  function unlock(account) {
-    setActiveId(account.id); setSelectedFolder('all'); setStatus('all'); setSearch('');
-    setModal(sharedUrl ? { type: 'reel', initialUrl: sharedUrl } : null);
+  function guard(action) {
+    try {
+      action();
+    } catch (err) {
+      setError(err.message);
+    }
   }
-  function lock() { setActiveId(null); setModal(null); setMobileNav(false); setSearch(''); }
-  async function importFile(event) {
-    const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
-    setImporting(true);
-    try { setPendingImport(await readBackup(file)); setModal({ type: 'import' }); }
-    catch (err) { setError(err.message); }
-    finally { setImporting(false); }
+  function lock() {
+    setAuthenticated(false);
+    setUnlocked(new Set());
+    setSelected("all");
+    setSearch("");
+    setModal(null);
+    setError("");
+  }
+  function openLibrary() {
+    setAuthenticated(true);
+    setModal(sharedUrl ? { type: "reel", initialUrl: sharedUrl } : null);
+  }
+  function selectFolder(id, lockId) {
+    if (lockId)
+      setUnlocked((previous) => {
+        const next = new Set(previous);
+        next.delete(lockId);
+        return next;
+      });
+    const folder = data.folders.find((f) => f.id === id);
+    if (folder?.pin && !unlocked.has(id)) {
+      setModal({ type: "unlockFolder", folder });
+      return;
+    }
+    setSelected(id);
+    setSearch("");
+  }
+  function saveFolder(folder) {
+    if (
+      data.folders.some(
+        (f) =>
+          f.id !== folder.id &&
+          f.name.toLowerCase() === folder.name.toLowerCase(),
+      )
+    )
+      throw new Error("A folder with this name already exists.");
+    const exists = data.folders.some((f) => f.id === folder.id);
+    commit({
+      ...data,
+      folders: exists
+        ? data.folders.map((f) => (f.id === folder.id ? folder : f))
+        : [...data.folders, folder],
+    });
+    setUnlocked((previous) => new Set([...previous, folder.id]));
+    if (modal.returnTo) {
+      setModal({
+        ...modal.returnTo,
+        draft: { ...modal.returnTo.draft, folderId: folder.id },
+      });
+    } else {
+      setSelected(folder.id);
+      setSearch("");
+      setModal(null);
+    }
+    setNotice("Folder saved.");
   }
   function saveReel(reel) {
-    if (profile.reels.some(r => r.shortcode === reel.shortcode && r.id !== reel.id)) throw new Error('This reel is already in your library. Search for its title to find it.');
-    changeProfile({ ...profile, reels: modal.reel ? profile.reels.map(r => r.id === reel.id ? reel : r) : [reel, ...profile.reels] });
-    setModal(null); setSharedUrl('');
-    const url = new URL(window.location.href); ['url', 'text', 'title'].forEach(k => url.searchParams.delete(k)); window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    notify(modal.reel ? 'Reel updated.' : 'A little inspiration, saved.');
+    if (
+      data.reels.some(
+        (r) =>
+          r.id !== reel.id &&
+          r.shortcode === reel.shortcode &&
+          r.folderId === reel.folderId,
+      )
+    )
+      throw new Error("This reel is already saved in that folder.");
+    commit({
+      ...data,
+      reels: modal.reel
+        ? data.reels.map((r) => (r.id === reel.id ? reel : r))
+        : [reel, ...data.reels],
+    });
+    // A reel moved into a locked folder must disappear from the current stream.
+    if (
+      reel.folderId &&
+      data.folders.some((f) => f.id === reel.folderId && f.pin) &&
+      !unlocked.has(reel.folderId)
+    )
+      setNotice("Reel saved in the locked folder.");
+    else {
+      setSelected(reel.folderId || "all");
+      setSearch("");
+      setNotice("Reel saved.");
+    }
+    setModal(null);
+    setSharedUrl("");
+    const url = new URL(window.location.href);
+    ["url", "text", "title"].forEach((key) => url.searchParams.delete(key));
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }
-
-  const filtered = useMemo(() => {
-    if (!profile) return [];
+  function restore(backup) {
+    commit({ ...backup, revision: data.revision });
+    setLegacy(null);
+    lock();
+    setNotice("Backup restored. Unlock with the backup’s Master PIN.");
+  }
+  const reels = useMemo(() => {
+    if (!data || !authenticated) return [];
+    const lockedIds = new Set(
+      data.folders.filter((f) => f.pin && !unlocked.has(f.id)).map((f) => f.id),
+    );
     const query = search.trim().toLowerCase();
-    return profile.reels.filter(r => (selectedFolder === 'all' || (selectedFolder === 'unfiled' ? !r.folderId : r.folderId === selectedFolder)) && (status === 'all' || r.status === status) && (!query || `${r.title} ${r.note}`.toLowerCase().includes(query))).sort((a, b) => sort === 'title' ? a.title.localeCompare(b.title) : sort === 'oldest' ? Date.parse(a.createdAt) - Date.parse(b.createdAt) : Date.parse(b.createdAt) - Date.parse(a.createdAt));
-  }, [profile, selectedFolder, status, search, sort]);
-  const currentFolder = profile?.folders.find(f => f.id === selectedFolder);
-  const collectionTitle = selectedFolder === 'all' ? 'All reels' : selectedFolder === 'unfiled' ? 'Unfiled' : currentFolder?.name || 'All reels';
-  const folderReels = profile?.reels.filter(r => selectedFolder === 'all' || (selectedFolder === 'unfiled' ? !r.folderId : r.folderId === selectedFolder)) || [];
+    return data.reels
+      .filter(
+        (r) =>
+          !lockedIds.has(r.folderId) &&
+          (selected === "all" || r.folderId === selected) &&
+          (!query || r.title.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }, [data, authenticated, unlocked, selected, search]);
 
-  function nav() {
-    return <>
-      <div className="px-6 pt-8 pb-9"><Brand small/></div>
-      <div className="px-4"><p className="nav-caption">YOUR WORKSPACE</p><button className={`nav-link ${selectedFolder === 'all' ? 'active' : ''}`} onClick={() => selectFolder('all')}><Grid2X2 size={18}/><span>All reels</span><span className="nav-count">{profile.reels.length}</span></button><button className={`nav-link ${selectedFolder === 'unfiled' ? 'active' : ''}`} onClick={() => selectFolder('unfiled')}><Bookmark size={18}/><span>Unfiled</span><span className="nav-count">{profile.reels.filter(r => !r.folderId).length}</span></button>
-      <div className="flex justify-between items-center mt-9 mb-3"><p className="nav-caption !mb-0">COLLECTIONS</p><button className="icon-button small" aria-label="Create collection" onClick={() => { setMobileNav(false); setModal({ type: 'folder' }); }}><Plus size={16}/></button></div>
-      <div className="space-y-1">{profile.folders.map(f => <button key={f.id} className={`nav-link ${selectedFolder === f.id ? 'active' : ''}`} onClick={() => selectFolder(f.id)}><Folder size={17} className={`text-${f.color}`}/><span className="truncate">{f.name}</span><span className="nav-count">{profile.reels.filter(r => r.folderId === f.id).length}</span></button>)}</div>
-      <button className="nav-link new-folder mt-2" onClick={() => { setMobileNav(false); setModal({ type: 'folder' }); }}><Plus size={17}/><span>New collection</span></button></div>
-      <div className="mt-auto px-4 pt-10 pb-4"><div className="inspiration-note"><Sparkles size={19} className="text-accent"/><p className="mt-3 text-sm text-zinc-200 font-medium">Less scrolling.<br/>More doing.</p><p className="text-xs text-zinc-500 mt-2 leading-relaxed">Your next great idea is already in your saves.</p></div><button className="nav-link mt-4" onClick={() => { setMobileNav(false); setModal({ type: 'help' }); }}><HelpCircle size={17}/><span>How to save reels</span><ArrowUpRight size={14}/></button><button className="nav-link" onClick={() => { setMobileNav(false); setModal({ type: 'settings' }); }}><Settings size={17}/><span>Settings & backup</span></button></div>
-      <button className="profile-button" onClick={lock}><span className={`avatar color-${profile.color}`}>{profile.name.slice(0, 1).toUpperCase()}</span><span className="min-w-0 flex-1 text-left"><strong className="block text-sm truncate">{profile.name}</strong><span className="text-[11px] text-zinc-500">Switch profile</span></span><LogOut size={16} className="text-zinc-500"/></button>
-    </>;
-  }
+  return (
+    <>
+      {loadError ? (
+        <main className="gate">
+          <Brand />
+          <section className="gate-panel">
+            <h1>Your library couldn’t be opened</h1>
+            <p className="muted-copy" role="alert">
+              {loadError}
+            </p>
+            <p className="muted-copy">
+              Your stored data has not been changed. Enable browser storage, or
+              preserve the Reelbag storage entries before restoring a backup.
+            </p>
+            <button
+              className="button-primary"
+              onClick={() => window.location.reload()}
+            >
+              Try again
+            </button>
+          </section>
+        </main>
+      ) : !data ? (
+        <main className="gate">
+          <Brand />
+          <p className="muted-copy" role="status">
+            Opening your library…
+          </p>
+        </main>
+      ) : legacy ? (
+        <main className="gate">
+          <Brand />
+          <section className="gate-panel">
+            <MigrationWizard
+              legacy={legacy}
+              onComplete={(next) => {
+                commit(next);
+                setLegacy(null);
+                openLibrary();
+              }}
+            />
+          </section>
+        </main>
+      ) : !authenticated ? (
+        <main className="gate">
+          <Brand />
+          <section className="gate-panel">
+            <div className="gate-icon">
+              <LockKeyhole size={22} />
+            </div>
+            <h1>
+              {data.masterPin ? "Welcome back." : "Your reels. Your space."}
+            </h1>
+            <p className="muted-copy">
+              {data.masterPin
+                ? "One PIN. Everything worth keeping."
+                : "Set a Master PIN to start your library."}
+            </p>
+            <PinForm
+              create={!data.masterPin}
+              credential={data.masterPin}
+              onSuccess={(pin) => {
+                if (!data.masterPin) commit({ ...data, masterPin: pin });
+                openLibrary();
+              }}
+            />
+            {!data.masterPin && (
+              <p className="fine-print">
+                Your library stays in this browser. PINs are hashed; data isn’t
+                encrypted. There is no PIN recovery.
+              </p>
+            )}
+          </section>
+        </main>
+      ) : (
+        <div className="app-shell">
+          <header className="topbar">
+            <Brand />
+            <label className="search-box">
+              <Search size={17} />
+              <span className="sr-only">Search reels</span>
+              <input
+                type="search"
+                placeholder="Search reels…"
+                value={search}
+                maxLength={200}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            <FolderBar
+              folders={data.folders}
+              selected={selected}
+              unlocked={unlocked}
+              onSelect={selectFolder}
+              onCreate={() => setModal({ type: "folder" })}
+              onEdit={(folder) => setModal({ type: "folder", folder })}
+            />
+            <button
+              className="button-primary add-reel"
+              onClick={() => setModal({ type: "reel" })}
+            >
+              <Plus size={17} />
+              <span>Add Reel</span>
+            </button>
+            <div className="header-actions">
+              <button
+                className="icon-button"
+                aria-label="Settings"
+                title="Settings"
+                onClick={() => setModal({ type: "settings" })}
+              >
+                <Settings size={19} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Lock app"
+                title="Lock app"
+                onClick={lock}
+              >
+                <LockKeyhole size={18} />
+              </button>
+            </div>
+          </header>
+          <main className="stream" id="main-content">
+            {reels.length ? (
+              <div className="reel-grid">
+                {reels.map((reel) => (
+                  <ReelCard
+                    key={reel.id}
+                    reel={reel}
+                    folder={data.folders.find((f) => f.id === reel.folderId)}
+                    onEdit={() => setModal({ type: "reel", reel })}
+                    onDelete={() => setModal({ type: "deleteReel", reel })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <section className="empty-state">
+                <Bookmark size={30} strokeWidth={1.3} />
+                <h1>
+                  {search ? "No matching reels." : "A place for the good ones."}
+                </h1>
+                <p>
+                  {search
+                    ? "Try another title."
+                    : "Add a reel, or open a folder above."}
+                </p>
+                <button
+                  className="button-secondary"
+                  onClick={() =>
+                    search ? setSearch("") : setModal({ type: "reel" })
+                  }
+                >
+                  {search ? "Clear search" : "Add your first reel"}
+                </button>
+              </section>
+            )}
+          </main>
+        </div>
+      )}
 
-  return <>
-    {splash && <div className="splash" aria-label="Loading Reelbag"><Brand/><p>Good ideas deserve a place.</p></div>}
-    <input ref={fileInput} className="sr-only" tabIndex={-1} type="file" accept="application/json,.json" onChange={importFile} aria-label="Import Reelbag backup"/>
-    {loadError ? <main className="account-screen"><Brand/><div className="glass-panel max-w-lg mt-12 p-8"><h1 className="text-2xl font-semibold">Your library needs attention</h1><p role="alert" className="text-zinc-400 mt-4 leading-relaxed">{loadError}</p><p className="text-sm text-zinc-500 mt-4">No saved data has been overwritten. Make sure browser storage is enabled. If a saved file is damaged, preserve the “reelbag.v1” entry in browser developer tools before restoring a backup.</p><button className="button-primary mt-6" onClick={() => window.location.reload()}>Try again</button></div></main> : !data ? <main className="account-screen"><Brand/><p role="status" className="mt-10 text-zinc-500">Opening your library…</p></main> : !profile ? <main className="account-screen">
-      <header className="account-top"><Brand/><button className="button-quiet" onClick={() => setModal({ type: 'settings' })}><Settings size={17}/><span className="hidden sm:inline">Data & settings</span></button></header>
-      <div className="account-intro"><span className="eyebrow"><span className="tiny-dot bg-lime"/> A HOME FOR YOUR INSPIRATION</span><h1>Your ideas.<br/><span className="text-zinc-500">In good company.</span></h1><p>{data.profiles.length ? 'Choose your space and pick up where inspiration left off.' : 'Save the reels you love. Organize your next big thing.'}<br className="hidden sm:block"/>{data.profiles.length ? 'Different worlds. One little bag.' : 'Create a private local profile to make it yours.'}</p></div>
-      <div className="profile-grid">{data.profiles.map(p => <button className="account-card group" key={p.id} onClick={() => setModal({ type: 'account', mode: 'unlock', account: p })}><span className={`account-avatar color-${p.color}`}>{p.name.slice(0, 1).toUpperCase()}<span className="account-lock"><LockKeyhole size={12}/></span></span><h2>{p.name}</h2><p>{p.reels.length} reels <span>·</span> {p.folders.length} collections</p><span className="account-open">Open your space <ArrowUpRight size={15}/></span></button>)}<button disabled={data.profiles.length >= 100} className="account-card new-account" onClick={() => setModal({ type: 'account', mode: 'create' })}><span className="account-avatar"><Plus size={31} strokeWidth={1.5}/></span><h2>Create a profile</h2><p>A fresh space for a new interest</p><span className="account-open">Make it yours <ArrowUpRight size={15}/></span></button></div>
-      {!data.profiles.length && <p className="profile-suggestions">A few ideas: <span>Personal</span><span>Bike Riding</span><span>With Friends</span></p>}
-      <footer className="account-footer"><span><ShieldCheck size={15}/> Local by design. Yours by default.</span><span>No account signup. No algorithm. Just your ideas.</span></footer>
-    </main> : <div className="app-shell">
-      <aside className="sidebar">{nav()}</aside>
-      {mobileNav && <div className="mobile-drawer-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setMobileNav(false); }}><Modal title="Your workspace" onClose={() => setMobileNav(false)}><div className="drawer-content">{nav()}</div></Modal></div>}
-      <div className="main-shell"><header className="topbar"><div className="flex items-center gap-3 min-w-0"><button className="icon-button lg:hidden" aria-label="Open navigation" onClick={() => setMobileNav(true)}><Menu size={21}/></button><span className="text-zinc-500 hidden sm:inline text-sm">My workspace</span><ChevronRight size={14} className="text-zinc-700 hidden sm:inline"/><span className="text-sm truncate">{collectionTitle}</span></div><div className="flex items-center gap-3"><span className="local-indicator"><span className="tiny-dot bg-lime"/>Saved on this device</span><button className="icon-button hidden sm:flex" aria-label="Help with saving reels" onClick={() => setModal({ type: 'help' })}><HelpCircle size={18}/></button><button className={`avatar color-${profile.color}`} onClick={lock} aria-label="Lock and switch profile">{profile.name.slice(0, 1).toUpperCase()}</button></div></header>
-      <main className="dashboard" id="main-content"><div className="page-heading"><div><p className="eyebrow">THE GOOD STUFF, ALL TOGETHER</p><h1>{collectionTitle}<span className="title-dot">.</span></h1><p className="heading-description">A little inspiration for whatever comes next.</p></div><button className="button-primary desktop-add" onClick={openAddReel}><Plus size={18}/>Add reel</button></div>
-      <section className="welcome-banner"><div className="banner-decoration" aria-hidden="true"><Bookmark/><Clapperboard/><Sparkles/></div><div className="relative"><span className="banner-kicker"><Sparkles size={13}/> COLLECT IDEAS. CREATE SOMETHING.</span><h2>Don’t just save it.<br className="sm:hidden"/> Make it happen.</h2><p>Your recipes, adventures, edits, and someday projects.<br className="hidden sm:block"/> All the inspiration. A little more intention.</p><button onClick={() => setModal({ type: 'help' })}>Build your inspiration library <ArrowUpRight size={15}/></button></div><div className="banner-badge" aria-hidden="true"><Clapperboard size={39} strokeWidth={1.4}/><span>GOOD IDEAS<br/>LIVE HERE</span></div></section>
-      <div className="collection-heading"><div className="flex items-center gap-2"><LayoutGrid size={17} className="text-zinc-500"/><h2 className="text-sm font-medium">Your library</h2><span className="count-pill">{folderReels.length}</span></div><div className="flex items-center gap-2">{currentFolder && <><button className="button-quiet small" aria-label="Edit collection" onClick={() => setModal({ type: 'folder', folder: currentFolder })}><Pencil size={14}/><span className="hidden sm:inline">Edit</span></button><button className="icon-button small danger" aria-label="Delete collection" onClick={() => setModal({ type: 'deleteFolder', folder: currentFolder })}><Trash2 size={14}/></button></>}<button className="button-quiet small" onClick={() => setModal({ type: 'folder' })}><FolderPlus size={15}/><span>New collection</span></button></div></div>
-      <div className="filter-toolbar"><div className="status-tabs" role="group" aria-label="Filter by reel status">{['all', ...STATUSES].map(s => <button key={s} onClick={() => setStatus(s)} className={status === s ? 'selected' : ''} aria-pressed={status === s}>{s === 'all' ? 'All reels' : s}<span>{folderReels.filter(r => s === 'all' || r.status === s).length}</span></button>)}</div><div className="search-sort"><label className="search-box"><Search size={16}/><span className="sr-only">Search reels</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search your inspiration…" maxLength={200}/></label><label className="sort-control"><span className="sr-only">Sort reels</span><select value={sort} onChange={e => setSort(e.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select><ChevronDown size={13}/></label></div></div>
-      {filtered.length ? <div className="reel-grid">{filtered.map(r => <ReelCard key={r.id} reel={r} folder={profile.folders.find(f => f.id === r.folderId)} onEdit={() => setModal({ type: 'reel', reel: r })} onDelete={() => setModal({ type: 'deleteReel', reel: r })} onStatus={next => guard(() => { changeProfile({ ...profile, reels: profile.reels.map(item => item.id === r.id ? { ...item, status: next } : item) }); notify('Status updated.'); })}/>)}</div> : <section className="empty-state"><div className="empty-icon">{search || status !== 'all' ? <Search size={28}/> : <Bookmark size={30} strokeWidth={1.5}/>}</div><span className="eyebrow">{search || status !== 'all' ? 'A LITTLE TOO SPECIFIC?' : 'YOUR NEXT IDEA STARTS HERE'}</span><h2>{search || status !== 'all' ? 'No reels found' : 'Good things are worth keeping.'}</h2><p>{search || status !== 'all' ? 'Try a different search or clear your filters.' : 'That recipe. That ride. That “I need to try this.”\nGive your first reel a place to call home.'}</p>{search || status !== 'all' ? <button className="button-secondary" onClick={() => { setSearch(''); setStatus('all'); }}>Clear filters</button> : <button className="button-primary" onClick={openAddReel}><Plus size={17}/>Save your first reel</button>}<span className="empty-footnote"><LockKeyhole size={12}/>Private library · Saved in your browser</span></section>}
-      <footer className="dashboard-footer"><span>Less lost in your saves. More out in the world.</span><span><span className="tiny-dot bg-lime"/>{profile.reels.length} ideas and counting</span></footer>
-      </main></div>
-      <button className="mobile-fab" onClick={openAddReel} aria-label="Add reel"><Plus size={25}/></button><nav className="mobile-bottom" aria-label="Mobile navigation"><button onClick={() => { selectFolder('all'); setStatus('all'); }} className={selectedFolder === 'all' ? 'active' : ''}><Grid2X2 size={20}/>Library</button><button onClick={() => setMobileNav(true)}><Folder size={20}/>Collections</button><button onClick={() => setModal({ type: 'settings' })}><Settings size={20}/>Settings</button><button onClick={lock}><LogOut size={20}/>Profiles</button></nav>
-    </div>}
-
-    {notice && <div className="toast" role="status"><Check size={17}/>{notice}<button onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={14}/></button></div>}
-    {error && <div className="error-banner" role="alert"><span>{error}</span><button className="icon-button small" aria-label="Dismiss error" onClick={() => setError('')}><X size={17}/></button></div>}
-
-    {modal?.type === 'account' && <AccountModal account={modal.account} mode={modal.mode} onClose={() => setModal(null)} onSave={account => { if (modal.mode === 'unlock') { unlock(account); return; } if (modal.mode === 'edit') changeProfile(account); else { if (data.profiles.some(p => p.name.toLowerCase() === account.name.toLowerCase())) throw new Error('Choose a different profile name.'); commit({ ...data, profiles: [...data.profiles, account] }); } unlock(account); notify(modal.mode === 'edit' ? 'Profile updated.' : 'Welcome to your new space.'); }}/>}
-    {modal?.type === 'folder' && profile && <FolderModal folder={modal.folder} onClose={() => setModal(null)} onSave={folder => { if (profile.folders.some(f => f.id !== folder.id && f.name.toLowerCase() === folder.name.toLowerCase())) throw new Error('A collection with this name already exists.'); changeProfile({ ...profile, folders: modal.folder ? profile.folders.map(f => f.id === folder.id ? folder : f) : [...profile.folders, folder] }); setSelectedFolder(folder.id); setModal(null); notify('Collection saved.'); }}/>}
-    {modal?.type === 'reel' && profile && <ReelModal reel={modal.reel} folders={profile.folders} folderId={currentFolder?.id} initialUrl={modal.initialUrl} onClose={() => setModal(null)} onSave={saveReel}/>}
-    {['deleteFolder', 'deleteReel', 'deleteProfile'].includes(modal?.type) && <Modal title={modal.type === 'deleteFolder' ? 'Delete this collection?' : modal.type === 'deleteProfile' ? 'Delete your profile?' : 'Remove this reel?'} description={modal.type === 'deleteFolder' ? `“${modal.folder.name}” will be removed. Its reels will be moved to Unfiled.` : modal.type === 'deleteProfile' ? 'This permanently removes this profile, all of its collections, and its reels from this browser. Export a backup first.' : `“${modal.reel.title}” will be removed from your library. This cannot be undone.`} onClose={() => setModal(null)}><div className="flex gap-3 justify-end"><button className="button-secondary" onClick={() => setModal(null)}>Keep it</button><button className="button-danger" onClick={() => guard(() => { if (modal.type === 'deleteFolder') { changeProfile({ ...profile, folders: profile.folders.filter(f => f.id !== modal.folder.id), reels: profile.reels.map(r => r.folderId === modal.folder.id ? { ...r, folderId: null } : r) }); setSelectedFolder('all'); } else if (modal.type === 'deleteProfile') { commit({ ...data, profiles: data.profiles.filter(p => p.id !== activeId) }); lock(); } else changeProfile({ ...profile, reels: profile.reels.filter(r => r.id !== modal.reel.id) }); setModal(null); notify('Removed from your library.'); })}><Trash2 size={16}/>Delete {modal.type === 'deleteFolder' ? 'collection' : modal.type === 'deleteProfile' ? 'profile' : 'reel'}</button></div></Modal>}
-    {modal?.type === 'settings' && <Modal title="Your data. Your call." description="Reelbag lives in this browser. Keep a backup for safekeeping or take your library to another device." onClose={() => setModal(null)} wide>
-      <div className="settings-section"><h3><ArrowDownToLine size={17}/>Data management</h3><p>Backups include every profile, collection, reel, and hashed PIN. Keep the JSON file private. Importing replaces your entire current library and preserves the backup’s PINs.</p><div className="flex gap-3 flex-wrap mt-4"><button className="button-primary" onClick={() => guard(() => { exportData(data); notify('Backup downloaded. Keep it somewhere safe.'); })}><ArrowDownToLine size={16}/>Export JSON Backup</button><button className="button-secondary" disabled={importing} onClick={() => fileInput.current?.click()}><ArrowUpFromLine size={16}/>{importing ? 'Checking backup…' : 'Import JSON Backup'}</button></div><p className="!text-xs !mt-3">{data.profiles.length} profiles · {data.profiles.reduce((n, p) => n + p.reels.length, 0)} saved reels · Backup format v1</p></div>
-      {profile && <div className="settings-section"><h3><LockKeyhole size={17}/>Your profile</h3><p>Update your name, color, or PIN. You will need your current PIN.</p><div className="flex gap-3 flex-wrap mt-4"><button className="button-secondary" onClick={() => setModal({ type: 'account', mode: 'edit', account: profile })}><Pencil size={15}/>Edit profile & PIN</button><button className="button-quiet text-red-300" onClick={() => setModal({ type: 'deleteProfile' })}><Trash2 size={15}/>Delete profile</button></div></div>}
-      <div className="privacy-note"><ShieldCheck size={21}/><div><h3 className="text-sm font-medium">A note on privacy</h3><p>Profiles are local spaces, not online accounts. PINs use salted PBKDF2-SHA256 hashes, but your reels and notes are not encrypted. Anyone with access to browser storage or a backup can read them. Clearing browser data deletes your library. Instagram embeds connect to Meta and may use cookies; private or restricted reels may not play.</p></div></div>
-    </Modal>}
-    {modal?.type === 'import' && pendingImport && <Modal title="Replace your library?" description={`This backup contains ${pendingImport.profiles.length} profiles and ${pendingImport.profiles.reduce((n, p) => n + p.reels.length, 0)} reels. It will replace all profiles on this device. You’ll need the PINs from that backup to unlock them.`} onClose={() => { setPendingImport(null); setModal(null); }}><div className="space-y-4"><button className="button-secondary w-full" onClick={() => guard(() => exportData(data))}><ArrowDownToLine size={16}/>Export current library first</button><button className="button-primary w-full" onClick={() => guard(() => { commit({ ...pendingImport, revision: data.revision }); setPendingImport(null); lock(); notify('Backup restored. Choose a profile to continue.'); })}><ArrowUpFromLine size={16}/>Replace library & import</button><button className="button-quiet w-full" onClick={() => { setPendingImport(null); setModal(null); }}>Cancel import</button></div></Modal>}
-    {modal?.type === 'help' && <Modal title="From your feed to your next idea." description="A few seconds now. A little inspiration for later." onClose={() => setModal(null)} wide><div className="help-steps"><div><span>01</span><div><h3>Find a reel worth keeping</h3><p>In Instagram, tap the share icon on a Reel, then choose “Copy link.” Private reels may only play when you’re signed into Instagram.</p></div></div><div><span>02</span><div><h3>Give it a home</h3><p>Come back to Reelbag, tap + Add Reel, and paste the link. Add a searchable title and choose a collection.</p></div></div><div><span>03</span><div><h3>Turn a save into a plan</h3><p>Move your reels from To Try to In Progress to Completed. Make a collection for your next ride, recipe night, or creative project.</p></div></div></div><div className="settings-section mt-6"><h3><Smartphone size={18}/>Make it quicker on your phone</h3><p><strong className="text-zinc-200">iPhone:</strong> In Shortcuts, create a shortcut that receives URLs from the Share Sheet. Add “URL Encode” for the Shortcut Input, then a URL action with your deployed Reelbag address followed by <code>/?url=[encoded input]</code>. Add “Open URLs.” Share an Instagram Reel to that shortcut, then unlock your profile to save it.</p><p><strong className="text-zinc-200">Android:</strong> In Instagram’s Share menu, choose Copy link, open Reelbag, and tap + to paste. Add Reelbag to your home screen from Chrome’s menu for easy access. Direct Android share-target installation is not included.</p><p><strong className="text-zinc-200">Across devices:</strong> Export a JSON backup in Settings, transfer the file securely, and import it in the other browser. Data does not sync automatically.</p></div><button className="button-primary w-full mt-5" onClick={() => setModal(null)}>Got it <Check size={16}/></button></Modal>}
-  </>;
+      {authenticated && modal?.type === "reel" && (
+        <ReelModal
+          reel={modal.reel}
+          draft={modal.draft}
+          initialUrl={modal.initialUrl}
+          folders={data.folders}
+          folderId={selected === "all" ? null : selected}
+          onSave={saveReel}
+          onClose={() => setModal(null)}
+          onCreateFolder={(draft) =>
+            setModal({ type: "folder", returnTo: { ...modal, draft } })
+          }
+        />
+      )}
+      {authenticated && modal?.type === "folder" && (
+        <FolderModal
+          folder={modal.folder}
+          onSave={saveFolder}
+          onClose={() => setModal(modal.returnTo || null)}
+          onDelete={() =>
+            setModal({ type: "deleteFolder", folder: modal.folder })
+          }
+        />
+      )}
+      {authenticated && modal?.type === "unlockFolder" && (
+        <Modal
+          title={modal.folder.name}
+          description="This folder is PIN protected."
+          onClose={() => setModal(null)}
+        >
+          <PinForm
+            folder
+            credential={modal.folder.pin}
+            label="Folder PIN"
+            submitLabel="Open folder"
+            onSuccess={() => {
+              setUnlocked(
+                (previous) => new Set([...previous, modal.folder.id]),
+              );
+              setSelected(modal.folder.id);
+              setSearch("");
+              setModal(null);
+            }}
+          />
+        </Modal>
+      )}
+      {authenticated && modal?.type === "settings" && (
+        <Modal title="Settings" onClose={() => setModal(null)}>
+          <SettingsPanel
+            data={data}
+            onImport={(backup) => setModal({ type: "import", backup })}
+            onChangePin={() => setModal({ type: "verifyMaster" })}
+          />
+        </Modal>
+      )}
+      {authenticated && modal?.type === "verifyMaster" && (
+        <Modal
+          title="Change Master PIN"
+          description="Verify your current PIN first."
+          onClose={() => setModal(null)}
+        >
+          <PinForm
+            credential={data.masterPin}
+            label="Current Master PIN"
+            submitLabel="Continue"
+            onSuccess={() => setModal({ type: "setMaster" })}
+          />
+        </Modal>
+      )}
+      {authenticated && modal?.type === "setMaster" && (
+        <Modal title="New Master PIN" onClose={() => setModal(null)}>
+          <PinForm
+            create
+            onSuccess={(pin) => {
+              commit({ ...data, masterPin: pin });
+              lock();
+              setNotice("Master PIN updated. Unlock to continue.");
+            }}
+          />
+        </Modal>
+      )}
+      {authenticated && modal?.type === "import" && (
+        <Modal
+          title="Replace your library?"
+          description="This replaces every reel, folder, and PIN on this device. Export your current library first. This cannot be undone."
+          onClose={() => setModal(null)}
+        >
+          <div className="form-stack">
+            <p className="muted-copy">
+              {modal.backup.version === 1
+                ? "This is an older backup. Verify every old PIN and choose a new Master PIN in the next step."
+                : "You will need the Master PIN from this backup. Folder PINs will also be preserved."}
+            </p>
+            <button
+              className="button-primary"
+              onClick={() =>
+                guard(() =>
+                  modal.backup.version === 1
+                    ? setModal({ type: "legacyImport", backup: modal.backup })
+                    : restore(modal.backup),
+                )
+              }
+            >
+              {modal.backup.version === 1
+                ? "Continue migration"
+                : "Replace & import"}
+            </button>
+            <button className="button-secondary" onClick={() => setModal(null)}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+      {authenticated && modal?.type === "legacyImport" && (
+        <Modal title="Migrate backup" onClose={() => setModal(null)}>
+          <MigrationWizard legacy={modal.backup} onComplete={restore} />
+        </Modal>
+      )}
+      {authenticated &&
+        ["deleteReel", "deleteFolder"].includes(modal?.type) && (
+          <Modal
+            title={
+              modal.type === "deleteFolder" ? "Delete folder?" : "Delete reel?"
+            }
+            description={
+              modal.type === "deleteFolder"
+                ? "The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN."
+                : "This removes the reel from your library. It cannot be undone."
+            }
+            onClose={() => setModal(null)}
+          >
+            <div className="dialog-actions">
+              <button
+                className="button-secondary"
+                onClick={() => setModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="button-danger"
+                onClick={() =>
+                  guard(() => {
+                    if (modal.type === "deleteFolder") {
+                      commit({
+                        ...data,
+                        folders: data.folders.filter(
+                          (f) => f.id !== modal.folder.id,
+                        ),
+                        reels: data.reels.map((r) =>
+                          r.folderId === modal.folder.id
+                            ? { ...r, folderId: null }
+                            : r,
+                        ),
+                      });
+                      setSelected("all");
+                      setSearch("");
+                      setUnlocked((previous) => {
+                        const next = new Set(previous);
+                        next.delete(modal.folder.id);
+                        return next;
+                      });
+                    } else
+                      commit({
+                        ...data,
+                        reels: data.reels.filter((r) => r.id !== modal.reel.id),
+                      });
+                    setModal(null);
+                    setNotice("Deleted.");
+                  })
+                }
+              >
+                Delete {modal.type === "deleteFolder" ? "folder" : "reel"}
+              </button>
+            </div>
+          </Modal>
+        )}
+      {notice && (
+        <div className="toast" role="status">
+          <Check size={15} />
+          {notice}
+          <button
+            onClick={() => setNotice("")}
+            aria-label="Dismiss notification"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      {error && (
+        <div className="error-banner" role="alert">
+          <span>{error}</span>
+          <button
+            className="icon-button"
+            onClick={() => setError("")}
+            aria-label="Dismiss error"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+    </>
+  );
 }

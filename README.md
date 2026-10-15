@@ -1,17 +1,17 @@
 # Reelbag
 
-A responsive Instagram Reel catalog built with Next.js 16 App Router, React 19, Tailwind CSS, and Lucide. Create PIN-protected local profiles, organize reels into collections, track progress, and transfer your library with JSON backups. The original Next.js 14 requirement was upgraded with approval because that line has unpatched security advisories.
+A minimal Instagram Reel library built with Next.js 16 App Router, React 19, Tailwind CSS, and Lucide. One Master PIN opens your library. Save reels, find them by title, and organize them in folders with optional 4-digit PINs.
 
-## Run locally
+## Development
 
-Use Node.js 22 LTS and npm. No database, API key, or environment variables are required.
+Use Node.js 22 LTS (Node.js >=20.9 is supported). No database, API keys, or environment variables are required.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open the development server in a browser. Create a profile with a 4–8 digit PIN, create a collection, and save an Instagram Reel URL with a title. The title and your notes are searchable. Instagram provides the official caption, creator, and player within its embed; the app does not scrape Instagram or copy the caption into your local search index.
+Create a 4–8 digit Master PIN on first launch. Reloading or using Lock app always requires the Master PIN again. HTTPS or localhost is required for Web Crypto PIN hashing.
 
 ```sh
 npm run lint
@@ -20,53 +20,68 @@ npm run build
 npm start
 ```
 
-The production start command uses port 3000 by default (`PORT` can override it). PIN hashing requires HTTPS or localhost. Opening a development server over plain HTTP on a LAN IP will not enable Web Crypto on most browsers.
+## Use
 
-## Deploy on Vercel
+- The header contains the app title, search, folder controls, Add Reel, settings, and lock. There is no sidebar, banner, activity metadata, or profile switcher.
+- Add Reel has three fields: Instagram Reel Link, Title / Name, and optional Folder. Create New Folder opens the folder form inline without losing your reel draft.
+- Reels without a folder appear directly in All reels, without a category label. Search filters titles in the selected folder or across the visible stream.
+- Use the folder dropdown to open a folder. The adjacent icons create, edit, or lock a folder. Editing supports renaming, adding/changing a PIN, removing protection, and deletion.
+- Folder PINs are exactly four digits. Locked folder reels are omitted from the stream and search, and their embed containers are not rendered. Unlocking a folder makes it available until you lock it, lock the app, reload, or another tab changes the library. Creating a protected folder unlocks it for the current session.
+- Saving a reel into a locked folder does not unlock that folder. Deleting a folder moves its reels into the main stream and removes their folder protection, with explicit confirmation.
+- Settings supports changing the Master PIN and JSON export/import. Imports require confirmation and replace the entire library, including all PINs. Invalid backups leave existing data unchanged.
 
-Push this directory to a GitHub repository and import it into Vercel. Select the Next.js framework preset, use Node.js 22, and keep the default `npm run build` command. If this directory is nested in another repository, set Vercel’s Root Directory to this directory. There are no runtime secrets or database setup steps. Vercel supplies HTTPS.
+## Existing libraries
 
-Before deployment, run `npm audit --omit=dev` and keep the framework patched. A successful build is not a dependency security audit. Builds use Next.js’s supported webpack mode for a predictable build in restricted cloud environments.
+The app uses the `reelbag.v2` localStorage key. When only the old `reelbag.v1` data exists, a one-time migration requires every existing PIN before combining the libraries and choosing a new Master PIN. All titles, reel links, and folder memberships are retained; duplicate IDs are remapped and duplicate folder names receive numbered suffixes. Old task metadata is removed from the new format. Add optional folder PINs after migration.
 
-## Data and PINs
+The original v1 browser entry is left untouched as a recovery copy. It can still contain old information; remove it manually only after verifying your migrated library and exporting a current backup. Older JSON backups follow the same verification and migration flow before import replaces the current library. Migration and imports never silently skip libraries with unavailable PINs.
 
-- Each profile has independent folders, reels, and a salted PBKDF2-SHA256 PIN hash (210,000 iterations). The original PIN is never saved. Profiles lock when the page reloads or you select Switch profile.
-- This is a multi-profile, browser-local application. It is not a server-authenticated multi-tenant service. Data is not encrypted; users with browser storage access or a backup can read all profiles. Short PINs are vulnerable to offline guessing. Do not store sensitive material here.
-- Local data is stored under `reelbag.v1` in localStorage. Writes are validated and acknowledged only after they succeed. Storage failures are displayed, and the current page retains the last saved state. Another-tab changes lock the profile; revision checks reject stale writes. Browser storage cannot provide fully transactional cross-tab writes.
-- Export JSON Backup includes all profiles and their PIN hashes. Keep backups private. Import validates sizes, IDs, relationships, status values, credentials, and Instagram URLs, then asks for confirmation before replacing the whole dataset. Import does not merge or reset PINs. There is no PIN recovery.
-- Deleting a collection moves its reels to Unfiled. Deleting a profile removes its entire library. Destructive actions require confirmation.
-- Back up before clearing browser data, changing domains, or switching devices. There is no cloud sync, telemetry, or backend database. Private browsing may discard data when the session closes. Each origin/browser has its own library.
+## Privacy and persistence
+
+Master and folder PINs use salted PBKDF2-SHA256 hashes with 210,000 iterations. Raw PINs are never saved. These locks protect the interface; data is **not encrypted**, and this is not server authentication. Anyone with browser storage access or a JSON backup can read the saved links and titles, including locked folders. Short PINs are vulnerable to offline guessing. There is no PIN recovery.
+
+Your browser saves the library locally. Clearing browser data, using private browsing, or changing domains may remove or isolate it. Export backups to transfer between devices; there is no automatic sync. Writes are validated before saving; storage quota errors preserve the last saved state. Another-tab changes lock the UI, and revision checks reject stale writes. localStorage is not a transactional database for concurrent writers.
 
 ## Instagram embeds
 
-Cards load the official `https://www.instagram.com/embed.js` script near the viewport and call `window.instgrm.Embeds.process()`. Instagram controls iframe content, login requirements, cookies, and playback. Private, removed, restricted, or embed-disabled reels may not display. Every card includes an original link, and script failures include Retry. No Instagram credentials are required or stored.
+Cards lazily load the official `https://www.instagram.com/embed.js` script near the viewport and trigger `window.instgrm.Embeds.process()`. Instagram controls the player, cookies, thumbnail, login requirements, and availability. Private, removed, or restricted reels may not display. Original links remain available; script failures include a Retry action. No Instagram login credentials are requested by Reelbag.
 
-The official embed script and its iframe may require network access to `www.instagram.com` and Instagram/Meta CDN domains in managed environments. Instagram can change its CDN destinations. Fallback links remain usable when third-party embeds are blocked. The grid uses one column on mobile, two on small tablets, three on larger screens, and four from 1440 px. Instagram’s iframe layout is controlled by Instagram.
+Managed cloud networks may need `www.instagram.com`, `*.cdninstagram.com`, and `*.fbcdn.net` allowed. The cloud policy used during initial development blocked live Instagram access; automated tests stub the script and separately test blocked-script fallbacks. Passing these tests does not prove that a particular live reel is playable.
 
-## Mobile saving
+Shared links are supported through `/?url=` with a URL-encoded Reel URL, or `?text=` containing a Reel link. Unlocking the app opens a prefilled Add Reel form; links are never saved without submission. This is not an installed native OS share target or offline PWA.
 
-The Help dialog includes iOS Shortcuts instructions and Android Copy link instructions. A deployed URL supports `/?url=` with a URL-encoded Instagram Reel link (or `?text=` containing a Reel URL). Unlock a profile to open the prefilled Add Reel dialog. A link is saved only when the user submits that form. This app does not claim native OS share-target or offline PWA support.
-
-## Validation
-
-`npm test` exercises PIN hashing, URL validation, backup validation, import limits, and storage conflict/quota handling. Browser tests exercise profile isolation, CRUD, filters, backup round trips, reload persistence, and responsive navigation against the production server.
+## Tests
 
 ```sh
-npx playwright install chromium
+npm test
 npm run build
+npx playwright install chromium
 npm run test:e2e
 ```
 
-To use a preinstalled Chromium binary, set `CHROMIUM_PATH` to its absolute path when running the browser tests. The browser suite stubs Instagram’s script to test app behavior deterministically; it does not prove that a live Instagram reel is publicly playable.
+Set `CHROMIUM_PATH` to an existing Chromium binary to skip the browser download. Browser tests cover inline folder creation, reel/folder CRUD, Master and folder PINs, protected content exclusion, reloads, backups, migration, cross-tab locking, failed embeds, and grid layouts from 320 px to desktop. Tests use isolated browser storage and a dedicated production server on port 3100, leaving your development server alone.
+
+## Vercel
+
+Push this directory to GitHub and import it into Vercel using the Next.js preset and Node.js 22. Keep the default `npm run build` command. No environment variables or backend provisioning are necessary. Vercel supplies HTTPS. The build uses Next.js's supported webpack mode. Run `npm audit --omit=dev` and keep dependencies patched before deployment.
 
 ## Structure
 
 ```text
-app/                  App Router layout, dashboard, styles
-components/           Accessible dialogs, account/folder/reel forms, Instagram card
-utils/storage.js      Persistence, backup validation, URLs, PBKDF2
-public/icon.svg       Application icon
-tests/                Unit and browser tests
+app/
+  layout.js             Metadata and root document
+  page.js               Single-library state, header, stream, and dialog routing
+  globals.css           Dark theme and responsive layouts
+components/
+  FolderBar.jsx         Folder selection and actions
+  FolderModal.jsx       Folder name and optional PIN
+  MigrationWizard.jsx   One-time legacy verification and migration
+  Modal.jsx             Accessible dialog and focus management
+  PinForm.jsx           Master/folder PIN creation and verification
+  ReelCard.jsx          Official Instagram embed and reel actions
+  ReelModal.jsx         Three-field save/edit form
+  SettingsPanel.jsx     Master PIN settings and backups
+utils/storage.js        Versioned persistence, validation, hashing, migration
+public/icon.svg         App icon
+tests/                  Unit and browser tests
 ```
-
-No build outputs, dependency folders, user data, or secret values belong in Git. The lockfile is included for repeatable installs.
