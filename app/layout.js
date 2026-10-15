@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   metadataBase: new URL("https://reelbag.vercel.app"),
-  title: "Reelbag — Your reels, simply saved.",
+  title: "Reelbag — Your personal vault for video remakes & inspiration",
   description:
     "A quiet home for your Instagram Reels. Save links, organize folders, and keep your favorites close.",
   applicationName: "Reelbag",
@@ -10,7 +10,7 @@ export const metadata = {
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
-      { url: "/icon1.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
     shortcut: "/favicon.ico",
     apple: [
