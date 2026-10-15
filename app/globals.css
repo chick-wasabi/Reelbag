@@ -711,3 +711,24 @@ select option {
     scroll-behavior: auto !important;
   }
 }
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #ffffff12;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  background: #ffffff02;
+}
+.auth-tabs button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 7px;
+  color: #8b9482;
+  font-size: 13px;
+}
+.auth-tabs button[aria-pressed="true"] {
+  color: #d4e9c1;
+  background: #c3ef960d;
+}

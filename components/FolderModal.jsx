@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Folder, LockKeyhole } from "lucide-react";
 import Modal from "./Modal";
-import { hashPin, uid } from "../utils/storage";
 
 export default function FolderModal({ folder, onSave, onClose, onDelete }) {
   const [name, setName] = useState(folder?.name || "");
@@ -18,15 +17,11 @@ export default function FolderModal({ folder, onSave, onClose, onDelete }) {
     try {
       if (protectedFolder && (pin || !folder?.pin) && !/^\d{4}$/.test(pin))
         throw new Error("Folder PINs must be exactly 4 digits.");
-      const credential = protectedFolder
-        ? pin
-          ? await hashPin(pin)
-          : folder.pin
-        : null;
       await onSave({
-        id: folder?.id || uid(),
+        id: folder?.id,
         name: name.trim(),
-        pin: credential,
+        protected: protectedFolder,
+        pin,
       });
     } catch (err) {
       setError(err.message);

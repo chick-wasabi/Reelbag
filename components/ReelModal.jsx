@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import Modal from "./Modal";
-import { parseReelUrl, uid } from "../utils/storage";
+import { parseReelUrl, uid } from "../utils/reels.mjs";
 
 export default function ReelModal({
   reel,
@@ -21,15 +21,17 @@ export default function ReelModal({
     draft?.folderId ?? reel?.folderId ?? folderId ?? "",
   );
   const [error, setError] = useState("");
-  function submit(event) {
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
     event.preventDefault();
     const parsed = parseReelUrl(url);
     if (!parsed) {
       setError("Enter a valid Instagram Reel link.");
       return;
     }
+    setBusy(true);
     try {
-      onSave({
+      await onSave({
         id: reel?.id || uid(),
         ...parsed,
         title: title.trim(),
@@ -38,10 +40,17 @@ export default function ReelModal({
       });
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
     }
   }
   return (
-    <Modal title={reel ? "Edit reel" : "Add reel"} onClose={onClose}>
+    <Modal
+      title={reel ? "Edit reel" : "Add reel"}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+    >
       <form className="form-stack" onSubmit={submit}>
         <label className="field-label">
           Instagram Reel Link
@@ -80,6 +89,7 @@ export default function ReelModal({
         <button
           className="inline-action"
           type="button"
+          disabled={busy}
           onClick={() => onCreateFolder({ url, title, folderId: folder })}
         >
           <Plus size={14} />
@@ -90,8 +100,11 @@ export default function ReelModal({
             {error}
           </p>
         )}
-        <button className="button-primary w-full" disabled={!title.trim()}>
-          {reel ? "Save changes" : "Save reel"}
+        <button
+          className="button-primary w-full"
+          disabled={busy || !title.trim()}
+        >
+          {busy ? "Saving…" : reel ? "Save changes" : "Save reel"}
         </button>
       </form>
     </Modal>

@@ -1,31 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   Check,
-  LockKeyhole,
+  LogOut,
   Plus,
   Search,
   Settings,
   X,
 } from "lucide-react";
+import AuthScreen from "../components/AuthScreen";
 import FolderBar from "../components/FolderBar";
 import FolderModal from "../components/FolderModal";
-import MigrationWizard from "../components/MigrationWizard";
+import LegacyImport from "../components/LegacyImport";
 import Modal from "../components/Modal";
 import PinForm from "../components/PinForm";
 import ReelCard from "../components/ReelCard";
 import ReelModal from "../components/ReelModal";
 import SettingsPanel from "../components/SettingsPanel";
-import {
-  LEGACY_KEY,
-  loadData,
-  loadLegacyData,
-  parseReelUrl,
-  saveData,
-  STORAGE_KEY,
-} from "../utils/storage";
+import { api } from "../utils/api.mjs";
+import { parseReelUrl } from "../utils/reels.mjs";
 
 function Brand() {
   return (
@@ -37,54 +32,105 @@ function Brand() {
     </span>
   );
 }
-
 export default function Home() {
   const [data, setData] = useState(null);
-  const [legacy, setLegacy] = useState(null);
-  const [loadError, setLoadError] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [unlocked, setUnlocked] = useState(new Set());
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("all");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [sharedUrl, setSharedUrl] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const epoch = useRef(0);
+  const pending = useRef(0);
+  const userId = data?.user?.id;
+  const unlocked = useMemo(
+    () =>
+      new Set(data?.folders.filter((f) => f.unlocked).map((f) => f.id) || []),
+    [data],
+  );
+
+  const apply = useCallback((next) => {
+    setData(next);
+    setSelected((previous) =>
+      next.folders.some((f) => f.id === previous && (!f.pin || f.unlocked))
+        ? previous
+        : "all",
+    );
+    setError("");
+  }, []);
+  const clearSession = useCallback(() => {
+    epoch.current += 1;
+    setData(null);
+    setSelected("all");
+    setSearch("");
+    setModal(null);
+  }, []);
 
   useEffect(() => {
-    function read() {
+    const controller = new AbortController();
+    async function start() {
       try {
-        setData(loadData());
-        setLegacy(loadLegacyData());
-        setLoadError("");
+        const session = await api("auth/session", {
+          signal: controller.signal,
+        });
+        if (session.user) {
+          const library = await api("library", { signal: controller.signal });
+          if (!controller.signal.aborted) {
+            apply(library);
+            const params = new URLSearchParams(window.location.search);
+            const link = parseReelUrl(
+              params.get("url") ||
+                params.get("text")?.match(/https?:\/\/[^\s]+/)?.[0],
+            );
+            if (link) setModal({ type: "reel", initialUrl: link.url });
+          }
+        }
       } catch (err) {
-        setLoadError(err.message);
+        if (err.name !== "AbortError") setError(err.message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
+    const params = new URLSearchParams(window.location.search);
+    const link = parseReelUrl(
+      params.get("url") || params.get("text")?.match(/https?:\/\/[^\s]+/)?.[0],
+    );
     const frame = requestAnimationFrame(() => {
-      read();
-      const params = new URLSearchParams(window.location.search);
-      const input =
-        params.get("url") ||
-        params.get("text")?.match(/https?:\/\/[^\s]+/)?.[0];
-      if (parseReelUrl(input)) setSharedUrl(parseReelUrl(input).url);
+      if (link) setSharedUrl(link.url);
     });
-    function changed(event) {
-      if (![STORAGE_KEY, LEGACY_KEY, null].includes(event.key)) return;
-      read();
-      setAuthenticated(false);
-      setUnlocked(new Set());
-      setSelected("all");
-      setSearch("");
-      setModal(null);
-      setNotice("Library updated in another tab. Please unlock again.");
-    }
-    window.addEventListener("storage", changed);
+    start();
     return () => {
+      controller.abort();
       cancelAnimationFrame(frame);
-      window.removeEventListener("storage", changed);
     };
-  }, []);
+  }, [apply]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    async function refresh() {
+      if (pending.current || document.visibilityState === "hidden") return;
+      const version = ++epoch.current;
+      try {
+        const next = await api("library");
+        if (active && version === epoch.current && !pending.current)
+          apply(next);
+      } catch (err) {
+        if (!active || version !== epoch.current) return;
+        if (err.status === 401) clearSession();
+        setError(err.message);
+      }
+    }
+    window.addEventListener("focus", refresh);
+    const interval = setInterval(refresh, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [userId, apply, clearSession]);
 
   useEffect(() => {
     if (!notice) return;
@@ -92,204 +138,131 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  function commit(next) {
-    const saved = saveData(next, data.revision);
-    setData(saved);
-    setError("");
-    return saved;
-  }
-  function guard(action) {
+  async function mutate(path, method, body = {}) {
+    const version = ++epoch.current;
+    pending.current += 1;
     try {
-      action();
+      const next = await api(path, { method, body });
+      if (version === epoch.current) apply(next);
+      return next;
+    } catch (err) {
+      if (err.status === 401) clearSession();
+      throw err;
+    } finally {
+      pending.current -= 1;
+    }
+  }
+  async function login() {
+    const next = await api("library");
+    apply(next);
+    setModal(sharedUrl ? { type: "reel", initialUrl: sharedUrl } : null);
+  }
+  async function logout() {
+    try {
+      await api("auth/logout", { method: "POST", body: {} });
+      clearSession();
+      setError("");
     } catch (err) {
       setError(err.message);
     }
   }
-  function lock() {
-    setAuthenticated(false);
-    setUnlocked(new Set());
-    setSelected("all");
-    setSearch("");
-    setModal(null);
-    setError("");
-  }
-  function openLibrary() {
-    setAuthenticated(true);
-    setModal(sharedUrl ? { type: "reel", initialUrl: sharedUrl } : null);
-  }
-  function selectFolder(id, lockId) {
-    if (lockId)
-      setUnlocked((previous) => {
-        const next = new Set(previous);
-        next.delete(lockId);
-        return next;
-      });
+  async function selectFolder(id, lockId) {
+    if (lockId) {
+      try {
+        await mutate(`folders/${lockId}/lock`, "POST");
+        setSelected("all");
+      } catch (err) {
+        setError(err.message);
+      }
+      return;
+    }
     const folder = data.folders.find((f) => f.id === id);
-    if (folder?.pin && !unlocked.has(id)) {
+    if (folder?.pin && !folder.unlocked) {
       setModal({ type: "unlockFolder", folder });
       return;
     }
     setSelected(id);
     setSearch("");
   }
-  function saveFolder(folder) {
-    if (
-      data.folders.some(
-        (f) =>
-          f.id !== folder.id &&
-          f.name.toLowerCase() === folder.name.toLowerCase(),
-      )
-    )
-      throw new Error("A folder with this name already exists.");
-    const exists = data.folders.some((f) => f.id === folder.id);
-    commit({
-      ...data,
-      folders: exists
-        ? data.folders.map((f) => (f.id === folder.id ? folder : f))
-        : [...data.folders, folder],
-    });
-    setUnlocked((previous) => new Set([...previous, folder.id]));
-    if (modal.returnTo) {
+  async function saveFolder(folder) {
+    const next = await mutate(
+      folder.id ? `folders/${folder.id}` : "folders",
+      folder.id ? "PATCH" : "POST",
+      folder,
+    );
+    const folderId = folder.id || next.folderId;
+    if (modal.returnTo)
       setModal({
         ...modal.returnTo,
-        draft: { ...modal.returnTo.draft, folderId: folder.id },
+        draft: { ...modal.returnTo.draft, folderId },
       });
-    } else {
-      setSelected(folder.id);
+    else {
+      setSelected(folderId);
       setSearch("");
       setModal(null);
     }
-    setNotice("Folder saved.");
+    setNotice("Folder saved to cloud.");
   }
-  function saveReel(reel) {
-    if (
-      data.reels.some(
-        (r) =>
-          r.id !== reel.id &&
-          r.shortcode === reel.shortcode &&
-          r.folderId === reel.folderId,
-      )
-    )
-      throw new Error("This reel is already saved in that folder.");
-    commit({
-      ...data,
-      reels: modal.reel
-        ? data.reels.map((r) => (r.id === reel.id ? reel : r))
-        : [reel, ...data.reels],
-    });
-    // A reel moved into a locked folder must disappear from the current stream.
-    if (
-      reel.folderId &&
-      data.folders.some((f) => f.id === reel.folderId && f.pin) &&
-      !unlocked.has(reel.folderId)
-    )
-      setNotice("Reel saved in the locked folder.");
-    else {
-      setSelected(reel.folderId || "all");
-      setSearch("");
-      setNotice("Reel saved.");
-    }
+  async function saveReel(reel) {
+    const next = await mutate(
+      modal.reel ? `reels/${modal.reel.id}` : "reels",
+      modal.reel ? "PATCH" : "POST",
+      reel,
+    );
+    const target = next.folders.find((f) => f.id === reel.folderId);
+    setSelected(target && (!target.pin || target.unlocked) ? target.id : "all");
+    setSearch("");
     setModal(null);
     setSharedUrl("");
+    setNotice("Reel saved to cloud.");
     const url = new URL(window.location.href);
     ["url", "text", "title"].forEach((key) => url.searchParams.delete(key));
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }
-  function restore(backup) {
-    commit({ ...backup, revision: data.revision });
-    setLegacy(null);
-    lock();
-    setNotice("Backup restored. Unlock with the backup’s Master PIN.");
+  async function importLibrary(backup) {
+    await mutate("library/import", "POST", backup);
+    setSelected("all");
+    setModal(null);
+    setNotice("Library copied to your cloud account.");
+  }
+  async function remove() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      if (modal.type === "deleteFolder") {
+        await mutate(`folders/${modal.folder.id}`, "DELETE");
+        setSelected("all");
+      } else await mutate(`reels/${modal.reel.id}`, "DELETE");
+      setModal(null);
+      setNotice("Deleted from cloud.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(false);
+    }
   }
   const reels = useMemo(() => {
-    if (!data || !authenticated) return [];
-    const lockedIds = new Set(
-      data.folders.filter((f) => f.pin && !unlocked.has(f.id)).map((f) => f.id),
-    );
     const query = search.trim().toLowerCase();
-    return data.reels
-      .filter(
-        (r) =>
-          !lockedIds.has(r.folderId) &&
-          (selected === "all" || r.folderId === selected) &&
-          (!query || r.title.toLowerCase().includes(query)),
-      )
-      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-  }, [data, authenticated, unlocked, selected, search]);
+    return (data?.reels || []).filter(
+      (r) =>
+        (selected === "all" || r.folderId === selected) &&
+        (!query || r.title.toLowerCase().includes(query)),
+    );
+  }, [data, selected, search]);
 
   return (
     <>
-      {loadError ? (
+      {loading ? (
         <main className="gate">
           <Brand />
-          <section className="gate-panel">
-            <h1>Your library couldn’t be opened</h1>
-            <p className="muted-copy" role="alert">
-              {loadError}
-            </p>
-            <p className="muted-copy">
-              Your stored data has not been changed. Enable browser storage, or
-              preserve the Reelbag storage entries before restoring a backup.
-            </p>
-            <button
-              className="button-primary"
-              onClick={() => window.location.reload()}
-            >
-              Try again
-            </button>
-          </section>
-        </main>
-      ) : !data ? (
-        <main className="gate">
-          <Brand />
-          <p className="muted-copy" role="status">
-            Opening your library…
+          <p className="muted-copy mt-12" role="status">
+            Connecting to your library…
           </p>
         </main>
-      ) : legacy ? (
+      ) : !data?.user ? (
         <main className="gate">
           <Brand />
-          <section className="gate-panel">
-            <MigrationWizard
-              legacy={legacy}
-              onComplete={(next) => {
-                commit(next);
-                setLegacy(null);
-                openLibrary();
-              }}
-            />
-          </section>
-        </main>
-      ) : !authenticated ? (
-        <main className="gate">
-          <Brand />
-          <section className="gate-panel">
-            <div className="gate-icon">
-              <LockKeyhole size={22} />
-            </div>
-            <h1>
-              {data.masterPin ? "Welcome back." : "Your reels. Your space."}
-            </h1>
-            <p className="muted-copy">
-              {data.masterPin
-                ? "One PIN. Everything worth keeping."
-                : "Set a Master PIN to start your library."}
-            </p>
-            <PinForm
-              create={!data.masterPin}
-              credential={data.masterPin}
-              onSuccess={(pin) => {
-                if (!data.masterPin) commit({ ...data, masterPin: pin });
-                openLibrary();
-              }}
-            />
-            {!data.masterPin && (
-              <p className="fine-print">
-                Your library stays in this browser. PINs are hashed; data isn’t
-                encrypted. There is no PIN recovery.
-              </p>
-            )}
-          </section>
+          <AuthScreen onSuccess={login} />
         </main>
       ) : (
         <div className="app-shell">
@@ -312,7 +285,13 @@ export default function Home() {
               unlocked={unlocked}
               onSelect={selectFolder}
               onCreate={() => setModal({ type: "folder" })}
-              onEdit={(folder) => setModal({ type: "folder", folder })}
+              onEdit={(folder) =>
+                setModal({
+                  type:
+                    folder.pin && !folder.unlocked ? "unlockFolder" : "folder",
+                  folder,
+                })
+              }
             />
             <button
               className="button-primary add-reel"
@@ -332,11 +311,11 @@ export default function Home() {
               </button>
               <button
                 className="icon-button"
-                aria-label="Lock app"
-                title="Lock app"
-                onClick={lock}
+                aria-label="Sign out"
+                title="Sign out"
+                onClick={logout}
               >
-                <LockKeyhole size={18} />
+                <LogOut size={18} />
               </button>
             </div>
           </header>
@@ -378,7 +357,7 @@ export default function Home() {
         </div>
       )}
 
-      {authenticated && modal?.type === "reel" && (
+      {data?.user && modal?.type === "reel" && (
         <ReelModal
           reel={modal.reel}
           draft={modal.draft}
@@ -392,7 +371,7 @@ export default function Home() {
           }
         />
       )}
-      {authenticated && modal?.type === "folder" && (
+      {data?.user && modal?.type === "folder" && (
         <FolderModal
           folder={modal.folder}
           onSave={saveFolder}
@@ -402,21 +381,17 @@ export default function Home() {
           }
         />
       )}
-      {authenticated && modal?.type === "unlockFolder" && (
+      {data?.user && modal?.type === "unlockFolder" && (
         <Modal
           title={modal.folder.name}
           description="This folder is PIN protected."
           onClose={() => setModal(null)}
         >
           <PinForm
-            folder
-            credential={modal.folder.pin}
-            label="Folder PIN"
-            submitLabel="Open folder"
-            onSuccess={() => {
-              setUnlocked(
-                (previous) => new Set([...previous, modal.folder.id]),
-              );
+            onVerify={async (pin) => {
+              await mutate(`folders/${modal.folder.id}/unlock`, "POST", {
+                pin,
+              });
               setSelected(modal.folder.id);
               setSearch("");
               setModal(null);
@@ -424,136 +399,83 @@ export default function Home() {
           />
         </Modal>
       )}
-      {authenticated && modal?.type === "settings" && (
+      {data?.user && modal?.type === "settings" && (
         <Modal title="Settings" onClose={() => setModal(null)}>
           <SettingsPanel
-            data={data}
+            user={data.user}
             onImport={(backup) => setModal({ type: "import", backup })}
-            onChangePin={() => setModal({ type: "verifyMaster" })}
+            onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
           />
         </Modal>
       )}
-      {authenticated && modal?.type === "verifyMaster" && (
+      {data?.user && modal?.type === "import" && (
         <Modal
-          title="Change Master PIN"
-          description="Verify your current PIN first."
+          title="Copy backup to cloud?"
+          description="This adds reels and folders to your account without replacing existing data. Imported folders start without PINs. Protect them again after importing. Passwords are never included."
           onClose={() => setModal(null)}
         >
-          <PinForm
-            credential={data.masterPin}
-            label="Current Master PIN"
-            submitLabel="Continue"
-            onSuccess={() => setModal({ type: "setMaster" })}
-          />
-        </Modal>
-      )}
-      {authenticated && modal?.type === "setMaster" && (
-        <Modal title="New Master PIN" onClose={() => setModal(null)}>
-          <PinForm
-            create
-            onSuccess={(pin) => {
-              commit({ ...data, masterPin: pin });
-              lock();
-              setNotice("Master PIN updated. Unlock to continue.");
-            }}
-          />
-        </Modal>
-      )}
-      {authenticated && modal?.type === "import" && (
-        <Modal
-          title="Replace your library?"
-          description="This replaces every reel, folder, and PIN on this device. Export your current library first. This cannot be undone."
-          onClose={() => setModal(null)}
-        >
-          <div className="form-stack">
-            <p className="muted-copy">
-              {modal.backup.version === 1
-                ? "This is an older backup. Verify every old PIN and choose a new Master PIN in the next step."
-                : "You will need the Master PIN from this backup. Folder PINs will also be preserved."}
-            </p>
-            <button
-              className="button-primary"
-              onClick={() =>
-                guard(() =>
-                  modal.backup.version === 1
-                    ? setModal({ type: "legacyImport", backup: modal.backup })
-                    : restore(modal.backup),
-                )
-              }
-            >
-              {modal.backup.version === 1
-                ? "Continue migration"
-                : "Replace & import"}
-            </button>
+          <div className="dialog-actions">
             <button className="button-secondary" onClick={() => setModal(null)}>
               Cancel
+            </button>
+            <button
+              className="button-primary"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                try {
+                  await importLibrary(modal.backup);
+                } catch (err) {
+                  setError(err.message);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? "Importing…" : "Import to cloud"}
             </button>
           </div>
         </Modal>
       )}
-      {authenticated && modal?.type === "legacyImport" && (
-        <Modal title="Migrate backup" onClose={() => setModal(null)}>
-          <MigrationWizard legacy={modal.backup} onComplete={restore} />
+      {data?.user && modal?.type === "legacyImport" && (
+        <Modal title="Import previous library" onClose={() => setModal(null)}>
+          <LegacyImport data={modal.backup} onComplete={importLibrary} />
         </Modal>
       )}
-      {authenticated &&
-        ["deleteReel", "deleteFolder"].includes(modal?.type) && (
-          <Modal
-            title={
-              modal.type === "deleteFolder" ? "Delete folder?" : "Delete reel?"
-            }
-            description={
-              modal.type === "deleteFolder"
-                ? "The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN."
-                : "This removes the reel from your library. It cannot be undone."
-            }
-            onClose={() => setModal(null)}
-          >
-            <div className="dialog-actions">
-              <button
-                className="button-secondary"
-                onClick={() => setModal(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="button-danger"
-                onClick={() =>
-                  guard(() => {
-                    if (modal.type === "deleteFolder") {
-                      commit({
-                        ...data,
-                        folders: data.folders.filter(
-                          (f) => f.id !== modal.folder.id,
-                        ),
-                        reels: data.reels.map((r) =>
-                          r.folderId === modal.folder.id
-                            ? { ...r, folderId: null }
-                            : r,
-                        ),
-                      });
-                      setSelected("all");
-                      setSearch("");
-                      setUnlocked((previous) => {
-                        const next = new Set(previous);
-                        next.delete(modal.folder.id);
-                        return next;
-                      });
-                    } else
-                      commit({
-                        ...data,
-                        reels: data.reels.filter((r) => r.id !== modal.reel.id),
-                      });
-                    setModal(null);
-                    setNotice("Deleted.");
-                  })
-                }
-              >
-                Delete {modal.type === "deleteFolder" ? "folder" : "reel"}
-              </button>
-            </div>
-          </Modal>
-        )}
+      {data?.user && ["deleteReel", "deleteFolder"].includes(modal?.type) && (
+        <Modal
+          title={
+            modal.type === "deleteFolder" ? "Delete folder?" : "Delete reel?"
+          }
+          description={
+            modal.type === "deleteFolder"
+              ? "The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN. This affects every device."
+              : "This removes the reel from your cloud library on every device. It cannot be undone."
+          }
+          onClose={() => {
+            if (!deleting) setModal(null);
+          }}
+        >
+          <div className="dialog-actions">
+            <button
+              className="button-secondary"
+              disabled={deleting}
+              onClick={() => setModal(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="button-danger"
+              disabled={deleting}
+              onClick={remove}
+            >
+              {deleting
+                ? "Deleting…"
+                : `Delete ${modal.type === "deleteFolder" ? "folder" : "reel"}`}
+            </button>
+          </div>
+        </Modal>
+      )}
       {notice && (
         <div className="toast" role="status">
           <Check size={15} />

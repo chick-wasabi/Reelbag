@@ -1,87 +1,89 @@
 # Reelbag
 
-A minimal Instagram Reel library built with Next.js 16 App Router, React 19, Tailwind CSS, and Lucide. One Master PIN opens your library. Save reels, find them by title, and organize them in folders with optional 4-digit PINs.
+A minimal, multi-user Instagram Reel library using Next.js 16 App Router, React 19, Tailwind CSS, Neon Postgres, and bcrypt. Sign in with a username and password/PIN on any device to use the same cloud library. The dashboard keeps only search, folders, Add Reel, settings, and sign out.
 
-## Development
+## Configure and run
 
-Use Node.js 22 LTS (Node.js >=20.9 is supported). No database, API keys, or environment variables are required.
+Use Node.js 22 LTS. Create a database at [Neon](https://console.neon.tech), choose **Connect**, and copy the **Postgres connection string** into the `DATABASE_URL` variable in `.env.local`. `.env.example` documents the required name; it intentionally contains no credential. Never commit a real connection string or use a `NEXT_PUBLIC_` variable for it.
 
 ```sh
 npm ci
+npm run db:migrate
 npm run dev
 ```
 
-Create a 4–8 digit Master PIN on first launch. Reloading or using Lock app always requires the Master PIN again. HTTPS or localhost is required for Web Crypto PIN hashing.
+`db:migrate` reads `.env.local` automatically. The first database-backed API request also initializes the tables, so no manual SQL is necessary. Initialization takes a Postgres advisory lock and applies additive, idempotent DDL in one transaction. The Neon role must have CREATE permission in its schema as well as normal read/write permissions. Existing unrelated tables are never dropped. A pre-existing incompatible schema requires an explicit migration; initialization will not silently rewrite it.
+
+The app builds without a connection string. Without a usable `DATABASE_URL`, live account and database operations return a clear 503, and no data is saved locally as a fallback. No additional session secret is needed: opaque session tokens are random and only SHA-256 token hashes are stored in Postgres.
+
+## Deploy to Vercel
+
+1. Import this GitHub repository with the Next.js framework preset and Node.js 22.
+2. In **Project Settings → Environment Variables**, add your Neon connection string as `DATABASE_URL` for the intended Production/Preview environments. Use a separate Neon database or branch for previews when data isolation is required.
+3. Deploy or redeploy after changing environment variables. Keep the default `npm run build` command.
+4. Open the HTTPS site, sign up, save a reel, then log in on a second device to verify the same library. Secure production cookies require HTTPS.
+
+Managed cloud environments need network access to the connection string's Neon hostname over HTTPS. The Neon serverless driver uses encrypted HTTP queries; no WebSocket server or local Postgres daemon is required. Instagram embeds additionally use `www.instagram.com` and Instagram/Meta CDNs.
+
+## Accounts and security
+
+- Usernames are case-insensitive and unique: 3–32 letters, digits, or underscores. Passwords/PINs require at least 8 characters and at most 72 UTF-8 bytes, avoiding bcrypt truncation. An 8-digit PIN is allowed, though a strong password is recommended.
+- Passwords and four-digit folder PINs are bcrypt-hashed with cost 12 on the server. Hashes and database credentials are never returned in account/library responses.
+- Login creates a random 256-bit opaque cookie token. Postgres stores only its SHA-256 hash. Cookies are HttpOnly, SameSite=Lax, host-only, and Secure with a `__Host-` prefix in production. Sessions expire after 30 days. Each device signs in separately; signing out deletes only that device's session and folder grants.
+- Every request derives the user from its session. Ownership is checked on the server for reads and writes. A composite foreign key also prevents linking a reel to another user's folder. Protected folder reels are excluded in SQL, not simply hidden by CSS.
+- Folder unlock grants belong to the current session. They survive page reloads and expire when that session expires or signs out. Changing/removing a folder PIN invalidates other sessions' grants by advancing the folder's protection version. Lock folder revokes this session's grant.
+- Parameterized queries prevent SQL injection. Mutations require a matching Origin and reject cross-site requests; API responses use no-store caching. Request size, field length, URLs, and IDs are validated server-side.
+- Authentication and PIN attempt throttles live in Postgres, so they work across serverless instances. Auth allows 10 attempts per username and 50 per client IP in 15 minutes; successful login resets that username's counter. Folder unlocks allow 10 attempts per account/folder in 15 minutes and reset after success. A trusted reverse proxy must control `x-real-ip`/`x-forwarded-for`; Vercel supplies forwarding headers.
+- Folder PINs restrict application access, not database administrators or someone who already has an unlocked session. There is no end-to-end encryption, email verification, password recovery, or administrator UI in this version. Never store highly sensitive material here.
+
+## Data model and behavior
+
+`users`, `folders`, and `reels` contain the requested ownership and timestamp fields. `folders.pin_code` stores a bcrypt hash, never plaintext. Supporting `sessions`, `folder_unlocks`, and `rate_limits` tables provide server-enforced authentication and protection. `folders.pin_version` invalidates obsolete grants. SQL definitions live in `lib/server/schema.mjs`.
+
+Folders and reels are fetched from Postgres after login. Saves update the displayed library after the database confirms the write; failed saves leave the draft available. The dashboard refreshes when focused and every 30 seconds while visible, so changes made on another device appear without a new login. This is polling, not realtime push.
+
+Add Reel has three fields: Instagram Reel Link, Title / Name, and optional Folder. Inline folder creation preserves the draft. Reels without a folder have no category label. Folder deletion retains its reels in the main stream and removes their folder protection, with confirmation. Reels saved into locked folders stay hidden until the folder is unlocked.
+
+## Backups and previous browser libraries
+
+Settings exports portable v3 JSON backups of links and folder names. Unlock every folder before exporting a complete library. Passwords and PIN hashes are never exported. Import **adds** to the current account in a transaction, remaps IDs, and numbers colliding folder names; it never replaces or deletes existing account data. Imported folders start **without PIN protection**. Protect them again after import. Files are validated and limited to 10 MB.
+
+Use **Import previous browser library** in Settings to explicitly copy the old local library from the same browser/domain. Previous v1/v2 JSON backup files are also accepted. Every old Master/profile/folder PIN is verified locally before importing that content. Original browser entries remain untouched; no credentials are copied into the new cloud account. The dashboard never uses localStorage for cloud data, sessions, or saving. Compatibility code in `utils/legacy.mjs` is read-only.
+
+## Instagram and mobile
+
+Reel cards load Instagram's official `https://www.instagram.com/embed.js` script lazily and call `window.instgrm.Embeds.process()`. Instagram controls thumbnails, players, availability, login requirements, and cookies. Private, removed, or restricted reels may not display. Every card has an original link and failed script loads offer Retry. No Instagram credentials are requested by Reelbag.
+
+The grid uses one column on Android/mobile, two on tablets, and three/four on desktop. Shared links through `/?url=` or `?text=` prefill Add Reel after login; a user must still submit the form.
+
+## Validation
 
 ```sh
 npm run lint
 npm test
 npm run build
-npm start
-```
-
-## Use
-
-- The header contains the app title, search, folder controls, Add Reel, settings, and lock. There is no sidebar, banner, activity metadata, or profile switcher.
-- Add Reel has three fields: Instagram Reel Link, Title / Name, and optional Folder. Create New Folder opens the folder form inline without losing your reel draft.
-- Reels without a folder appear directly in All reels, without a category label. Search filters titles in the selected folder or across the visible stream.
-- Use the folder dropdown to open a folder. The adjacent icons create, edit, or lock a folder. Editing supports renaming, adding/changing a PIN, removing protection, and deletion.
-- Folder PINs are exactly four digits. Locked folder reels are omitted from the stream and search, and their embed containers are not rendered. Unlocking a folder makes it available until you lock it, lock the app, reload, or another tab changes the library. Creating a protected folder unlocks it for the current session.
-- Saving a reel into a locked folder does not unlock that folder. Deleting a folder moves its reels into the main stream and removes their folder protection, with explicit confirmation.
-- Settings supports changing the Master PIN and JSON export/import. Imports require confirmation and replace the entire library, including all PINs. Invalid backups leave existing data unchanged.
-
-## Existing libraries
-
-The app uses the `reelbag.v2` localStorage key. When only the old `reelbag.v1` data exists, a one-time migration requires every existing PIN before combining the libraries and choosing a new Master PIN. All titles, reel links, and folder memberships are retained; duplicate IDs are remapped and duplicate folder names receive numbered suffixes. Old task metadata is removed from the new format. Add optional folder PINs after migration.
-
-The original v1 browser entry is left untouched as a recovery copy. It can still contain old information; remove it manually only after verifying your migrated library and exporting a current backup. Older JSON backups follow the same verification and migration flow before import replaces the current library. Migration and imports never silently skip libraries with unavailable PINs.
-
-## Privacy and persistence
-
-Master and folder PINs use salted PBKDF2-SHA256 hashes with 210,000 iterations. Raw PINs are never saved. These locks protect the interface; data is **not encrypted**, and this is not server authentication. Anyone with browser storage access or a JSON backup can read the saved links and titles, including locked folders. Short PINs are vulnerable to offline guessing. There is no PIN recovery.
-
-Your browser saves the library locally. Clearing browser data, using private browsing, or changing domains may remove or isolate it. Export backups to transfer between devices; there is no automatic sync. Writes are validated before saving; storage quota errors preserve the last saved state. Another-tab changes lock the UI, and revision checks reject stale writes. localStorage is not a transactional database for concurrent writers.
-
-## Instagram embeds
-
-Cards lazily load the official `https://www.instagram.com/embed.js` script near the viewport and trigger `window.instgrm.Embeds.process()`. Instagram controls the player, cookies, thumbnail, login requirements, and availability. Private, removed, or restricted reels may not display. Original links remain available; script failures include a Retry action. No Instagram login credentials are requested by Reelbag.
-
-Managed cloud networks may need `www.instagram.com`, `*.cdninstagram.com`, and `*.fbcdn.net` allowed. The cloud policy used during initial development blocked live Instagram access; automated tests stub the script and separately test blocked-script fallbacks. Passing these tests does not prove that a particular live reel is playable.
-
-Shared links are supported through `/?url=` with a URL-encoded Reel URL, or `?text=` containing a Reel link. Unlocking the app opens a prefilled Add Reel form; links are never saved without submission. This is not an installed native OS share target or offline PWA.
-
-## Tests
-
-```sh
-npm test
-npm run build
 npx playwright install chromium
 npm run test:e2e
+npm audit --omit=dev
 ```
 
-Set `CHROMIUM_PATH` to an existing Chromium binary to skip the browser download. Browser tests cover inline folder creation, reel/folder CRUD, Master and folder PINs, protected content exclusion, reloads, backups, migration, cross-tab locking, failed embeds, and grid layouts from 320 px to desktop. Tests use isolated browser storage and a dedicated production server on port 3100, leaving your development server alone.
+Set `CHROMIUM_PATH` to an existing Chromium binary if desired. Tests do not use a real user's Neon database or modify deployment data. Server integration tests run the actual API handlers, schema, and parameterized SQL against PGlite, an embedded PostgreSQL engine. They check automatic migrations, accounts, bcrypt hashes, cookie attributes, session expiry, multiple devices, ownership/FK isolation, server-enforced folder PINs, CSRF, validation, imports, and persistent rate limits.
 
-## Vercel
-
-Push this directory to GitHub and import it into Vercel using the Next.js preset and Node.js 22. Keep the default `npm run build` command. No environment variables or backend provisioning are necessary. Vercel supplies HTTPS. The build uses Next.js's supported webpack mode. Run `npm audit --omit=dev` and keep dependencies patched before deployment.
+Browser tests run the production frontend on port 3100 and route API requests to the same SQL-backed test handlers; only the Neon transport and Instagram script are substituted. They exercise signup/login, device/account separation, folder and reel CRUD, backups, previous local imports, responsive layouts, and failed-save drafts. A passing suite does not verify a live Neon connection or a specific Instagram reel. A real Neon connection was not available during initial cloud integration because `DATABASE_URL` was unset; perform the live checks above once it is configured.
 
 ## Structure
 
 ```text
-app/
-  layout.js             Metadata and root document
-  page.js               Single-library state, header, stream, and dialog routing
-  globals.css           Dark theme and responsive layouts
-components/
-  FolderBar.jsx         Folder selection and actions
-  FolderModal.jsx       Folder name and optional PIN
-  MigrationWizard.jsx   One-time legacy verification and migration
-  Modal.jsx             Accessible dialog and focus management
-  PinForm.jsx           Master/folder PIN creation and verification
-  ReelCard.jsx          Official Instagram embed and reel actions
-  ReelModal.jsx         Three-field save/edit form
-  SettingsPanel.jsx     Master PIN settings and backups
-utils/storage.js        Versioned persistence, validation, hashing, migration
-public/icon.svg         App icon
-tests/                  Unit and browser tests
+app/page.js                    Minimal dashboard and cloud account flow
+app/api/[...path]/route.js      Dynamic Node.js API route adapter
+components/                    Auth, folders, reels, dialogs, settings, legacy import
+lib/server/api.mjs             Authenticated, ownership-checked API operations
+lib/server/database.mjs        Neon adapter and idempotent initialization
+lib/server/schema.mjs          Additive database DDL
+lib/server/runtime.mjs         Server-only application composition
+utils/api.mjs                  Browser fetch/error handling
+utils/backup.mjs               Credential-free portable backups
+utils/legacy.mjs               Read-only old browser data compatibility
+scripts/migrate.mjs            Explicit schema initialization command
+tests/                         SQL integration, compatibility, and browser tests
 ```

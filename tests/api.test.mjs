@@ -1,0 +1,462 @@
+import test, { before, after } from "node:test";
+import assert from "node:assert/strict";
+import { randomBytes, randomUUID } from "node:crypto";
+import { testApplication } from "./helpers/application.mjs";
+import { createApi } from "../lib/server/api.mjs";
+import { createDatabase } from "../lib/server/database.mjs";
+
+let app;
+before(async () => {
+  app = await testApplication();
+});
+after(async () => {
+  await app.pg.close();
+});
+const name = () => `test_${randomBytes(6).toString("hex")}`;
+async function call(
+  path,
+  method = "GET",
+  body,
+  cookie,
+  headers = {},
+  handler = app.handle,
+) {
+  const response = await handler(
+    new Request(`http://localhost/api/${path}`, {
+      method,
+      headers: {
+        ...(method === "GET"
+          ? {}
+          : { origin: "http://localhost", "content-type": "application/json" }),
+        ...(cookie ? { cookie } : {}),
+        ...headers,
+      },
+      ...(method === "GET" ? {} : { body: JSON.stringify(body || {}) }),
+    }),
+    path.split("/"),
+  );
+  return {
+    response,
+    data: await response.json(),
+    status: response.status,
+    cookie: response.headers.get("set-cookie")?.split(";")[0],
+  };
+}
+async function account() {
+  const username = name();
+  const password = "Strong-test-9876";
+  const result = await call("auth/signup", "POST", { username, password });
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  return { ...result, username, password };
+}
+
+test("automatic initialization is repeatable and accounts use bcrypt with opaque HttpOnly sessions", async () => {
+  const user = await account();
+  await createDatabase(app.adapter).ready();
+  const [stored] = await app.db.query("SELECT * FROM users WHERE username=$1", [
+    user.username,
+  ]);
+  assert.match(stored.password_hash, /^\$2[aby]\$12\$/);
+  assert.notEqual(stored.password_hash, user.password);
+  const [session] = await app.db.query(
+    "SELECT * FROM sessions WHERE user_id=$1",
+    [stored.id],
+  );
+  assert.notEqual(session.token_hash, user.cookie.split("=")[1]);
+  assert.equal(session.token_hash.length, 64);
+  assert.match(user.response.headers.get("set-cookie"), /HttpOnly/);
+  assert.match(user.response.headers.get("set-cookie"), /SameSite=Lax/);
+  const secure = await call(
+    "auth/login",
+    "POST",
+    { username: user.username, password: user.password },
+    null,
+    {},
+    createApi({ db: app.db, secureCookies: true }),
+  );
+  assert.match(
+    secure.response.headers.get("set-cookie"),
+    /^__Host-reelbag_session=/,
+  );
+  assert.match(secure.response.headers.get("set-cookie"), /; Secure/);
+  const duplicate = await call("auth/signup", "POST", {
+    username: user.username.toUpperCase(),
+    password: user.password,
+  });
+  assert.equal(duplicate.status, 409);
+  assert.equal((await call("library")).status, 401);
+  assert.equal((await call("auth/session")).data.user, null);
+});
+
+test("two devices see the same Postgres reels while a different account cannot read or mutate them", async () => {
+  const alice = await account();
+  const bob = await account();
+  const folder = await call(
+    "folders",
+    "POST",
+    { name: "Bike Riding", protected: false },
+    alice.cookie,
+  );
+  assert.equal(folder.status, 201, JSON.stringify(folder.data));
+  const id = folder.data.folderId;
+  const saved = await call(
+    "reels",
+    "POST",
+    {
+      title: "Sunset ' ride",
+      url: "https://instagram.com/reel/BIKE_1/?igsh=tracking",
+      folderId: id,
+    },
+    alice.cookie,
+  );
+  assert.equal(saved.status, 201, JSON.stringify(saved.data));
+  const reelId = saved.data.reels[0].id;
+  const device = await call("auth/login", "POST", {
+    username: alice.username,
+    password: alice.password,
+  });
+  const deviceLibrary = await call("library", "GET", null, device.cookie);
+  assert.equal(deviceLibrary.data.reels[0].title, "Sunset ' ride");
+  assert.equal(
+    deviceLibrary.data.reels[0].url,
+    "https://www.instagram.com/reel/BIKE_1/",
+  );
+  assert.equal(
+    (await call("library", "GET", null, bob.cookie)).data.reels.length,
+    0,
+  );
+  for (const [path, method, body] of [
+    [`reels/${reelId}`, "DELETE", {}],
+    [
+      `reels/${reelId}`,
+      "PATCH",
+      { title: "stolen", url: "https://instagram.com/reel/X/", folderId: null },
+    ],
+    [`folders/${id}`, "DELETE", {}],
+    [
+      "reels",
+      "POST",
+      {
+        title: "Bad ownership",
+        url: "https://instagram.com/reel/OTHER/",
+        folderId: id,
+      },
+    ],
+  ]) {
+    assert.equal((await call(path, method, body, bob.cookie)).status, 404);
+  }
+  await assert.rejects(
+    app.db.query(
+      "INSERT INTO reels(id,user_id,folder_id,title,url) VALUES($1,$2,$3,$4,$5)",
+      [
+        randomUUID(),
+        bob.data.user.id,
+        id,
+        "Cross-owner",
+        "https://instagram.com/reel/X/",
+      ],
+    ),
+    (error) => error.code === "23503",
+  );
+  const cold = createApi({
+    db: createDatabase(app.adapter),
+    secureCookies: false,
+  });
+  assert.equal(
+    (await call("library", "GET", null, device.cookie, {}, cold)).data.reels
+      .length,
+    1,
+  );
+  await call("auth/logout", "POST", {}, alice.cookie);
+  assert.equal((await call("library", "GET", null, alice.cookie)).status, 401);
+  assert.equal((await call("library", "GET", null, device.cookie)).status, 200);
+});
+
+test("folder PINs are enforced on the server, grants are per session, and changing a PIN revokes other grants", async () => {
+  const user = await account();
+  const folder = await call(
+    "folders",
+    "POST",
+    { name: "Magic", protected: true, pin: "4567" },
+    user.cookie,
+  );
+  assert.equal(folder.status, 201, JSON.stringify(folder.data));
+  const id = folder.data.folderId;
+  const saved = await call(
+    "reels",
+    "POST",
+    {
+      title: "Secret trick",
+      url: "https://instagram.com/reel/SECRET/",
+      folderId: id,
+    },
+    user.cookie,
+  );
+  const reelId = saved.data.reels[0].id;
+  const device = await call("auth/login", "POST", {
+    username: user.username,
+    password: user.password,
+  });
+  const hidden = await call("library", "GET", null, device.cookie);
+  assert.equal(hidden.data.reels.length, 0);
+  assert.equal(hidden.data.folders[0].pin, true);
+  assert.equal(hidden.data.folders[0].unlocked, false);
+  assert.doesNotMatch(
+    JSON.stringify(hidden.data),
+    /pin_code|pin_version|password_hash|token_hash/,
+  );
+  assert.equal(
+    (await call(`reels/${reelId}`, "DELETE", {}, device.cookie)).status,
+    423,
+  );
+  assert.equal(
+    (
+      await call(
+        `reels/${reelId}`,
+        "PATCH",
+        {
+          title: "moved",
+          url: "https://instagram.com/reel/SECRET/",
+          folderId: null,
+        },
+        device.cookie,
+      )
+    ).status,
+    423,
+  );
+  assert.equal(
+    (
+      await call(
+        `folders/${id}`,
+        "PATCH",
+        { name: "Bypass", protected: false },
+        device.cookie,
+      )
+    ).status,
+    423,
+  );
+  assert.equal(
+    (await call(`folders/${id}`, "DELETE", {}, device.cookie)).status,
+    423,
+  );
+  assert.equal(
+    (await call("library/export", "GET", null, device.cookie)).status,
+    423,
+  );
+  assert.equal(
+    (await call(`folders/${id}/unlock`, "POST", { pin: "0000" }, device.cookie))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await call(`folders/${id}/unlock`, "POST", { pin: "4567" }, device.cookie))
+      .data.reels.length,
+    1,
+  );
+  const change = await call(
+    `folders/${id}`,
+    "PATCH",
+    { name: "Magic", protected: true, pin: "9876" },
+    user.cookie,
+  );
+  assert.equal(change.status, 200, JSON.stringify(change.data));
+  assert.equal(
+    (await call("library", "GET", null, device.cookie)).data.reels.length,
+    0,
+  );
+  assert.equal(
+    (await call(`folders/${id}/unlock`, "POST", { pin: "4567" }, device.cookie))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await call(`folders/${id}/unlock`, "POST", { pin: "9876" }, device.cookie))
+      .status,
+    200,
+  );
+  const [stored] = await app.db.query(
+    "SELECT pin_code FROM folders WHERE id=$1",
+    [id],
+  );
+  assert.match(stored.pin_code, /^\$2[aby]\$12\$/);
+  const removed = await call(`folders/${id}`, "DELETE", {}, user.cookie);
+  assert.equal(removed.status, 200, JSON.stringify(removed.data));
+  assert.equal(removed.data.reels[0].folderId, null);
+  assert.equal(removed.data.folders.length, 0);
+});
+
+test("expired and forged sessions, CSRF, malformed inputs, and oversized bodies are rejected", async () => {
+  const user = await account();
+  assert.equal(
+    (
+      await call(
+        "reels",
+        "POST",
+        { title: "x", url: "https://evil.com/reel/X/", folderId: null },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "folders",
+        "POST",
+        { name: "x", protected: true, pin: "12345" },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "folders",
+        "POST",
+        { name: "x", protected: true, pin: 1234 },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "folders",
+        "POST",
+        { name: "x", protected: false },
+        user.cookie,
+        { origin: "https://evil.com" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        "folders",
+        "POST",
+        { name: "x", protected: false },
+        user.cookie,
+        { "sec-fetch-site": "cross-site" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        "folders",
+        "POST",
+        { name: "x".repeat(20000), protected: false },
+        user.cookie,
+      )
+    ).status,
+    413,
+  );
+  assert.equal(
+    (await call("library", "GET", null, "reelbag_session=" + "a".repeat(64)))
+      .status,
+    401,
+  );
+  await app.db.query(
+    "UPDATE sessions SET expires_at=now() - interval '1 second' WHERE user_id=$1",
+    [user.data.user.id],
+  );
+  assert.equal((await call("library", "GET", null, user.cookie)).status, 401);
+});
+
+test("portable backups contain no credential hashes; imports append atomically with new IDs and names", async () => {
+  const user = await account();
+  const payload = {
+    version: 3,
+    folders: [{ id: "source-folder", name: "Favorites" }],
+    reels: [
+      {
+        title: "Recipe",
+        url: "https://instagram.com/reel/RECIPE/",
+        folderId: "source-folder",
+      },
+      {
+        title: "No folder",
+        url: "https://instagram.com/reel/LOOSE/",
+        folderId: null,
+      },
+    ],
+  };
+  const imported = await call("library/import", "POST", payload, user.cookie);
+  assert.equal(imported.status, 200, JSON.stringify(imported.data));
+  assert.equal(imported.data.reels.length, 2);
+  assert.notEqual(imported.data.folders[0].id, "source-folder");
+  const repeated = await call("library/import", "POST", payload, user.cookie);
+  assert.equal(repeated.data.reels.length, 4);
+  assert.equal(repeated.data.folders[1].name, "Favorites (2)");
+  const exported = await call("library/export", "GET", null, user.cookie);
+  assert.equal(exported.data.version, 3);
+  assert.doesNotMatch(JSON.stringify(exported.data), /password|hash|pin/);
+  const bad = structuredClone(payload);
+  bad.reels[0].folderId = "missing";
+  assert.equal(
+    (await call("library/import", "POST", bad, user.cookie)).status,
+    400,
+  );
+  assert.equal(
+    (await call("library", "GET", null, user.cookie)).data.reels.length,
+    4,
+  );
+});
+
+test("database-backed authentication throttling survives a fresh application instance", async () => {
+  const user = await account();
+  let result;
+  for (let i = 0; i < 10; i++)
+    result = await call("auth/login", "POST", {
+      username: user.username,
+      password: "wrong-password",
+    });
+  assert.equal(result.status, 429);
+  const fresh = createApi({
+    db: createDatabase(app.adapter),
+    secureCookies: false,
+  });
+  result = await call(
+    "auth/login",
+    "POST",
+    { username: user.username, password: "wrong-password" },
+    null,
+    {},
+    fresh,
+  );
+  assert.equal(result.status, 429);
+  assert.equal(result.response.headers.get("retry-after"), "900");
+});
+
+test("a session-store failure returns a safe API error instead of an uncaught rejection", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const db = {
+    async query(sql, params) {
+      if (sql.includes("INSERT INTO sessions")) {
+        const error = new Error(
+          "Sensitive driver details must not be returned",
+        );
+        error.code = "08006";
+        throw error;
+      }
+      return app.db.query(sql, params);
+    },
+    transaction: app.db.transaction,
+  };
+  const broken = createApi({ db, secureCookies: false });
+  const result = await call(
+    "auth/signup",
+    "POST",
+    { username: name(), password: "Secure-test-1234" },
+    null,
+    {},
+    broken,
+  );
+  assert.equal(result.status, 503);
+  assert.match(result.data.error, /database unavailable/i);
+  assert.doesNotMatch(JSON.stringify(result.data), /Sensitive driver details/);
+});

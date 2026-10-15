@@ -1,40 +1,12 @@
+import { uid, parseReelUrl } from "./reels.mjs";
+// Read-only compatibility with browser libraries from previous Reelbag releases.
 export const STORAGE_KEY = "reelbag.v2";
 export const LEGACY_KEY = "reelbag.v1";
-export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
-const ITERATIONS = 210000;
 const encoder = new TextEncoder();
 
 export function emptyData() {
   return { version: 2, revision: 0, masterPin: null, folders: [], reels: [] };
 }
-export function uid() {
-  return crypto.randomUUID();
-}
-
-export function parseReelUrl(input) {
-  try {
-    const url = new URL(input.trim());
-    if (
-      !["https:", "http:"].includes(url.protocol) ||
-      !["instagram.com", "www.instagram.com", "m.instagram.com"].includes(
-        url.hostname,
-      ) ||
-      url.username ||
-      url.password
-    )
-      return null;
-    const match = url.pathname.match(/^\/reels?\/([A-Za-z0-9_-]{1,100})\/?$/);
-    return match
-      ? {
-          shortcode: match[1],
-          url: `https://www.instagram.com/reel/${match[1]}/`,
-        }
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function hex(bytes) {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -62,15 +34,6 @@ async function derive(pin, salt, iterations) {
       ),
     ),
   );
-}
-export async function hashPin(pin) {
-  if (!/^\d{4,8}$/.test(pin)) throw new Error("Choose a PIN with 4–8 digits.");
-  const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  return {
-    salt,
-    hash: await derive(pin, salt, ITERATIONS),
-    iterations: ITERATIONS,
-  };
 }
 export async function verifyPin(pin, credential) {
   const result = await derive(pin, credential.salt, credential.iterations);
@@ -218,51 +181,4 @@ export function loadLegacyData() {
   if (saved === null) return null;
   const result = validateLegacy(JSON.parse(saved));
   return result.profiles.length ? result : null;
-}
-export function saveData(next, expectedRevision) {
-  if (loadData().revision !== expectedRevision)
-    throw new Error(
-      "Your library changed in another tab. Reload before saving.",
-    );
-  const validated = validateData({ ...next, revision: expectedRevision + 1 });
-  const serialized = JSON.stringify(validated);
-  if (new Blob([serialized]).size > MAX_BACKUP_BYTES)
-    throw new Error(
-      "Your library is too large. Export a backup and remove unused reels.",
-    );
-  try {
-    localStorage.setItem(STORAGE_KEY, serialized);
-  } catch {
-    throw new Error(
-      "Could not save. Browser storage may be full or unavailable. Export a backup and free some space.",
-    );
-  }
-  return validated;
-}
-export function exportData(data) {
-  const blob = new Blob([JSON.stringify(validateData(data), null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reelbag-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-export async function readBackup(file) {
-  if (file.size > MAX_BACKUP_BYTES)
-    throw new Error("Backups must be smaller than 10 MB.");
-  try {
-    const raw = JSON.parse(await file.text());
-    return raw?.version === 1 ? validateLegacy(raw) : validateData(raw);
-  } catch (error) {
-    throw new Error(
-      error instanceof SyntaxError
-        ? "This file is not valid JSON."
-        : error.message,
-    );
-  }
 }
