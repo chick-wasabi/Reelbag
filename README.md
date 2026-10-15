@@ -68,6 +68,10 @@ Instagram controls the cross-origin document, availability, login requirements, 
 
 The grid uses one column on Android/mobile, two on tablets, and three/four on desktop. Shared links through `/?url=` or `?text=` prefill Add Reel after login; a user must still submit the form.
 
+## Logo and browser icons
+
+`app/icon.svg` is the shared vector source for the sidebar/header logo and browser tab icon, using `#b5f36d`. Next.js metadata serves the SVG, 32 px PNG (`app/icon1.png`), six-size ICO (16–256 px), and opaque 180 px Apple icon (`app/apple-icon.png`). `public/apple-touch-icon.png` supplies the conventional Apple path as well. The manifest provides 192/512 px home-screen icons and a separate 512 px maskable icon with safe-zone padding. All PNG/ICO artwork is rasterized from the same SVG; preserve that source when updating the brand. These assets and standalone metadata support home-screen shortcuts; the app still requires a network connection for cloud data and Instagram playback.
+
 ## Validation
 
 ```sh

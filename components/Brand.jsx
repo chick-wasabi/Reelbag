@@ -1,11 +1,18 @@
-import { Bookmark } from "lucide-react";
+import Image from "next/image";
 export const SLOGAN = "Your personal vault for video remakes & inspiration";
 export default function Brand({ slogan = false, compact = false }) {
   return (
     <div className={`brand-block ${compact ? "brand-compact" : ""}`}>
       <span className="brand">
         <span className="brand-mark">
-          <Bookmark size={22} strokeWidth={1.8} />
+          <Image
+            src="/icon.svg"
+            alt=""
+            width={64}
+            height={64}
+            unoptimized
+            aria-hidden="true"
+          />
         </span>
         <span className="brand-wordmark">
           Reelbag<span className="brand-dot">.</span>

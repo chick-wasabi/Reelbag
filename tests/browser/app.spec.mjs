@@ -748,7 +748,7 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
   await expect(header.getByRole("button")).toHaveCount(2);
   await expect(header.getByRole("button", { name: "Add Reel" })).toHaveCount(0);
   await expect(header.getByRole("combobox")).toHaveCount(0);
-  await expect(header.locator("img")).toHaveAttribute(
+  await expect(header.locator(".header-actions img")).toHaveAttribute(
     "src",
     /seed=pixel_wizard/,
   );
@@ -766,10 +766,9 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
   await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.reload();
-  await expect(page.getByRole("banner").locator("img")).toHaveAttribute(
-    "src",
-    /seed=pixel_cyber_bot/,
-  );
+  await expect(
+    page.getByRole("banner").locator(".header-actions img"),
+  ).toHaveAttribute("src", /seed=pixel_cyber_bot/);
   await expect(page.locator(".sidebar-account img")).toHaveAttribute(
     "src",
     /seed=pixel_cyber_bot/,

@@ -86,11 +86,14 @@ select option {
   align-items: center;
   justify-content: center;
   color: var(--accent);
-  background: #b5f36d0b;
-  border: 1px solid #b5f36d1b;
-  border-radius: 10px;
-  width: 33px;
+  flex-shrink: 0;
+  width: 36px;
   height: 36px;
+}
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .brand-dot {
   color: var(--accent);
@@ -679,9 +682,8 @@ select option {
   gap: 10px;
 }
 .sidebar .brand-mark {
-  width: 37px;
-  height: 41px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
 }
 .sidebar-toggle {
   position: absolute;
