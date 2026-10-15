@@ -1,0 +1,97 @@
+import { test, expect } from '@playwright/test';
+
+async function createProfile(page, name) {
+  await page.getByRole('button', { name: /Create a profile/ }).click();
+  await page.getByLabel('Profile name').fill(name);
+  await page.getByLabel('Create a PIN').fill('1234');
+  await page.getByLabel('Confirm PIN').fill('1234');
+  await page.getByRole('button', { name: 'Create profile', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'All reels.' })).toBeVisible();
+}
+test.beforeEach(async ({ page }) => {
+  await page.route('https://www.instagram.com/embed.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.instgrm = { Embeds: { process: function () { document.querySelectorAll("blockquote.instagram-media").forEach(el => el.setAttribute("data-test-processed", "true")); } } };' }));
+});
+
+test('desktop: protected profiles, collection/reel CRUD, filters, persistence, and backup round trip', async ({ page }) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  const failures = []; page.on('pageerror', e => failures.push(e.message));
+  await page.goto('/');
+  await createProfile(page, 'Personal');
+  await page.getByRole('button', { name: 'New collection', exact: true }).first().click();
+  await page.getByLabel('Collection name').fill('Bike Editing');
+  await page.getByRole('dialog').getByRole('button', { name: 'Create collection', exact: true }).click();
+  await page.getByRole('button', { name: 'Add reel', exact: true }).first().click();
+  await page.getByLabel('Instagram Reel link').fill('https://www.instagram.com/reel/ABC_123/?igsh=tracking');
+  await page.getByLabel('Title or caption').fill('Sunset bike ride');
+  await page.getByLabel('A note for later').fill('Try the transition at sunset');
+  await page.getByRole('button', { name: 'Save to my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Sunset bike ride' })).toBeVisible();
+  await expect(page.locator('[data-test-processed="true"]')).toHaveCount(1);
+  await page.getByLabel('Status for Sunset bike ride').selectOption('Completed');
+  await page.getByRole('button', { name: 'To Try 0', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No reels found' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await page.getByRole('searchbox', { name: 'Search reels' }).fill('missing');
+  await expect(page.getByRole('heading', { name: 'No reels found' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await page.getByRole('button', { name: 'Edit Sunset bike ride', exact: true }).click();
+  await page.getByLabel('Title or caption').fill('Sunset ride inspiration');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await page.screenshot({ path: '/tmp/reelbag-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Settings & backup' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON Backup' }).click();
+  const download = await downloadPromise; const backupPath = await download.path();
+  await page.getByRole('button', { name: 'Close dialog' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: /Personal.*Open your space/ }).click();
+  await page.getByLabel('Your PIN').fill('0000');
+  await page.getByRole('button', { name: 'Unlock library' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('doesn’t match');
+  await page.getByLabel('Your PIN').fill('1234');
+  await page.getByRole('button', { name: 'Unlock library' }).click();
+  await expect(page.getByRole('heading', { name: 'Sunset ride inspiration' })).toBeVisible();
+  await page.getByRole('button', { name: 'Lock and switch profile' }).click();
+  await createProfile(page, 'With Friends');
+  await expect(page.getByRole('heading', { name: 'Sunset ride inspiration' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Settings & backup' }).click();
+  await page.getByLabel('Import Reelbag backup').setInputFiles(backupPath);
+  await expect(page.getByRole('heading', { name: 'Replace your library?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Replace library & import' }).click();
+  await expect(page.getByRole('button', { name: /With Friends.*Open your space/ })).toHaveCount(0);
+  await page.getByRole('button', { name: /Personal.*Open your space/ }).click();
+  await page.getByLabel('Your PIN').fill('1234');
+  await page.getByRole('button', { name: 'Unlock library' }).click();
+  await page.getByRole('button', { name: /Bike Editing 1/ }).click();
+  await page.getByRole('button', { name: 'Delete collection', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete collection', exact: true }).last().click();
+  await expect(page.getByRole('heading', { name: 'Sunset ride inspiration' })).toBeVisible();
+  await page.getByRole('button', { name: 'Delete Sunset ride inspiration', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete reel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Good things are worth keeping.' })).toBeVisible();
+  expect(failures).toEqual([]);
+});
+
+test('mobile: shared link, drawer, profile editing, keyboard dismissal, no horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/?url=https%3A%2F%2Fwww.instagram.com%2Freel%2FMOBILE_1%2F');
+  await createProfile(page, 'Bike Riding');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByLabel('Instagram Reel link')).toHaveValue('https://www.instagram.com/reel/MOBILE_1/');
+  await page.getByLabel('Title or caption').fill('My next adventure');
+  await page.getByRole('button', { name: 'Save to my library' }).click();
+  await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible();
+  await page.getByRole('button', { name: 'Collections', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Your workspace' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.screenshot({ path: '/tmp/reelbag-mobile.png', fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit profile & PIN' }).click();
+  await page.getByLabel('Profile name').fill('Bike Adventures');
+  await page.getByLabel('Current PIN', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profiles', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Bike Adventures', exact: true })).toBeVisible();
+});
