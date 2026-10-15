@@ -10,6 +10,10 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import Brand from "../components/Brand";
+import Sidebar from "../components/Sidebar";
+import FoldersPanel from "../components/FoldersPanel";
+import MoveReelModal from "../components/MoveReelModal";
 import AuthScreen from "../components/AuthScreen";
 import FolderBar from "../components/FolderBar";
 import FolderModal from "../components/FolderModal";
@@ -22,19 +26,10 @@ import SettingsPanel from "../components/SettingsPanel";
 import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
 
-function Brand() {
-  return (
-    <span className="brand">
-      <span className="brand-mark">
-        <Bookmark size={20} strokeWidth={2} />
-      </span>
-      Reelbag<span className="brand-dot">.</span>
-    </span>
-  );
-}
 export default function Home() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selected, setSelected] = useState("all");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
@@ -45,6 +40,22 @@ export default function Home() {
   const epoch = useRef(0);
   const pending = useRef(0);
   const userId = data?.user?.id;
+  const folderCounts = useMemo(
+    () =>
+      (data?.reels || []).reduce((counts, reel) => {
+        if (reel.folderId)
+          counts[reel.folderId] = (counts[reel.folderId] || 0) + 1;
+        return counts;
+      }, {}),
+    [data],
+  );
+  function editFolder(folder) {
+    setModal({
+      type: folder.pin && !folder.unlocked ? "unlockFolder" : "folder",
+      folder,
+    });
+  }
+
   const unlocked = useMemo(
     () =>
       new Set(data?.folders.filter((f) => f.unlocked).map((f) => f.id) || []),
@@ -265,98 +276,145 @@ export default function Home() {
           <AuthScreen onSuccess={login} />
         </main>
       ) : (
-        <div className="app-shell">
-          <header className="topbar">
-            <Brand />
-            <label className="search-box">
-              <Search size={17} />
-              <span className="sr-only">Search reels</span>
-              <input
-                type="search"
-                placeholder="Search reels…"
-                value={search}
-                maxLength={200}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </label>
-            <FolderBar
-              folders={data.folders}
-              selected={selected}
-              unlocked={unlocked}
-              onSelect={selectFolder}
-              onCreate={() => setModal({ type: "folder" })}
-              onEdit={(folder) =>
-                setModal({
-                  type:
-                    folder.pin && !folder.unlocked ? "unlockFolder" : "folder",
-                  folder,
-                })
-              }
-            />
-            <button
-              className="button-primary add-reel"
-              onClick={() => setModal({ type: "reel" })}
-            >
-              <Plus size={17} />
-              <span>Add Reel</span>
-            </button>
-            <div className="header-actions">
-              <button
-                className="icon-button"
-                aria-label="Settings"
-                title="Settings"
-                onClick={() => setModal({ type: "settings" })}
-              >
-                <Settings size={19} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Sign out"
-                title="Sign out"
-                onClick={logout}
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
-          </header>
-          <main className="stream" id="main-content">
-            {reels.length ? (
-              <div className="reel-grid">
-                {reels.map((reel) => (
-                  <ReelCard
-                    key={reel.id}
-                    reel={reel}
-                    folder={data.folders.find((f) => f.id === reel.folderId)}
-                    onEdit={() => setModal({ type: "reel", reel })}
-                    onDelete={() => setModal({ type: "deleteReel", reel })}
-                  />
-                ))}
+        <div
+          className={`app-shell has-sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}
+        >
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed((value) => !value)}
+            folders={data.folders}
+            counts={folderCounts}
+            reelCount={data.reels.length}
+            selected={selected}
+            onSelect={selectFolder}
+            onFolders={() => setModal({ type: "folders" })}
+            onCreate={() => setModal({ type: "folder" })}
+            onSettings={() => setModal({ type: "settings" })}
+            onLogout={logout}
+            username={data.user.username}
+          />
+          <div className="workspace">
+            <header className="topbar">
+              <div className="mobile-brand">
+                <Brand slogan />
               </div>
-            ) : (
-              <section className="empty-state">
-                <Bookmark size={30} strokeWidth={1.3} />
-                <h1>
-                  {search ? "No matching reels." : "A place for the good ones."}
-                </h1>
-                <p>
-                  {search
-                    ? "Try another title."
-                    : "Add a reel, or open a folder above."}
-                </p>
+              <label className="search-box">
+                <Search size={17} />
+                <span className="sr-only">Search reels</span>
+                <input
+                  type="search"
+                  placeholder="Search reels…"
+                  value={search}
+                  maxLength={200}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+              <FolderBar
+                folders={data.folders}
+                selected={selected}
+                unlocked={unlocked}
+                onSelect={selectFolder}
+                onCreate={() => setModal({ type: "folder" })}
+                onEdit={editFolder}
+              />
+              <button
+                className="button-primary add-reel"
+                onClick={() => setModal({ type: "reel" })}
+              >
+                <Plus size={17} />
+                <span>Add Reel</span>
+              </button>
+              <div className="header-actions mobile-header-actions">
                 <button
-                  className="button-secondary"
-                  onClick={() =>
-                    search ? setSearch("") : setModal({ type: "reel" })
-                  }
+                  className="icon-button"
+                  aria-label="Settings"
+                  title="Settings"
+                  onClick={() => setModal({ type: "settings" })}
                 >
-                  {search ? "Clear search" : "Add your first reel"}
+                  <Settings size={19} />
                 </button>
-              </section>
-            )}
-          </main>
+                <button
+                  className="icon-button"
+                  aria-label="Sign out"
+                  title="Sign out"
+                  onClick={logout}
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            </header>
+            <main className="stream" id="main-content">
+              {reels.length ? (
+                <div className="reel-grid">
+                  {reels.map((reel) => (
+                    <ReelCard
+                      key={reel.id}
+                      reel={reel}
+                      folder={data.folders.find((f) => f.id === reel.folderId)}
+                      onEdit={() => setModal({ type: "reel", reel })}
+                      onMove={() => setModal({ type: "moveReel", reel })}
+                      onDelete={() => setModal({ type: "deleteReel", reel })}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <section className="empty-state">
+                  <Bookmark size={30} strokeWidth={1.3} />
+                  <h1>
+                    {search
+                      ? "No matching reels."
+                      : "A place for the good ones."}
+                  </h1>
+                  <p>
+                    {search
+                      ? "Try another title."
+                      : "Add a reel, or open a folder above."}
+                  </p>
+                  <button
+                    className="button-secondary"
+                    onClick={() =>
+                      search ? setSearch("") : setModal({ type: "reel" })
+                    }
+                  >
+                    {search ? "Clear search" : "Add your first reel"}
+                  </button>
+                </section>
+              )}
+            </main>
+          </div>
+          <button
+            className="mobile-fab"
+            aria-label="Add Reel"
+            onClick={() => setModal({ type: "reel" })}
+          >
+            <Plus size={21} />
+            <span>Add Reel</span>
+          </button>
         </div>
       )}
 
+      {data?.user && modal?.type === "folders" && (
+        <Modal title="Folders" onClose={() => setModal(null)}>
+          <FoldersPanel
+            folders={data.folders}
+            counts={folderCounts}
+            onSelect={(id) => {
+              setModal(null);
+              selectFolder(id);
+            }}
+            onCreate={() => setModal({ type: "folder" })}
+            onEdit={editFolder}
+          />
+        </Modal>
+      )}
+      {data?.user && modal?.type === "moveReel" && (
+        <MoveReelModal
+          reel={modal.reel}
+          folders={data.folders}
+          onClose={() => setModal(null)}
+          onSave={(folderId) => saveReel({ ...modal.reel, folderId })}
+        />
+      )}
       {data?.user && modal?.type === "reel" && (
         <ReelModal
           reel={modal.reel}

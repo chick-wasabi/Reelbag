@@ -1,6 +1,6 @@
 # Reelbag
 
-A minimal, multi-user Instagram Reel library using Next.js 16 App Router, React 19, Tailwind CSS, Neon Postgres, and bcrypt. Sign in with a username and password/PIN on any device to use the same cloud library. The dashboard keeps only search, folders, Add Reel, settings, and sign out.
+A minimal, multi-user Instagram Reel library using Next.js 16 App Router, React 19, Tailwind CSS, Neon Postgres, and bcrypt. Sign in with a username and password/PIN on any device to use the same cloud library. The desktop workspace has a collapsible sidebar for All Reels, Folders, Settings, and Logout, plus folder counts and quick creation. Phones use the branded header and an Add Reel floating action button; the sidebar is hidden below 768 px.
 
 ## Configure and run
 
@@ -52,7 +52,11 @@ Use **Import previous browser library** in Settings to explicitly copy the old l
 
 ## Instagram and mobile
 
+Custom titles appear above each video. The card action menu supports Edit Title, Move Folder, Delete, and switching between cropped and full-embed views. Actions remain accessible by keyboard and on touchscreens. Folder counts include accessible reels; locked folders show a lock instead of exposing a count.
+
 Reel cards load Instagram's official `https://www.instagram.com/embed.js` script lazily and call `window.instgrm.Embeds.process()`. Instagram controls thumbnails, players, availability, login requirements, and cookies. Private, removed, or restricted reels may not display. Every card has an original link and failed script loads offer Retry. No Instagram credentials are requested by Reelbag.
+
+The default video-only view clips the outer iframe inside a 9:16 frame with a 58 px top offset and hides content below the player. Captions are declared false; because Instagram treats its caption attribute as a presence flag, the disabled flag is omitted before its scanner runs. This does not inspect or modify the cross-origin document. The crop is best-effort: Instagram can change header heights, player dimensions, restrictions, or overlays. Use **Show full embed** from the action menu or **Open original** if playback controls, login prompts, or other content are clipped. The app does not scrape or download video files.
 
 The grid uses one column on Android/mobile, two on tablets, and three/four on desktop. Shared links through `/?url=` or `?text=` prefill Add Reel after login; a user must still submit the form.
 
@@ -69,7 +73,7 @@ npm audit --omit=dev
 
 Set `CHROMIUM_PATH` to an existing Chromium binary if desired. Tests do not use a real user's Neon database or modify deployment data. Server integration tests run the actual API handlers, schema, and parameterized SQL against PGlite, an embedded PostgreSQL engine. They check automatic migrations, accounts, bcrypt hashes, cookie attributes, session expiry, multiple devices, ownership/FK isolation, server-enforced folder PINs, CSRF, validation, imports, and persistent rate limits.
 
-Browser tests run the production frontend on port 3100 and route API requests to the same SQL-backed test handlers; only the Neon transport and Instagram script are substituted. They exercise signup/login, device/account separation, folder and reel CRUD, backups, previous local imports, responsive layouts, and failed-save drafts. A passing suite does not verify a live Neon connection or a specific Instagram reel. A real Neon connection was not available during initial cloud integration because `DATABASE_URL` was unset; perform the live checks above once it is configured.
+Browser tests run the production frontend on port 3100 and route API requests to the same SQL-backed test handlers; only the Neon transport and Instagram script are substituted. They exercise signup/login, device/account separation, folder and reel CRUD, backups, previous local imports, responsive layouts, failed-save drafts, sidebar collapse/counts, persisted folder moves, and cropping against a deterministic interactive iframe fixture. The fixture is not a live Instagram player. A passing suite does not verify a live Neon connection or a specific Instagram reel. A real Neon connection was not available during initial cloud integration because `DATABASE_URL` was unset; perform the live checks above once it is configured.
 
 ## Structure
 

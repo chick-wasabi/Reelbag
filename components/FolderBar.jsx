@@ -51,7 +51,7 @@ export default function FolderBar({
         </button>
       )}
       <button
-        className="icon-button"
+        className="icon-button folder-create"
         onClick={onCreate}
         aria-label="New folder"
         title="New folder"

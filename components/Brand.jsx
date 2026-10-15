@@ -1,0 +1,17 @@
+import { Bookmark } from "lucide-react";
+export const SLOGAN = "Your personal vault for video remakes & inspiration";
+export default function Brand({ slogan = false, compact = false }) {
+  return (
+    <div className={`brand-block ${compact ? "brand-compact" : ""}`}>
+      <span className="brand">
+        <span className="brand-mark">
+          <Bookmark size={22} strokeWidth={1.8} />
+        </span>
+        <span className="brand-wordmark">
+          Reelbag<span className="brand-dot">.</span>
+        </span>
+      </span>
+      {slogan && <p className="brand-tagline">{SLOGAN}</p>}
+    </div>
+  );
+}

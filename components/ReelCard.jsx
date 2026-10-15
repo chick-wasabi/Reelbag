@@ -2,6 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ExternalLink,
+  MoreHorizontal,
+  FolderInput,
+  Scan,
+  Crop,
   Pencil,
   Trash2,
   Instagram,
@@ -43,8 +47,34 @@ function loadInstagram() {
   return embedPromise;
 }
 
-export default function ReelCard({ reel, folder, onEdit, onDelete }) {
+export default function ReelCard({ reel, folder, onEdit, onMove, onDelete }) {
   const ref = useRef(null);
+  const menu = useRef(null);
+  const [fullEmbed, setFullEmbed] = useState(false);
+  function closeMenu() {
+    if (menu.current) {
+      menu.current.open = false;
+      menu.current.querySelector("summary")?.focus();
+    }
+  }
+  useEffect(() => {
+    function outside(event) {
+      if (menu.current && !menu.current.contains(event.target))
+        menu.current.open = false;
+    }
+    function escape(event) {
+      if (event.key === "Escape" && menu.current?.open) {
+        event.preventDefault();
+        closeMenu();
+      }
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
   const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -68,6 +98,11 @@ export default function ReelCard({ reel, folder, onEdit, onDelete }) {
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
+    // Instagram treats this option as a presence flag. JSX declares false;
+    // omit the flag before the native scanner runs so captions stay disabled.
+    ref.current
+      ?.querySelectorAll('[data-instgrm-captioned="false"]')
+      .forEach((node) => node.removeAttribute("data-instgrm-captioned"));
     loadInstagram()
       .then(() => {
         if (!cancelled) {
@@ -99,28 +134,69 @@ export default function ReelCard({ reel, folder, onEdit, onDelete }) {
           >
             <ExternalLink size={15} />
           </a>
-          <button
-            className="icon-button"
-            onClick={onEdit}
-            aria-label={`Edit ${reel.title}`}
-          >
-            <Pencil size={15} />
-          </button>
-          <button
-            className="icon-button danger"
-            onClick={onDelete}
-            aria-label={`Delete ${reel.title}`}
-          >
-            <Trash2 size={15} />
-          </button>
+          <details ref={menu} className="reel-menu">
+            <summary
+              className="icon-button"
+              aria-label={`Actions for ${reel.title}`}
+              title="Reel actions"
+            >
+              <MoreHorizontal size={19} />
+            </summary>
+            <div className="reel-menu-panel">
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onEdit();
+                }}
+                aria-label={`Edit ${reel.title}`}
+              >
+                <Pencil size={15} />
+                Edit Title
+              </button>
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onMove();
+                }}
+                aria-label={`Move ${reel.title}`}
+              >
+                <FolderInput size={15} />
+                Move Folder
+              </button>
+              <button
+                onClick={() => {
+                  closeMenu();
+                  setFullEmbed((value) => !value);
+                }}
+              >
+                {fullEmbed ? <Crop size={15} /> : <Scan size={15} />}{" "}
+                {fullEmbed ? "Video-only view" : "Show full embed"}
+              </button>
+              <button
+                className="danger"
+                onClick={() => {
+                  closeMenu();
+                  onDelete();
+                }}
+                aria-label={`Delete ${reel.title}`}
+              >
+                <Trash2 size={15} />
+                Delete
+              </button>
+            </div>
+          </details>
         </div>
       </div>
-      <div className="embed-shell" key={`${reel.url}-${attempt}`}>
+      <div
+        className={`embed-shell ${fullEmbed ? "is-full" : "is-cropped"}`}
+        key={`${reel.url}-${attempt}`}
+      >
         {visible ? (
           <blockquote
             className="instagram-media"
             data-instgrm-permalink={reel.url}
             data-instgrm-version="14"
+            data-instgrm-captioned="false"
           >
             <a
               href={reel.url}

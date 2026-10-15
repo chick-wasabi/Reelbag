@@ -34,7 +34,12 @@ async function connect(context) {
   await context.route("https://www.instagram.com/embed.js", (route) =>
     route.fulfill({
       contentType: "application/javascript",
-      body: 'window.instgrm={Embeds:{process(){document.querySelectorAll("blockquote.instagram-media").forEach(el=>el.setAttribute("data-test-processed","true"));}}};',
+      body: `window.instgrm={Embeds:{process(){document.querySelectorAll('blockquote.instagram-media').forEach(el=>{
+        const frame=document.createElement('iframe');frame.className='instagram-media';frame.title='Instagram video embed';
+        frame.setAttribute('data-test-processed','true');frame.setAttribute('data-caption-mode',String(el.hasAttribute('data-instgrm-captioned')));
+        frame.style.height='1100px';frame.srcdoc=${JSON.stringify(`<html><head><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}header{height:58px;padding:20px;background:#1c252c}main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:radial-gradient(ellipse at 20% 25%,#8fae6040,transparent 60%),linear-gradient(150deg,#293c39,#132026 50%,#30394a)}button{width:62px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:50%;font-size:25px;margin:auto;cursor:pointer}p{color:#91aaa0;font-size:12px;letter-spacing:3px;margin-top:24px}footer{height:220px;background:#1c252c;padding:20px}</style></head><body><header>Instagram profile</header><main><button aria-label="Play video" onclick="this.textContent='Playing';this.setAttribute('aria-label','Playing video')">▶</button><p>VIDEO PREVIEW</p></main><footer>Likes · Comments · Caption</footer></body></html>`)};
+        el.replaceWith(frame);
+      });}}};`,
     }),
   );
 }
@@ -111,6 +116,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
   await expect(page.getByLabel("Title / Name")).toHaveValue("Sunset ride");
   await page.getByRole("button", { name: "Save reel", exact: true }).click();
   await expect(page.locator('[data-test-processed="true"]')).toHaveCount(1);
+  await page.getByLabel("Actions for Sunset ride", { exact: true }).click();
   await page
     .getByRole("button", { name: "Edit Sunset ride", exact: true })
     .click();
@@ -171,6 +177,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
   await expect(
     page.getByRole("heading", { name: "Evening ride" }),
   ).toBeVisible();
+  await page.getByLabel("Actions for Evening ride", { exact: true }).click();
   await page
     .getByRole("button", { name: "Delete Evening ride", exact: true })
     .click();
@@ -264,12 +271,12 @@ test("folder PINs are verified by SQL-backed API and protected content is absent
       .getByLabel("Folders", { exact: true })
       .selectOption({ label: "🔒 Pranks" });
     await other.getByLabel("Folder PIN", { exact: true }).fill("0000");
-    await other.getByRole("button", { name: "Open folder" }).click();
+    await other.getByRole("button", { name: "Open folder", exact: true }).click();
     await expect(other.getByRole("dialog").getByRole("alert")).toContainText(
       "doesn’t match",
     );
     await other.getByLabel("Folder PIN", { exact: true }).fill("4567");
-    await other.getByRole("button", { name: "Open folder" }).click();
+    await other.getByRole("button", { name: "Open folder", exact: true }).click();
     await expect(
       other.getByRole("heading", { name: "Secret prank" }),
     ).toBeVisible();
@@ -395,4 +402,120 @@ test("server write errors keep reel drafts available and never show an unsaved c
   );
   await expect(page.getByLabel("Title / Name")).toHaveValue("Keep my draft");
   await expect(page.getByRole("article")).toHaveCount(0);
+});
+
+test("sidebar collapses, folder counts follow moves, mobile hides navigation, and cropped embeds remain playable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await folder(page, "Inspiration");
+  await addReel(page, "Video to remake", "REMAKE");
+  await folder(page, "Remakes");
+  await addReel(page, "Weekend idea", "WEEKEND", "");
+  await page.getByRole("button", { name: "All Reels", exact: true }).click();
+  const sidebar = page.getByRole("complementary", {
+    name: "Desktop workspace",
+  });
+  await expect(sidebar).toBeVisible();
+  await expect(
+    sidebar.getByText("Your personal vault for video remakes & inspiration", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    sidebar
+      .getByRole("button", { name: "Open folder Inspiration", exact: true })
+      .locator(".sidebar-count"),
+  ).toHaveText("1");
+  const card = page
+    .getByRole("article")
+    .filter({
+      has: page.getByRole("heading", { name: "Video to remake", exact: true }),
+    });
+  await expect(card.locator("iframe.instagram-media")).toHaveAttribute(
+    "data-caption-mode",
+    "false",
+  );
+  const clip = card.locator(".embed-shell");
+  await expect(clip).toHaveClass(/is-cropped/);
+  const clipped = await clip.boundingBox();
+  const frame = await card.locator("iframe").boundingBox();
+  expect(Math.abs(clipped.width / clipped.height - 9 / 16)).toBeLessThan(0.01);
+  expect(frame.y).toBeLessThan(clipped.y);
+  expect(frame.y + frame.height).toBeGreaterThan(clipped.y + clipped.height);
+  await card
+    .frameLocator("iframe")
+    .getByRole("button", { name: "Play video", exact: true })
+    .click();
+  await expect(
+    card
+      .frameLocator("iframe")
+      .getByRole("button", { name: "Playing video", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "/tmp/reelbag-vault-desktop.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Collapse sidebar", exact: true })
+    .click();
+  await expect(sidebar).toHaveCSS("width", "84px");
+  await page
+    .getByRole("button", { name: "Expand sidebar", exact: true })
+    .click();
+  await expect(sidebar).toHaveCSS("width", "264px");
+  await page
+    .getByRole("button", { name: "Browse folders", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Folders", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await card.getByLabel("Actions for Video to remake", { exact: true }).click();
+  await card
+    .getByRole("button", { name: "Show full embed", exact: true })
+    .click();
+  await expect(clip).toHaveClass(/is-full/);
+  await card.getByLabel("Actions for Video to remake", { exact: true }).click();
+  await card
+    .getByRole("button", { name: "Video-only view", exact: true })
+    .click();
+  await card.getByLabel("Actions for Video to remake", { exact: true }).click();
+  await card
+    .getByRole("button", { name: "Move Video to remake", exact: true })
+    .click();
+  await page
+    .getByLabel("Move to folder", { exact: true })
+    .selectOption({ label: "Remakes" });
+  await page.getByRole("button", { name: "Move reel", exact: true }).click();
+  await expect(
+    sidebar
+      .getByRole("button", { name: "Open folder Inspiration", exact: true })
+      .locator(".sidebar-count"),
+  ).toHaveText("0");
+  await expect(
+    sidebar
+      .getByRole("button", { name: "Open folder Remakes", exact: true })
+      .locator(".sidebar-count"),
+  ).toHaveText("1");
+  const persisted = await page.evaluate(async () =>
+    (await fetch("/api/library")).json(),
+  );
+  expect(
+    persisted.reels.find((reel) => reel.title === "Video to remake").folderId,
+  ).toBe(persisted.folders.find((folder) => folder.name === "Remakes").id);
+  await page.setViewportSize({ width: 412, height: 915 });
+  await expect(sidebar).toBeHidden();
+  await expect(page.locator(".mobile-fab")).toBeVisible();
+  await expect(page.locator(".mobile-brand .brand-tagline")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/reelbag-vault-mobile.png",
+    fullPage: true,
+  });
 });
