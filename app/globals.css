@@ -5,6 +5,9 @@
 :root {
   color-scheme: dark;
   --accent: #b5f36d;
+  --accent-rgb: 181 243 109;
+  --grid-gap: 22px;
+  --surface: #15181a;
   --background: #0c0d0f;
   --line: #ffffff0e;
 }
@@ -46,7 +49,7 @@ select:focus-visible {
   outline-offset: 3px;
 }
 ::selection {
-  background: #b5f36d30;
+  background: rgb(var(--accent-rgb) / 0.188);
 }
 input,
 select {
@@ -63,7 +66,7 @@ input::placeholder {
 }
 input:focus,
 select:focus {
-  border-color: #b5f36d70;
+  border-color: rgb(var(--accent-rgb) / 0.439);
 }
 select {
   cursor: pointer;
@@ -116,11 +119,11 @@ select option {
 }
 .button-primary {
   background: var(--accent);
-  color: #17210d;
+  color: var(--on-accent, #17210d);
   border: 1px solid transparent;
 }
 .button-primary:hover {
-  background: #b5f36d;
+  background: var(--accent);
 }
 .button-secondary {
   background: #ffffff03;
@@ -174,7 +177,7 @@ select option {
   padding: 20px 32px;
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 55;
   border-bottom: 1px solid var(--line);
   background: #0e1012ed;
   backdrop-filter: blur(20px);
@@ -200,7 +203,7 @@ select option {
   font-size: 13px;
 }
 .search-box:focus-within {
-  border-color: #b5f36d60;
+  border-color: rgb(var(--accent-rgb) / 0.376);
 }
 .search-box input:focus-visible {
   outline: none;
@@ -245,7 +248,7 @@ select option {
 .reel-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 22px;
+  gap: var(--grid-gap);
   align-items: start;
 }
 .reel-card {
@@ -290,26 +293,28 @@ select option {
   height: 28px;
 }
 .embed-shell {
-  width: calc(100% - 16px);
-  max-width: 380px;
-  min-height: 480px;
-  margin: 0 auto 8px;
-  background: #0f172a;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 480px;
+  overflow: hidden;
+  margin: 0 0 8px;
   border-radius: 12px;
+  background: #0f172a;
 }
 .reel-iframe {
-  display: block;
+  position: absolute;
+  top: -55px;
+  left: 0;
   width: 100%;
-  height: auto;
-  aspect-ratio: 9 / 21;
-  min-height: 480px;
+  height: calc(100% + 165px);
   border: 0;
-  border-radius: 12px;
+  display: block;
   background: #0f172a;
 }
 .reel-playback-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 4px 12px 12px;
 }
 .replay-button {
@@ -317,16 +322,16 @@ select option {
   align-items: center;
   gap: 7px;
   color: var(--accent);
-  background: #b5f36d0b;
-  border: 1px solid #b5f36d26;
+  background: rgb(var(--accent-rgb) / 0.043);
+  border: 1px solid rgb(var(--accent-rgb) / 0.149);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 12px;
 }
 .reel-card:focus-within,
 .reel-card:hover {
-  border-color: #b5f36d55;
-  box-shadow: 0 0 22px #b5f36d09;
+  border-color: rgb(var(--accent-rgb) / 0.333);
+  box-shadow: 0 0 22px rgb(var(--accent-rgb) / 0.035);
 }
 .embed-fallback {
   display: flex;
@@ -340,7 +345,12 @@ select option {
   color: #70796a;
   font-size: 12px;
   background:
-    radial-gradient(ellipse at 50% 30%, #b5f36d05, transparent 70%), #101214;
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgb(var(--accent-rgb) / 0.02),
+      transparent 70%
+    ),
+    #101214;
 }
 .embed-fallback:hover {
   color: #bac9ad;
@@ -395,7 +405,11 @@ select option {
   flex-direction: column;
   align-items: center;
   padding: 50px 24px;
-  background: radial-gradient(ellipse at 50% 20%, #b5f36d04, transparent 60%);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgb(var(--accent-rgb) / 0.016),
+    transparent 60%
+  );
 }
 .gate-panel {
   margin: auto 0;
@@ -422,9 +436,9 @@ select option {
   height: 48px;
   margin-bottom: 24px;
   color: #9cb38b;
-  border: 1px solid #b5f36d18;
+  border: 1px solid rgb(var(--accent-rgb) / 0.094);
   border-radius: 15px;
-  background: #b5f36d05;
+  background: rgb(var(--accent-rgb) / 0.02);
 }
 .form-stack {
   display: flex;
@@ -453,7 +467,7 @@ select option {
 .checkbox-label input {
   width: 16px;
   height: 16px;
-  accent-color: #b5f36d;
+  accent-color: var(--accent);
 }
 .inline-action {
   display: inline-flex;
@@ -547,7 +561,7 @@ select option {
   width: max-content;
   max-width: calc(100vw - 30px);
   background: #20271c;
-  border: 1px solid #b5f36d26;
+  border: 1px solid rgb(var(--accent-rgb) / 0.149);
   color: #c7dbb6;
   border-radius: 10px;
   box-shadow: 0 8px 40px #0008;
@@ -633,7 +647,7 @@ select option {
 }
 .auth-tabs button[aria-pressed="true"] {
   color: #d4e9c1;
-  background: #b5f36d0d;
+  background: rgb(var(--accent-rgb) / 0.051);
 }
 
 /* Desktop vault navigation */
@@ -718,9 +732,9 @@ select option {
   background: #ffffff04;
 }
 .sidebar-link.active {
-  color: #b5f36d;
-  border-color: #b5f36d12;
-  background: #b5f36d0b;
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.071);
+  background: rgb(var(--accent-rgb) / 0.043);
 }
 .sidebar-label {
   flex: 1;
@@ -750,7 +764,7 @@ select option {
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #b5f36d1a transparent;
+  scrollbar-color: rgb(var(--accent-rgb) / 0.102) transparent;
 }
 .sidebar-folder-list .sidebar-link {
   min-height: 41px;
@@ -787,7 +801,7 @@ select option {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #b5f36d;
+  background: var(--accent);
   flex-shrink: 0;
 }
 .sidebar-collapsed {
@@ -1086,13 +1100,13 @@ select option {
 }
 .password-input button:hover {
   color: #d2e8c0;
-  background: #b5f36d0a;
+  background: rgb(var(--accent-rgb) / 0.039);
 }
 .recovery-fields {
   padding: 17px;
-  border: 1px solid #b5f36d17;
+  border: 1px solid rgb(var(--accent-rgb) / 0.09);
   border-radius: 11px;
-  background: #b5f36d03;
+  background: rgb(var(--accent-rgb) / 0.012);
 }
 .recovery-fields select {
   max-width: 100%;
@@ -1108,20 +1122,20 @@ select option {
 .success-text {
   font-size: 12px;
   color: #c3e7a7;
-  border: 1px solid #b5f36d26;
-  background: #b5f36d06;
+  border: 1px solid rgb(var(--accent-rgb) / 0.149);
+  background: rgb(var(--accent-rgb) / 0.024);
   padding: 12px;
   border-radius: 8px;
   line-height: 1.7;
 }
 .reel-actions .is-pinned {
-  color: #b5f36d;
+  color: var(--accent);
 }
 .reel-actions .is-favorite {
-  color: #b5f36d;
+  color: var(--accent);
 }
 .reel-actions .flag-toggle:hover {
-  background: #b5f36d10;
+  background: rgb(var(--accent-rgb) / 0.063);
 }
 
 /* Shared branding, profile controls, and a single Add Reel entry point. */
@@ -1138,7 +1152,7 @@ select option {
   padding: 0 20px;
   border-radius: 18px;
   background: var(--accent);
-  color: #17210d;
+  color: var(--on-accent, #17210d);
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 8px 34px #0009;
@@ -1146,7 +1160,7 @@ select option {
 .reel-fab:hover,
 .button-primary:hover {
   background: var(--accent);
-  box-shadow: 0 0 20px #b5f36d20;
+  box-shadow: 0 0 20px rgb(var(--accent-rgb) / 0.125);
 }
 .stream {
   padding-bottom: 110px;
@@ -1167,7 +1181,7 @@ select option {
   flex-shrink: 0;
   border-radius: 10px;
   overflow: hidden;
-  background: #b5f36d10;
+  background: rgb(var(--accent-rgb) / 0.063);
 }
 .profile-avatar img {
   width: 100%;
@@ -1177,7 +1191,7 @@ select option {
 }
 .avatar-button {
   border-radius: 11px;
-  border: 1px solid #b5f36d35;
+  border: 1px solid rgb(var(--accent-rgb) / 0.208);
 }
 .avatar-picker {
   border: 0;
@@ -1217,8 +1231,8 @@ select option {
 }
 .avatar-grid button[aria-pressed="true"] {
   border-color: var(--accent);
-  background: #b5f36d20;
-  box-shadow: 0 0 12px #b5f36d12;
+  background: rgb(var(--accent-rgb) / 0.125);
+  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.071);
 }
 .profile-form {
   padding-bottom: 24px;
@@ -1250,8 +1264,8 @@ select option {
 }
 .folder-tabs button.active {
   color: var(--accent);
-  background: #b5f36d10;
-  border-color: #b5f36d40;
+  background: rgb(var(--accent-rgb) / 0.063);
+  border-color: rgb(var(--accent-rgb) / 0.251);
 }
 .current-folder-name {
   font-size: 13px;
@@ -1296,4 +1310,115 @@ select option {
 
 .sidebar-link.active .sidebar-count {
   color: var(--accent);
+}
+
+.profile-dropdown {
+  position: relative;
+}
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 260px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 110px);
+  overflow-y: auto;
+  z-index: 55;
+  padding: 8px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.2);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px #0006;
+}
+.profile-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 10px;
+  text-align: left;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.profile-menu button:hover,
+.profile-menu button:focus-visible {
+  background: rgb(var(--accent-rgb) / 0.1);
+}
+.profile-menu-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 10px 14px;
+  overflow-wrap: anywhere;
+}
+.profile-menu-identity strong {
+  font-size: 14px;
+}
+.profile-menu-identity span {
+  color: #88927f;
+  font-size: 12px;
+}
+.profile-menu-divider {
+  border-top: 1px solid var(--line);
+  margin: 6px 0;
+}
+input[type="color"] {
+  height: 48px;
+  padding: 5px;
+  cursor: pointer;
+}
+@media (min-width: 1280px) {
+  .app-shell[data-grid-columns="4"] .reel-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .app-shell[data-grid-columns="5"] .reel-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f5f0;
+  --surface: #fff;
+  --line: #16200f18;
+}
+:root[data-theme="light"] body {
+  color: #20271c;
+}
+:root[data-theme="light"] .sidebar,
+:root[data-theme="light"] .topbar,
+:root[data-theme="light"] .reel-card,
+:root[data-theme="light"] .reel-heading,
+:root[data-theme="light"] .modal {
+  background: #fff;
+  color: #20271c;
+  border-color: #16200f18;
+}
+:root[data-theme="light"] input,
+:root[data-theme="light"] select,
+:root[data-theme="light"] .search-box {
+  background: #f5f7f2;
+  color: #20271c;
+  border-color: #16200f24;
+}
+:root[data-theme="light"] .field-label,
+:root[data-theme="light"] .sidebar-link,
+:root[data-theme="light"] .button-secondary,
+:root[data-theme="light"] .muted-copy,
+:root[data-theme="light"] .fine-print,
+:root[data-theme="light"] .folder-tabs button,
+:root[data-theme="light"] .icon-button {
+  color: #526046;
+}
+:root[data-theme="light"] .sidebar-link.active,
+:root[data-theme="light"] .folder-tabs button.active {
+  color: #203510;
+  background: rgb(var(--accent-rgb) / 0.3);
+}
+:root[data-theme="light"] .reel-menu-panel {
+  background: #fff;
+  color: #20271c;
+  border-color: #16200f24;
+}
+:root[data-theme="light"] .reel-menu-panel button {
+  color: #526046;
 }

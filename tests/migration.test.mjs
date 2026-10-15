@@ -1,3 +1,4 @@
+import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -36,7 +37,7 @@ test("additive migrations retain an existing account and reel and initialize new
       is_favorite: false,
     });
     const [account] = await app.db.query(
-      "SELECT username,security_question,security_answer,avatar_url,password_hint FROM users WHERE id=$1",
+      "SELECT username,security_question,security_answer,avatar_url,password_hint,display_name,appearance FROM users WHERE id=$1",
       [user],
     );
     assert.deepEqual(account, {
@@ -45,6 +46,8 @@ test("additive migrations retain an existing account and reel and initialize new
       security_answer: null,
       avatar_url: DEFAULT_AVATAR,
       password_hint: null,
+      display_name: null,
+      appearance: DEFAULT_APPEARANCE,
     });
   } finally {
     await app.pg.close();

@@ -37,12 +37,12 @@ async function connect(context) {
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#b5f36d"/><path d="M10 12h5v5h-5zm15 0h5v5h-5zM12 26h16v4H12z" fill="#15181a"/></svg>',
     }),
   );
-  await context.route("https://www.instagram.com/reel/*/embed/", (route) =>
+  await context.route("https://www.instagram.com/reel/*/embed/**", (route) =>
     route.fulfill({
       contentType: "text/html",
       body: `<!doctype html><html><head><style>
         *{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}
-        header{height:60px;padding:20px;background:white;color:#333}
+        header{height:55px;padding:20px;background:white;color:#333}
         main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:linear-gradient(150deg,#293c39,#132026 50%,#30394a)}
         button{width:80px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:20px;font-size:15px;margin:auto;cursor:pointer}
         footer{height:240px;background:white;color:#333;padding:20px}
@@ -52,7 +52,7 @@ async function connect(context) {
           if(current==='Play video'){this.textContent='Pause';this.setAttribute('aria-label','Pause video')}
           else if(current==='Pause video'){this.textContent='Replay';this.setAttribute('aria-label','Replay video')}
           else{window.open('https://www.instagram.com/reel/REDIRECT/','_blank');try{top.location.href='https://www.instagram.com/reel/REDIRECT/'}catch{};this.textContent='Pause';this.setAttribute('aria-label','Pause video')}
-        ">Play</button></main><footer>Likes · Comments · Instagram</footer></body></html>`,
+        ">Play</button></main><footer>Likes · Comments · Instagram</footer><script>if(new URLSearchParams(location.search).get('autoplay')==='1'){const button=document.querySelector('button');button.textContent='Pause';button.setAttribute('aria-label','Pause video')}</script></body></html>`,
     }),
   );
 }
@@ -92,6 +92,12 @@ async function addReel(page, title, code, folderId) {
       .selectOption(folderId);
   await page.getByRole("button", { name: "Save reel", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+async function openProfileItem(page, name) {
+  await page
+    .getByRole("button", { name: "Open profile menu", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name, exact: true }).click();
 }
 async function selectFilter(page, name) {
   const sidebar = page.getByRole("complementary", {
@@ -331,9 +337,7 @@ test("portable cloud backups append without credentials and legacy browser impor
 }) => {
   await register(page);
   await addReel(page, "Recipe", "BACKUP", "");
-  await page
-    .getByRole("button", { name: "Open settings", exact: true })
-    .click();
+  await openProfileItem(page, "Data & Backups");
   const promise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON Backup" }).click();
   const download = await promise;
@@ -395,9 +399,7 @@ test("portable cloud backups append without credentials and legacy browser impor
   const original = await page.evaluate(() =>
     localStorage.getItem("reelbag.v2"),
   );
-  await page
-    .getByRole("button", { name: "Open settings", exact: true })
-    .click();
+  await openProfileItem(page, "Data & Backups");
   await page
     .getByRole("button", { name: "Import previous browser library" })
     .click();
@@ -436,7 +438,7 @@ test("server write errors keep reel drafts available and never show an unsaved c
   await expect(page.getByRole("article")).toHaveCount(0);
 });
 
-test("sidebar collapses, folder counts follow moves, and full native embeds replay without navigating", async ({
+test("sidebar collapses, folder counts follow moves, and full-width cropped embeds request autoplay on replay", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1536, height: 1000 });
@@ -478,9 +480,10 @@ test("sidebar collapses, folder counts follow moves, and full native embeds repl
   const clip = card.locator(".embed-shell");
   const clipped = await clip.boundingBox();
   const frame = await iframe.boundingBox();
-  expect(clipped.width).toBeLessThanOrEqual(380);
-  expect(clipped.height).toBeGreaterThanOrEqual(480);
-  await expect(clip).toHaveCSS("overflow", "visible");
+  const cardBox = await card.boundingBox();
+  expect(Math.abs(clipped.width - (cardBox.width - 2))).toBeLessThan(1);
+  expect(clipped.height).toBeLessThanOrEqual(480);
+  await expect(clip).toHaveCSS("overflow", "hidden");
   const footer = await card
     .frameLocator("iframe")
     .locator("footer")
@@ -489,10 +492,10 @@ test("sidebar collapses, folder counts follow moves, and full native embeds repl
     .frameLocator("iframe")
     .locator("header")
     .boundingBox();
-  expect(footer.y).toBeLessThan(clipped.y + clipped.height);
-  expect(profile.y).toBeGreaterThanOrEqual(clipped.y);
-  expect(frame.y).toBe(clipped.y);
-  expect(frame.height).toBe(clipped.height);
+  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height - 1);
+  expect(profile.y + profile.height).toBeLessThanOrEqual(clipped.y + 1);
+  expect(frame.y).toBe(clipped.y - 55);
+  expect(Math.abs(frame.height - clipped.height - 165)).toBeLessThan(1);
   const player = card.frameLocator("iframe");
   await player.getByRole("button", { name: "Play video", exact: true }).click();
   await player
@@ -530,8 +533,12 @@ test("sidebar collapses, folder counts follow moves, and full native embeds repl
   await card
     .getByRole("button", { name: "Replay Video to remake", exact: true })
     .click();
+  await expect(iframe).toHaveAttribute(
+    "src",
+    "https://www.instagram.com/reel/REMAKE/embed/?autoplay=1",
+  );
   await expect(
-    player.getByRole("button", { name: "Play video", exact: true }),
+    player.getByRole("button", { name: "Pause video", exact: true }),
   ).toBeVisible();
   await card.getByLabel("Actions for Video to remake", { exact: true }).click();
   await card
@@ -560,8 +567,7 @@ test("sidebar collapses, folder counts follow moves, and full native embeds repl
   await page.setViewportSize({ width: 412, height: 915 });
   await expect(sidebar).toBeHidden();
   const mobileClip = await clip.boundingBox();
-  expect(mobileClip.width).toBeLessThanOrEqual(380);
-  expect(mobileClip.height).toBeGreaterThanOrEqual(480);
+  expect(mobileClip.height).toBeLessThanOrEqual(480);
   await expect(page.locator(".reel-fab")).toBeVisible();
   await expect(page.locator(".mobile-brand .brand-tagline")).toBeVisible();
   expect(
@@ -636,9 +642,7 @@ test("optional custom recovery accepts a typo, password eye toggles work, and re
   await expect(
     page.getByRole("heading", { name: "Keep after recovery", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Open settings", exact: true })
-    .click();
+  await openProfileItem(page, "Account Security");
   await page
     .getByRole("button", { name: "Account recovery", exact: true })
     .click();
@@ -745,25 +749,32 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
     "rgb(181, 243, 109)",
   );
   const header = page.getByRole("banner");
-  await expect(header.getByRole("button")).toHaveCount(2);
+  await expect(header.getByRole("button")).toHaveCount(1);
   await expect(header.getByRole("button", { name: "Add Reel" })).toHaveCount(0);
   await expect(header.getByRole("combobox")).toHaveCount(0);
   await expect(header.locator(".header-actions img")).toHaveAttribute(
     "src",
     /seed=pixel_wizard/,
   );
-  await header
-    .getByRole("button", { name: "Edit profile", exact: true })
-    .click();
+  await openProfileItem(page, "Profile");
   await page.getByText("Choose your avatar", { exact: true }).click();
   await page
     .getByRole("button", { name: "Choose Cyber bot avatar", exact: true })
     .click();
+  await page.getByLabel("Display name", { exact: true }).fill("Pixel Rider");
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await openProfileItem(page, "Account Security");
   await page
     .getByLabel("Password hint (optional)", { exact: true })
     .fill("My updated road trip clue");
-  await page.getByRole("button", { name: "Save profile", exact: true }).click();
-  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Save password hint", exact: true })
+    .click();
+  await expect(
+    page.getByText("Password hint saved.", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.reload();
   await expect(
@@ -775,13 +786,7 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
   );
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".reel-fab")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Open settings", exact: true })
-    .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Sign out", exact: true })
-    .click();
+  await openProfileItem(page, "Sign Out");
   await page
     .getByRole("button", { name: "Forgot password?", exact: true })
     .click();
@@ -795,4 +800,94 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
   await expect(
     page.getByRole("button", { name: "Reset password", exact: true }),
   ).toBeDisabled();
+});
+
+test("keyboard profile menu, cloud appearance controls, password change and switch account", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const name = await register(page);
+  await addReel(page, "Appearance reel", "APPEAR");
+  const trigger = page.getByRole("button", {
+    name: "Open profile menu",
+    exact: true,
+  });
+  await trigger.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("menuitem", { name: "Profile", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("menuitem", { name: "Account Security", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await openProfileItem(page, "Appearance & Settings");
+  await page.getByLabel("Theme", { exact: true }).selectOption("light");
+  await page.getByLabel("Desktop grid", { exact: true }).selectOption("5");
+  await page
+    .getByLabel("Card spacing", { exact: true })
+    .selectOption("compact");
+  await page.getByLabel("Accent color", { exact: true }).fill("#8a65ee");
+  await page
+    .getByRole("button", { name: "Save appearance", exact: true })
+    .click();
+  await expect(
+    page.getByText("Appearance saved.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(138, 101, 238)",
+  );
+  await expect(page.locator(".reel-grid")).toHaveCSS("gap", "12px");
+  expect(
+    await page
+      .locator(".reel-grid")
+      .evaluate(
+        (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+      ),
+  ).toBe(5);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(138, 101, 238)",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page
+      .locator(".reel-grid")
+      .evaluate(
+        (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+      ),
+  ).toBe(1);
+  await openProfileItem(page, "Account Security");
+  await page.getByLabel("Current password", { exact: true }).fill(secret);
+  await page
+    .getByLabel("New password", { exact: true })
+    .fill("Updated-test-9876");
+  await page
+    .getByLabel("Confirm new password", { exact: true })
+    .fill("Updated-test-9876");
+  await page
+    .getByRole("button", { name: "Update password", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Password updated");
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await openProfileItem(page, "Switch Account");
+  await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByLabel("Username", { exact: true }).fill(name);
+  await page
+    .getByLabel("Password or PIN", { exact: true })
+    .fill("Updated-test-9876");
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Appearance reel", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

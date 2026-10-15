@@ -1,11 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  CloudUpload,
-  ShieldQuestion,
-} from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CloudUpload } from "lucide-react";
 import { api } from "../utils/api.mjs";
 import {
   downloadBackup,
@@ -13,12 +8,7 @@ import {
   validateBackup,
 } from "../utils/backup.mjs";
 
-export default function SettingsPanel({
-  user,
-  onImport,
-  onLegacy,
-  onRecovery,
-}) {
+export default function DataPanel({ user, onImport, onLegacy }) {
   const input = useRef(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,10 +46,6 @@ export default function SettingsPanel({
         Signed in as <strong>{user.username}</strong>. Your library is saved in
         Postgres and available on every device you sign into.
       </p>
-      <button className="button-secondary" onClick={onRecovery}>
-        <ShieldQuestion size={17} />
-        Account recovery
-      </button>
       <section className="settings-section">
         <h3>Backups & import</h3>
         <p className="muted-copy">

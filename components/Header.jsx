@@ -1,8 +1,8 @@
 "use client";
-import { Search, Settings } from "lucide-react";
+import { Search } from "lucide-react";
 import Brand from "./Brand";
-import Avatar from "./Avatar";
-export default function Header({ user, search, onSearch, onSettings }) {
+import ProfileDropdown from "./ProfileDropdown";
+export default function Header({ user, search, onSearch, onOpen, onLogout }) {
   return (
     <header className="topbar">
       <div className="mobile-brand">
@@ -20,26 +20,7 @@ export default function Header({ user, search, onSearch, onSettings }) {
         />
       </label>
       <div className="header-actions">
-        <button
-          className="avatar-button"
-          aria-label="Edit profile"
-          title={user.username}
-          onClick={onSettings}
-        >
-          <Avatar
-            url={user.avatarUrl}
-            name={`${user.username}'s avatar`}
-            size={36}
-          />
-        </button>
-        <button
-          className="icon-button"
-          aria-label="Open settings"
-          title="Settings"
-          onClick={onSettings}
-        >
-          <Settings size={20} />
-        </button>
+        <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} />
       </div>
     </header>
   );

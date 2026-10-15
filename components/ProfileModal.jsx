@@ -1,25 +1,19 @@
 "use client";
 import { useState } from "react";
-import { LogOut } from "lucide-react";
 import Modal from "./Modal";
-import SettingsPanel from "./SettingsPanel";
 import AvatarPicker from "./AvatarPicker";
 import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
-export default function SettingsModal({
-  user,
-  onClose,
-  onSaveProfile,
-  onLogout,
-  ...settings
-}) {
+export default function ProfileModal({ user, onClose, onSaveProfile }) {
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || DEFAULT_AVATAR);
-  const [passwordHint, setPasswordHint] = useState(user.passwordHint || "");
+  const [displayName, setDisplayName] = useState(
+    user.displayName || user.username,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   return (
     <Modal
-      title="Settings"
+      title="Profile"
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -32,7 +26,7 @@ export default function SettingsModal({
           setError("");
           setSaved(false);
           try {
-            await onSaveProfile({ avatarUrl, passwordHint });
+            await onSaveProfile({ avatarUrl, displayName });
             setSaved(true);
           } catch (err) {
             setError(err.message);
@@ -47,18 +41,17 @@ export default function SettingsModal({
           disabled={busy}
         />
         <label className="field-label">
-          Password hint (optional)
+          Display name
           <input
-            value={passwordHint}
-            maxLength={160}
+            value={displayName}
+            maxLength={60}
             disabled={busy}
-            onChange={(e) => setPasswordHint(e.target.value)}
-            placeholder="A clue only you would understand"
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder={user.username}
           />
         </label>
         <p className="fine-print !mt-0">
-          Your hint is visible during recovery to anyone who knows your
-          username. Never include your password or recovery answer.
+          Your login username stays @{user.username}.
         </p>
         {error && (
           <p className="error-text" role="alert">
@@ -74,15 +67,6 @@ export default function SettingsModal({
           {busy ? "Saving…" : "Save profile"}
         </button>
       </form>
-      <SettingsPanel user={user} {...settings} />
-      <button
-        className="button-quiet w-full mt-4"
-        onClick={onLogout}
-        disabled={busy}
-      >
-        <LogOut size={17} />
-        Sign out
-      </button>
     </Modal>
   );
 }

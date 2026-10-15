@@ -15,7 +15,11 @@ import PinForm from "../components/PinForm";
 import ReelCard from "../components/ReelCard";
 import ReelModal from "../components/ReelModal";
 import Header from "../components/Header";
-import SettingsModal from "../components/SettingsModal";
+import ProfileModal from "../components/ProfileModal";
+import SecurityModal from "../components/SecurityModal";
+import AppearanceModal from "../components/AppearanceModal";
+import DataPanel from "../components/DataPanel";
+import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
 
@@ -33,6 +37,46 @@ export default function Home() {
   const epoch = useRef(0);
   const pending = useRef(0);
   const userId = data?.user?.id;
+  const appearance = data?.user?.appearance || DEFAULT_APPEARANCE;
+  useEffect(() => {
+    const root = document.documentElement;
+    const rgb = appearance.accent
+      .slice(1)
+      .match(/.{2}/g)
+      .map((value) => parseInt(value, 16))
+      .join(" ");
+    root.style.setProperty("--accent", appearance.accent);
+    root.style.setProperty("--accent-rgb", rgb);
+    const channels = rgb.split(" ").map((value) => {
+      const channel = Number(value) / 255;
+      return channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    const luminance =
+      channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    root.style.setProperty(
+      "--on-accent",
+      luminance > 0.179 ? "#11150d" : "#ffffff",
+    );
+    root.style.setProperty(
+      "--grid-gap",
+      { compact: "12px", comfortable: "22px", spacious: "32px" }[
+        appearance.spacing
+      ],
+    );
+    root.dataset.theme = appearance.theme;
+    return () => {
+      for (const name of [
+        "--accent",
+        "--accent-rgb",
+        "--grid-gap",
+        "--on-accent",
+      ])
+        root.style.removeProperty(name);
+      delete root.dataset.theme;
+    };
+  }, [appearance]);
   const folderCounts = useMemo(
     () =>
       (data?.reels || []).reduce((counts, reel) => {
@@ -277,6 +321,7 @@ export default function Home() {
       ) : (
         <div
           className={`app-shell has-sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}
+          data-grid-columns={appearance.columns}
         >
           <Sidebar
             collapsed={sidebarCollapsed}
@@ -289,9 +334,9 @@ export default function Home() {
             pinnedCount={data.reels.filter((reel) => reel.isPinned).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite).length}
             onCreate={() => setModal({ type: "folder" })}
-            onSettings={() => setModal({ type: "settings" })}
+            onSettings={() => setModal({ type: "appearance" })}
             onLogout={logout}
-            username={data.user.username}
+            username={data.user.displayName || data.user.username}
             avatarUrl={data.user.avatarUrl}
           />
           <div className="workspace">
@@ -299,7 +344,8 @@ export default function Home() {
               user={data.user}
               search={search}
               onSearch={setSearch}
-              onSettings={() => setModal({ type: "settings" })}
+              onOpen={(type) => setModal({ type })}
+              onLogout={logout}
             />
             <div className="stream-navigation">
               <FolderBar
@@ -445,18 +491,43 @@ export default function Home() {
           />
         </Modal>
       )}
-      {data?.user && modal?.type === "settings" && (
-        <SettingsModal
+      {data?.user && modal?.type === "profile" && (
+        <ProfileModal
           user={data.user}
           onClose={() => setModal(null)}
           onSaveProfile={(profile) =>
             mutate("account/profile", "PATCH", profile)
           }
-          onLogout={logout}
-          onRecovery={() => setModal({ type: "recoverySettings" })}
-          onImport={(backup) => setModal({ type: "import", backup })}
-          onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
         />
+      )}
+      {data?.user && modal?.type === "security" && (
+        <SecurityModal
+          user={data.user}
+          onClose={() => setModal(null)}
+          onSaveHint={(passwordHint) =>
+            mutate("account/profile", "PATCH", { passwordHint })
+          }
+          onRecovery={() => setModal({ type: "recoverySettings" })}
+          onChangePassword={(body) => mutate("account/password", "POST", body)}
+        />
+      )}
+      {data?.user && modal?.type === "appearance" && (
+        <AppearanceModal
+          value={appearance}
+          onClose={() => setModal(null)}
+          onSave={(appearance) =>
+            mutate("account/profile", "PATCH", { appearance })
+          }
+        />
+      )}
+      {data?.user && modal?.type === "data" && (
+        <Modal title="Data & Backups" onClose={() => setModal(null)}>
+          <DataPanel
+            user={data.user}
+            onImport={(backup) => setModal({ type: "import", backup })}
+            onLegacy={(backup) => setModal({ type: "legacyImport", backup })}
+          />
+        </Modal>
       )}
       {data?.user && modal?.type === "import" && (
         <Modal

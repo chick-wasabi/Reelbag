@@ -167,7 +167,7 @@ export default function ReelCard({
           <iframe
             key={`${embedUrl}-${attempt}`}
             className="reel-iframe"
-            src={embedUrl}
+            src={`${embedUrl}${attempt > 0 ? "?autoplay=1" : ""}`}
             title={`Instagram Reel: ${reel.title}`}
             // Do not allow popups or top navigation, including on user gestures.
             // Player controls remain native; an overlay would swallow play/pause.

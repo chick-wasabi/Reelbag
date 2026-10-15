@@ -844,3 +844,160 @@ test("recovery returns a configured hint and clears the obsolete hint after rese
     null,
   );
 });
+
+test("display name and appearance persist independently of the login username and partial profile edits", async () => {
+  const user = await account();
+  const appearance = {
+    theme: "light",
+    accent: "#8a65ee",
+    columns: "5",
+    spacing: "compact",
+  };
+  const saved = await call(
+    "account/profile",
+    "PATCH",
+    { displayName: "Pixel Rider", appearance },
+    user.cookie,
+  );
+  assert.equal(saved.status, 200);
+  assert.equal(saved.data.user.username, user.username);
+  assert.equal(saved.data.user.displayName, "Pixel Rider");
+  assert.deepEqual(saved.data.user.appearance, appearance);
+  await call(
+    "account/profile",
+    "PATCH",
+    { passwordHint: "Independent hint" },
+    user.cookie,
+  );
+  const device = await call("auth/login", "POST", {
+    username: user.username,
+    password: user.password,
+  });
+  assert.equal(device.status, 200);
+  assert.equal(device.data.user.displayName, "Pixel Rider");
+  assert.deepEqual(device.data.user.appearance, appearance);
+  assert.equal(device.data.user.passwordHint, "Independent hint");
+  for (const appearance of [
+    { theme: "light" },
+    {
+      theme: "dark",
+      accent: "red;display:none",
+      columns: "5",
+      spacing: "compact",
+    },
+    { theme: "dark", accent: "#b5f36d", columns: "100", spacing: "compact" },
+  ]) {
+    assert.equal(
+      (await call("account/profile", "PATCH", { appearance }, user.cookie))
+        .status,
+      400,
+    );
+  }
+  assert.equal(
+    (
+      await call(
+        "account/profile",
+        "PATCH",
+        { username: "another_user" },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/profile",
+        "PATCH",
+        { displayName: "x".repeat(61) },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  const other = await account();
+  assert.equal(other.data.user.displayName, other.username);
+  assert.equal(other.data.user.appearance.columns, "auto");
+});
+
+test("password updates require current credentials, revoke other devices, preserve this session and clear stale hints", async () => {
+  const user = await account();
+  await call(
+    "account/profile",
+    "PATCH",
+    { passwordHint: "An old clue" },
+    user.cookie,
+  );
+  const otherDevice = await call("auth/login", "POST", {
+    username: user.username,
+    password: user.password,
+  });
+  assert.equal(
+    (
+      await call(
+        "account/password",
+        "POST",
+        {
+          currentPassword: "Wrong-test-9876",
+          newPassword: "Next-password-9876",
+        },
+        user.cookie,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/password",
+        "POST",
+        { currentPassword: user.password, newPassword: "short" },
+        user.cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        "account/password",
+        "POST",
+        { currentPassword: user.password, newPassword: "Next-password-9876" },
+        user.cookie,
+        { origin: "https://evil.example" },
+      )
+    ).status,
+    403,
+  );
+  const changed = await call(
+    "account/password",
+    "POST",
+    { currentPassword: user.password, newPassword: "Next-password-9876" },
+    user.cookie,
+  );
+  assert.equal(changed.status, 200);
+  assert.equal(changed.data.user.passwordHint, null);
+  assert.equal((await call("library", "GET", null, user.cookie)).status, 200);
+  assert.equal(
+    (await call("library", "GET", null, otherDevice.cookie)).status,
+    401,
+  );
+  assert.equal(
+    (
+      await call("auth/login", "POST", {
+        username: user.username,
+        password: user.password,
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await call("auth/login", "POST", {
+        username: user.username,
+        password: "Next-password-9876",
+      })
+    ).status,
+    200,
+  );
+});
