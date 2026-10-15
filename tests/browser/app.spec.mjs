@@ -31,15 +31,22 @@ async function connect(context) {
       body: await response.text(),
     });
   });
-  await context.route("https://www.instagram.com/embed.js", (route) =>
+  await context.route("https://www.instagram.com/reel/*/embed/", (route) =>
     route.fulfill({
-      contentType: "application/javascript",
-      body: `window.instgrm={Embeds:{process(){document.querySelectorAll('blockquote.instagram-media').forEach(el=>{
-        const frame=document.createElement('iframe');frame.className='instagram-media';frame.title='Instagram video embed';
-        frame.setAttribute('data-test-processed','true');frame.setAttribute('data-caption-mode',String(el.hasAttribute('data-instgrm-captioned')));
-        frame.style.height='1100px';frame.srcdoc=${JSON.stringify(`<html><head><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}header{height:58px;padding:20px;background:#1c252c}main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:radial-gradient(ellipse at 20% 25%,#8fae6040,transparent 60%),linear-gradient(150deg,#293c39,#132026 50%,#30394a)}button{width:62px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:50%;font-size:25px;margin:auto;cursor:pointer}p{color:#91aaa0;font-size:12px;letter-spacing:3px;margin-top:24px}footer{height:220px;background:white;color:#333;padding:20px;margin-top:-100px;position:relative}</style></head><body><header>Instagram profile</header><main><button aria-label="Play video" onclick="this.textContent='Playing';this.setAttribute('aria-label','Playing video')">▶</button><p>VIDEO PREVIEW</p></main><footer>Likes · Comments · Caption</footer></body></html>`)};
-        el.replaceWith(frame);
-      });}}};`,
+      contentType: "text/html",
+      body: `<!doctype html><html><head><style>
+        *{box-sizing:border-box}body{margin:0;background:#101820;color:#d7e4dd;font:14px Arial}
+        header{height:60px;padding:20px;background:white;color:#333}
+        main{aspect-ratio:9/16;display:grid;place-content:center;text-align:center;background:linear-gradient(150deg,#293c39,#132026 50%,#30394a)}
+        button{width:80px;height:62px;border:1px solid #e0f2db66;background:#bde9a922;color:#e0f2db;border-radius:20px;font-size:15px;margin:auto;cursor:pointer}
+        footer{height:240px;background:white;color:#333;padding:20px}
+        </style></head><body><header>Instagram profile</header><main>
+        <button aria-label="Play video" onclick="
+          const current=this.getAttribute('aria-label');
+          if(current==='Play video'){this.textContent='Pause';this.setAttribute('aria-label','Pause video')}
+          else if(current==='Pause video'){this.textContent='Replay';this.setAttribute('aria-label','Replay video')}
+          else{window.open('https://www.instagram.com/reel/REDIRECT/','_blank');try{top.location.href='https://www.instagram.com/reel/REDIRECT/'}catch{};this.textContent='Pause';this.setAttribute('aria-label','Pause video')}
+        ">Play</button></main><footer>Likes · Comments · Instagram</footer></body></html>`,
     }),
   );
 }
@@ -115,7 +122,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
     .click();
   await expect(page.getByLabel("Title / Name")).toHaveValue("Sunset ride");
   await page.getByRole("button", { name: "Save reel", exact: true }).click();
-  await expect(page.locator('[data-test-processed="true"]')).toHaveCount(1);
+  await expect(page.locator("iframe.reel-iframe")).toHaveCount(1);
   await page.getByLabel("Actions for Sunset ride", { exact: true }).click();
   await page
     .getByRole("button", { name: "Edit Sunset ride", exact: true })
@@ -435,34 +442,49 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   const card = page.getByRole("article").filter({
     has: page.getByRole("heading", { name: "Video to remake", exact: true }),
   });
-  await expect(card.locator("iframe.instagram-media")).toHaveAttribute(
-    "data-caption-mode",
-    "false",
+  const iframe = card.locator("iframe.reel-iframe");
+  await expect(iframe).toHaveAttribute(
+    "src",
+    "https://www.instagram.com/reel/REMAKE/embed/",
   );
+  await expect(iframe).toHaveAttribute(
+    "sandbox",
+    "allow-scripts allow-same-origin allow-presentation",
+  );
+  await expect(
+    page.locator('script[src="https://www.instagram.com/embed.js"]'),
+  ).toHaveCount(0);
   const clip = card.locator(".embed-shell");
-  await expect(clip).toHaveClass(/is-cropped/);
   const clipped = await clip.boundingBox();
-  const frame = await card.locator("iframe").boundingBox();
-  const stage = await card.locator(".embed-stage").boundingBox();
-  expect(Math.abs(stage.width / stage.height - 9 / 16)).toBeLessThan(0.01);
-  expect(Math.abs(stage.height - clipped.height - 120)).toBeLessThan(1);
+  const frame = await iframe.boundingBox();
+  expect(Math.abs(clipped.width / clipped.height - 9 / 16)).toBeLessThan(0.01);
+  expect(clipped.height).toBeLessThanOrEqual(520);
   await expect(clip).toHaveCSS("overflow", "hidden");
   const footer = await card
     .frameLocator("iframe")
     .locator("footer")
     .boundingBox();
-  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height);
+  const profile = await card
+    .frameLocator("iframe")
+    .locator("header")
+    .boundingBox();
+  expect(footer.y).toBeGreaterThanOrEqual(clipped.y + clipped.height - 1);
+  expect(profile.y + profile.height).toBeLessThanOrEqual(clipped.y + 1);
   expect(frame.y).toBeLessThan(clipped.y);
   expect(frame.y + frame.height).toBeGreaterThan(clipped.y + clipped.height);
-  await card
-    .frameLocator("iframe")
-    .getByRole("button", { name: "Play video", exact: true })
+  const player = card.frameLocator("iframe");
+  await player.getByRole("button", { name: "Play video", exact: true }).click();
+  await player
+    .getByRole("button", { name: "Pause video", exact: true })
+    .click();
+  await player
+    .getByRole("button", { name: "Replay video", exact: true })
     .click();
   await expect(
-    card
-      .frameLocator("iframe")
-      .getByRole("button", { name: "Playing video", exact: true }),
+    player.getByRole("button", { name: "Pause video", exact: true }),
   ).toBeVisible();
+  expect(page.context().pages()).toHaveLength(1);
+  await expect(page).toHaveURL("http://127.0.0.1:3100/");
   await page.screenshot({
     path: "/tmp/reelbag-vault-desktop.png",
     fullPage: true,
@@ -486,13 +508,11 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   ).toBeVisible();
   await card.getByLabel("Actions for Video to remake", { exact: true }).click();
   await card
-    .getByRole("button", { name: "Show full embed", exact: true })
+    .getByRole("button", { name: "Restart Video to remake", exact: true })
     .click();
-  await expect(clip).toHaveClass(/is-full/);
-  await card.getByLabel("Actions for Video to remake", { exact: true }).click();
-  await card
-    .getByRole("button", { name: "Video-only view", exact: true })
-    .click();
+  await expect(
+    player.getByRole("button", { name: "Play video", exact: true }),
+  ).toBeVisible();
   await card.getByLabel("Actions for Video to remake", { exact: true }).click();
   await card
     .getByRole("button", { name: "Move Video to remake", exact: true })
@@ -519,6 +539,11 @@ test("sidebar collapses, folder counts follow moves, mobile hides navigation, an
   ).toBe(persisted.folders.find((folder) => folder.name === "Remakes").id);
   await page.setViewportSize({ width: 412, height: 915 });
   await expect(sidebar).toBeHidden();
+  const mobileClip = await clip.boundingBox();
+  expect(Math.abs(mobileClip.width / mobileClip.height - 9 / 16)).toBeLessThan(
+    0.01,
+  );
+  expect(mobileClip.height).toBeLessThanOrEqual(520);
   await expect(page.locator(".mobile-fab")).toBeVisible();
   await expect(page.locator(".mobile-brand .brand-tagline")).toBeVisible();
   expect(

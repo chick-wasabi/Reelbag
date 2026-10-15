@@ -259,6 +259,9 @@ select option {
   justify-content: space-between;
   gap: 8px;
   padding: 16px 12px 14px 17px;
+  background: linear-gradient(135deg, #1c222af5, #131820f5);
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 8px;
   min-height: 64px;
 }
 .reel-heading h2 {
@@ -285,45 +288,28 @@ select option {
 }
 .embed-shell {
   position: relative;
-  overflow: hidden;
-  background: #0f1720;
-  border-radius: 12px;
-  margin: 0 8px 8px;
-}
-/* Instagram is cross-origin: only the outer iframe is cropped. */
-.embed-shell.is-cropped {
-  --embed-header: 58px;
-  --embed-bottom-cut: 120px;
-}
-.embed-stage {
-  position: relative;
-}
-.embed-shell.is-cropped .embed-stage {
+  width: calc(100% - 16px);
+  /* Cap width along with height so the visible window remains exactly 9:16. */
+  max-width: 292.5px;
   aspect-ratio: 9 / 16;
-  margin-bottom: calc(-1 * var(--embed-bottom-cut));
+  max-height: 520px;
+  overflow: hidden;
+  background: #0f172a;
+  border-radius: 12px;
+  margin: 0 auto 8px;
+  isolation: isolate;
 }
-.embed-shell.is-cropped iframe.instagram-media {
-  position: absolute !important;
-  top: calc(-1 * var(--embed-header));
+/* Crop only the outer cross-origin iframe. Extra height keeps the footer below
+   the visible window; the negative top offset removes the profile header. */
+.reel-iframe {
+  position: absolute;
   left: 0;
-  height: calc(100% + var(--embed-header) + 240px) !important;
-}
-.embed-shell.is-cropped blockquote {
-  height: 100%;
-}
-.embed-shell.is-full {
-  min-height: 360px;
-}
-
-.embed-shell .instagram-media,
-.embed-shell iframe.instagram-media {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-  border: 0 !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  top: -60px;
+  width: 100%;
+  height: calc(100% + 300px);
+  border: 0;
+  display: block;
+  background: #0f172a;
 }
 .embed-fallback {
   display: flex;

@@ -6,48 +6,13 @@ import {
   Star,
   MoreHorizontal,
   FolderInput,
-  Scan,
-  Crop,
   Pencil,
   Trash2,
   Instagram,
   RefreshCw,
 } from "lucide-react";
 
-let embedPromise;
-function loadInstagram() {
-  if (window.instgrm?.Embeds) return Promise.resolve();
-  if (embedPromise) return embedPromise;
-  embedPromise = new Promise((resolve, reject) => {
-    let script = document.getElementById("instagram-embed-script");
-    if (script) script.remove();
-    script = document.createElement("script");
-    script.id = "instagram-embed-script";
-    script.src = "https://www.instagram.com/embed.js";
-    script.async = true;
-    const timeout = setTimeout(() => {
-      script.remove();
-      embedPromise = undefined;
-      reject(new Error("Instagram timed out"));
-    }, 20000);
-    script.onload = () => {
-      clearTimeout(timeout);
-      if (window.instgrm?.Embeds) resolve();
-      else {
-        embedPromise = undefined;
-        reject(new Error("Instagram is unavailable"));
-      }
-    };
-    script.onerror = () => {
-      clearTimeout(timeout);
-      script.remove();
-      embedPromise = undefined;
-      reject(new Error("Instagram is unavailable"));
-    };
-    document.body.appendChild(script);
-  });
-  return embedPromise;
-}
+import { parseReelUrl } from "../utils/reels.mjs";
 
 export default function ReelCard({
   reel,
@@ -59,7 +24,10 @@ export default function ReelCard({
 }) {
   const ref = useRef(null);
   const menu = useRef(null);
-  const [fullEmbed, setFullEmbed] = useState(false);
+  const parsed = parseReelUrl(reel.url);
+  const embedUrl = parsed
+    ? `https://www.instagram.com/reel/${parsed.shortcode}/embed/`
+    : null;
   const [toggling, setToggling] = useState(false);
   async function toggle(flag) {
     setToggling(true);
@@ -113,28 +81,6 @@ export default function ReelCard({
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    if (!visible) return;
-    let cancelled = false;
-    // Instagram treats this option as a presence flag. JSX declares false;
-    // omit the flag before the native scanner runs so captions stay disabled.
-    ref.current
-      ?.querySelectorAll('[data-instgrm-captioned="false"]')
-      .forEach((node) => node.removeAttribute("data-instgrm-captioned"));
-    loadInstagram()
-      .then(() => {
-        if (!cancelled) {
-          setFailed(false);
-          window.instgrm.Embeds.process();
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, reel.url, attempt]);
   return (
     <article className="reel-card" ref={ref}>
       <div className="reel-heading">
@@ -204,11 +150,13 @@ export default function ReelCard({
               <button
                 onClick={() => {
                   closeMenu();
-                  setFullEmbed((value) => !value);
+                  setFailed(false);
+                  setAttempt((value) => value + 1);
                 }}
+                aria-label={`Restart ${reel.title}`}
               >
-                {fullEmbed ? <Crop size={15} /> : <Scan size={15} />}{" "}
-                {fullEmbed ? "Video-only view" : "Show full embed"}
+                <RefreshCw size={15} />
+                Restart video
               </button>
               <button
                 className="danger"
@@ -225,35 +173,28 @@ export default function ReelCard({
           </details>
         </div>
       </div>
-      <div
-        className={`embed-shell ${fullEmbed ? "is-full" : "is-cropped"}`}
-        key={`${reel.url}-${attempt}`}
-      >
-        <div className="embed-stage">
-          {visible ? (
-            <blockquote
-              className="instagram-media"
-              data-instgrm-permalink={reel.url}
-              data-instgrm-version="14"
-              data-instgrm-captioned="false"
-            >
-              <a
-                href={reel.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="embed-fallback"
-              >
-                <Instagram size={29} />
-                <span>View reel on Instagram</span>
-              </a>
-            </blockquote>
-          ) : (
-            <div className="embed-fallback">
-              <Instagram size={29} />
-              <span>Loading preview…</span>
-            </div>
-          )}
-        </div>
+      <div className="embed-shell" aria-label={`Video player: ${reel.title}`}>
+        {visible && embedUrl ? (
+          <iframe
+            key={`${embedUrl}-${attempt}`}
+            className="reel-iframe"
+            src={embedUrl}
+            title={`Instagram Reel: ${reel.title}`}
+            // Do not allow popups or top navigation, including on user gestures.
+            // Player controls remain native; an overlay would swallow play/pause.
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            onLoad={() => setFailed(false)}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <div className="embed-fallback">
+            <Instagram size={29} />
+            <span>{embedUrl ? "Loading preview…" : "Invalid Reel link"}</span>
+          </div>
+        )}
       </div>
       {failed && (
         <div className="embed-error">

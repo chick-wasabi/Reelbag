@@ -352,7 +352,11 @@ export default function Home() {
             </header>
             <main className="stream" id="main-content">
               {reels.length ? (
-                <div className="reel-grid">
+                <div
+                  className="reel-grid"
+                  role="region"
+                  aria-label="Saved Reels"
+                >
                   {reels.map((reel) => (
                     <ReelCard
                       key={reel.id}
