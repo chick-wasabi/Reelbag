@@ -62,12 +62,6 @@ export default function Home() {
       "--on-accent",
       luminance > 0.179 ? LOGO_DARK : "#ffffff",
     );
-    root.style.setProperty(
-      "--grid-gap",
-      { compact: "12px", comfortable: "22px", spacious: "32px" }[
-        appearance.spacing
-      ],
-    );
     root.dataset.theme = appearance.theme;
     const favicon = document.createElement("link");
     favicon.rel = "icon";
@@ -87,7 +81,6 @@ export default function Home() {
       for (const name of [
         "--accent",
         "--accent-rgb",
-        "--grid-gap",
         "--on-accent",
       ])
         root.style.removeProperty(name);
@@ -338,7 +331,6 @@ export default function Home() {
       ) : (
         <div
           className={`app-shell has-sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}
-          data-grid-columns={appearance.columns}
         >
           <Sidebar
             collapsed={sidebarCollapsed}
@@ -377,7 +369,7 @@ export default function Home() {
             <main className="stream" id="main-content">
               {reels.length ? (
                 <div
-                  className="reel-grid"
+                  className="reel-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                   role="region"
                   aria-label="Saved Reels"
                 >

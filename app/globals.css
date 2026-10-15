@@ -6,7 +6,6 @@
   color-scheme: dark;
   --accent: #b5f36d;
   --accent-rgb: 181 243 109;
-  --grid-gap: 22px;
   --surface: #15181a;
   --text-muted: #818897;
   --text-secondary: #b9bfca;
@@ -250,8 +249,6 @@ select option {
 }
 .reel-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--grid-gap);
   align-items: start;
 }
 .reel-card {
@@ -606,22 +603,6 @@ select option {
     transform: translateY(0);
   }
 }
-@media (min-width: 640px) {
-  .reel-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1024px) {
-  .reel-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1440px) {
-  .reel-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1043,7 +1024,7 @@ select option {
     padding: 23px 18px 100px;
   }
   .reel-card {
-    max-width: 500px;
+    max-width: 380px;
     margin: 0 auto;
   }
   .reel-heading {
@@ -1371,19 +1352,13 @@ select option {
   border-top: 1px solid var(--line);
   margin: 6px 0;
 }
-input[type="color"] {
-  height: 48px;
-  padding: 5px;
-  cursor: pointer;
-}
-@media (min-width: 1280px) {
-  .app-shell[data-grid-columns="4"] .reel-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .app-shell[data-grid-columns="5"] .reel-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
+.accent-picker { border: 0; padding: 0; margin: 0; min-width: 0; }
+.accent-swatches { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 20px; }
+.accent-swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid transparent; color: #101215; font-size: 22px; cursor: pointer; }
+.accent-swatch[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 3px; }
+.accent-hex-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.accent-hex-row input { min-width: 0; flex: 1; }
+.accent-preview { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line); }
 :root[data-theme="light"] {
   color-scheme: light;
   --background: #f3f4f6;

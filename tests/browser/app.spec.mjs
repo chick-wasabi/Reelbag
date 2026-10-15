@@ -178,7 +178,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
     path: "/tmp/reelbag-cloud-desktop.png",
     fullPage: true,
   });
-  for (const width of [320, 390, 768, 1024, 1536]) {
+  for (const width of [320, 390, 640, 768, 1024, 1280, 1536]) {
     await page.setViewportSize({ width, height: 844 });
     expect(
       await page.evaluate(
@@ -191,7 +191,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
         (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
       );
     expect(columns).toBe(
-      width < 640 ? 1 : width < 1024 ? 2 : width < 1440 ? 3 : 4,
+      width < 640 ? 1 : width < 1024 ? 2 : width < 1280 ? 3 : 4,
     );
   }
   await page.setViewportSize({ width: 390, height: 844 });
@@ -820,6 +820,15 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
   await page.setViewportSize({ width: 1600, height: 1000 });
   const name = await register(page);
   await addReel(page, "Appearance reel", "APPEAR");
+  const legacySave = await page.evaluate(async () => (await fetch("/api/account/profile", {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ appearance: { theme: "dark", accent: "#b5f36d", columns: "5", spacing: "compact" } }),
+  })).status);
+  expect(legacySave).toBe(200);
+  await page.reload();
+  await expect(page.locator(".reel-grid")).toHaveCSS("gap", "24px");
+  await expect.poll(() => page.locator(".reel-grid").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(4);
+
   const trigger = page.getByRole("button", {
     name: "Open profile menu",
     exact: true,
@@ -838,10 +847,14 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await openProfileItem(page, "Appearance & Settings");
   await page.getByLabel("Theme", { exact: true }).selectOption("light");
-  await page.getByLabel("Desktop grid", { exact: true }).selectOption("5");
-  await page
-    .getByLabel("Card spacing", { exact: true })
-    .selectOption("compact");
+  await expect(page.getByLabel("Desktop grid", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Card spacing", { exact: true })).toHaveCount(0);
+  await expect(page.locator('input[type="color"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Use Electric Blue", exact: true }).click();
+  await expect(page.getByLabel("Accent color", { exact: true })).toHaveValue("#3b82f6");
+  await page.getByLabel("Accent color", { exact: true }).fill("#zz");
+  await expect(page.getByRole("button", { name: "Save appearance", exact: true })).toBeDisabled();
+  await expect(page.locator(".reel-fab")).toHaveCSS("background-color", "rgb(59, 130, 246)");
   await page.getByLabel("Accent color", { exact: true }).fill("#8a65ee");
   await page
     .getByRole("button", { name: "Save appearance", exact: true })
@@ -855,14 +868,14 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
     "background-color",
     "rgb(138, 101, 238)",
   );
-  await expect(page.locator(".reel-grid")).toHaveCSS("gap", "12px");
+  await expect(page.locator(".reel-grid")).toHaveCSS("gap", "24px");
   expect(
     await page
       .locator(".reel-grid")
       .evaluate(
         (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
       ),
-  ).toBe(5);
+  ).toBe(4);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator(".reel-fab")).toHaveCSS(
@@ -970,7 +983,13 @@ test("accent previews recolor outlined logos, sidebar, favicon, buttons and focu
     path: "/tmp/reelbag-purple-preview.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openProfileItem(page, "Appearance & Settings");
+  await page.getByLabel("Accent color", { exact: true }).fill("abc");
+  await expect(page.locator(".reel-fab")).toHaveCSS("background-color", "rgb(170, 187, 204)");
+  await page.locator(".modal-backdrop").click({ position: { x: 5, y: 5 } });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".reel-fab")).toHaveCSS(
     "background-color",
     "rgb(181, 243, 109)",

@@ -82,7 +82,7 @@ export default function ReelCard({
     return () => observer.disconnect();
   }, []);
   return (
-    <article className="reel-card" ref={ref}>
+    <article className="reel-card w-full max-w-[380px] justify-self-center" ref={ref}>
       <div className="reel-heading">
         <div className="min-w-0">
           <h2>{reel.title}</h2>
