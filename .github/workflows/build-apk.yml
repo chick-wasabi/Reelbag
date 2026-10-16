@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || format('android-build-{0}', github.run_number) }}
 
     steps:
@@ -40,11 +41,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Android API 36 build tools
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli@1.27.0
@@ -54,7 +55,7 @@ jobs:
           mkdir -p "$HOME/.bubblewrap"
           jq -n \
             --arg jdk "$JAVA_HOME" \
-            --arg sdk "$ANDROID_SDK_ROOT" \
+            --arg sdk "$ANDROID_HOME" \
             '{jdkPath: $jdk, androidSdkPath: $sdk}' \
             > "$HOME/.bubblewrap/config.json"
 
@@ -86,7 +87,7 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Reelbag-Android
+          name: Reelbag-Android-APK
           path: Reelbag-Android.apk
           if-no-files-found: error
 
