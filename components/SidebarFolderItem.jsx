@@ -33,12 +33,11 @@ export default function SidebarFolderItem({
           {folder.name}
           {!owner && <small className="shared-role">{folder.role}</small>}
         </span>
-        {owner && folder.isShared && (
-          <Users
-            className="sidebar-share-badge"
-            size={13}
-            aria-label="Shared folder"
-          />
+        {folder.isShared && (
+          <span className="sidebar-share-badge" aria-label={`${folder.memberCount} members`}>
+            <Users size={13} />
+            {folder.memberCount > 1 && <small>{folder.memberCount}</small>}
+          </span>
         )}
       </button>
       <FolderMenu

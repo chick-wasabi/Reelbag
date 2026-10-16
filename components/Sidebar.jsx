@@ -23,6 +23,7 @@ export default function Sidebar({
   onSelect,
   pinnedCount,
   favoriteCount,
+  sharedCount,
   onCreate,
   onRename,
   onShare,
@@ -83,6 +84,7 @@ export default function Sidebar({
             icon: Star,
             count: favoriteCount,
           },
+          { id: "shared", label: "Shared with Me", icon: Users, count: sharedCount },
         ].map((item) => (
           <button
             key={item.id}
@@ -115,9 +117,7 @@ export default function Sidebar({
             </button>
           </div>
           <div className="sidebar-folder-list">
-            {folders
-              .filter((folder) => folder.role === "owner")
-              .map((folder) => (
+            {folders.map((folder) => (
                 <SidebarFolderItem
                   key={folder.id}
                   folder={folder}
@@ -129,36 +129,12 @@ export default function Sidebar({
                   onLock={onLock}
                 />
               ))}
-            {!folders.some((folder) => folder.role === "owner") && (
+            {!folders.length && (
               <p className="sidebar-empty sidebar-label">
                 A folder for every kind of inspiration.
               </p>
             )}
           </div>
-          {folders.some((folder) => folder.role !== "owner") && (
-            <>
-              <div className="sidebar-folder-heading">
-                <span className="sidebar-label">SHARED WITH ME</span>
-                <Users size={16} aria-hidden="true" />
-              </div>
-              <div className="sidebar-folder-list shared-folder-list">
-                {folders
-                  .filter((folder) => folder.role !== "owner")
-                  .map((folder) => (
-                    <SidebarFolderItem
-                      key={folder.id}
-                      folder={folder}
-                      selected={selected}
-                      onSelect={onSelect}
-                      onRename={onRename}
-                      onShare={onShare}
-                      onDelete={onDelete}
-                      onLock={onLock}
-                    />
-                  ))}
-              </div>
-            </>
-          )}
           <div className="sidebar-folder-heading sidebar-friends-heading">
             <span className="sidebar-label">FRIENDS</span>
             {friendRequestCount > 0 && (

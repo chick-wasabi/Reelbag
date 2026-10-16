@@ -1,7 +1,7 @@
 "use client";
 
 import FolderMenu from "./FolderMenu";
-import { FolderPlus, LockKeyhole } from "lucide-react";
+import { FolderPlus, LockKeyhole, Users } from "lucide-react";
 
 export default function FolderBar({
   folders,
@@ -22,6 +22,7 @@ export default function FolderBar({
           { id: "all", name: "All reels" },
           { id: "pinned", name: "Pinned" },
           { id: "favorites", name: "Favorites" },
+          { id: "shared", name: "Shared with me", virtual: true },
           ...folders,
         ].map((folder) => (
           <button
@@ -31,6 +32,7 @@ export default function FolderBar({
             aria-pressed={selected === folder.id}
             onClick={() => onSelect(folder.id)}
           >
+            {folder.virtual && <Users size={13} />}
             {folder.pin && !unlocked.has(folder.id) && (
               <LockKeyhole size={13} />
             )}

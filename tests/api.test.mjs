@@ -124,6 +124,18 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(notifications.data.unread, 1);
   assert.equal(notifications.data.items[0].type, "friend_request");
   assert.equal(notifications.data.items[0].sender, sender.username);
+  const blockedContentInvite = await call(
+    `sharing/reel/${reelId}/send`,
+    "POST",
+    { username: recipient.username, role: "viewer" },
+    sender.cookie,
+  );
+  assert.equal(blockedContentInvite.status, 200);
+  assert.equal(blockedContentInvite.data.friendRequestSent, true);
+  assert.equal(
+    (await call("library", "GET", null, recipient.cookie)).data.reels.length,
+    0,
+  );
 
   const denied = await call(
     `friends/${friendshipId}/share/${reelId}`,
@@ -154,15 +166,42 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(typeof sharePicker.data.friends[0].avatarUrl, "string");
 
   const shared = await call(
-    `friends/${friendshipId}/share/${reelId}`,
+    `sharing/reel/${reelId}/send`,
     "POST",
-    {},
+    { username: recipient.username, role: "viewer" },
     sender.cookie,
   );
   assert.equal(shared.status, 200, JSON.stringify(shared.data));
-  assert.equal(shared.data.reels.some((reel) => reel.id === reelId), true);
+  assert.equal(shared.data.sent, true);
+  const senderLibrary = await call("library", "GET", null, sender.cookie);
+  assert.equal(senderLibrary.data.reels.some((reel) => reel.id === reelId), true);
   const received = await call("library", "GET", null, recipient.cookie);
-  assert.equal(received.data.reels.find((reel) => reel.id === reelId).canManage, false);
+  const receivedReel = received.data.reels.find((reel) => reel.id === reelId);
+  assert.equal(receivedReel.canManage, false);
+  assert.equal(receivedReel.isDirectShared, true);
+  assert.equal(receivedReel.sharedBy, sender.username);
+  assert.equal(
+    (await call("notifications", "GET", null, recipient.cookie)).data.items.length,
+    0,
+  );
+  const folder = await call(
+    "folders",
+    "POST",
+    { name: "Friends ride", protected: false },
+    sender.cookie,
+  );
+  const folderId = folder.data.folderId;
+  const sharedFolder = await call(
+    `sharing/folder/${folderId}/send`,
+    "POST",
+    { username: recipient.username, role: "viewer" },
+    sender.cookie,
+  );
+  assert.equal(sharedFolder.status, 200, JSON.stringify(sharedFolder.data));
+  const withSharedFolder = await call("library", "GET", null, recipient.cookie);
+  assert.equal(withSharedFolder.data.folders[0].id, folderId);
+  assert.equal(withSharedFolder.data.folders[0].role, "viewer");
+  assert.equal(withSharedFolder.data.folders[0].memberCount, 2);
 
   const removed = await call(
     `friends/${friendshipId}`,
@@ -173,6 +212,7 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(removed.status, 200);
   const revoked = await call("library", "GET", null, recipient.cookie);
   assert.equal(revoked.data.reels.some((reel) => reel.id === reelId), false);
+  assert.equal(revoked.data.folders.some((folder) => folder.id === folderId), false);
 });
 
 test("private or removed Instagram embeds are rejected before they enter the library", async () => {

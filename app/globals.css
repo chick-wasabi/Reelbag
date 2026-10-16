@@ -1349,6 +1349,18 @@ select option {
   color: var(--accent);
   filter: drop-shadow(0 0 5px rgb(var(--accent-rgb) / 0.8));
 }
+.reel-shared-by {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .reel-actions .is-favorite {
   color: #facc15;
   filter: drop-shadow(0 0 5px rgb(250 204 21 / 0.85));
@@ -1900,6 +1912,10 @@ select option {
 .sidebar-share-badge {
   flex-shrink: 0;
   color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
 }
 .sidebar-collapsed .sidebar-share-badge {
   display: none;

@@ -183,7 +183,7 @@ export default function Home() {
   const apply = useCallback((next) => {
     setData(next);
     setSelected((previous) =>
-      ["all", "pinned", "favorites"].includes(previous) ||
+      ["all", "pinned", "favorites", "shared"].includes(previous) ||
       next.folders.some((f) => f.id === previous && (!f.pin || f.unlocked))
         ? previous
         : "all",
@@ -451,12 +451,14 @@ export default function Home() {
     const query = search.trim().toLowerCase();
     return (data?.reels || []).filter(
       (r) =>
-        (selected === "all" ||
+        ((selected === "all" && !r.isDirectShared) ||
           (selected === "pinned"
-            ? r.isPinned
+            ? r.isPinned && !r.isDirectShared
             : selected === "favorites"
-              ? r.isFavorite
-              : r.folderId === selected)) &&
+              ? r.isFavorite && !r.isDirectShared
+              : selected === "shared"
+                ? r.isDirectShared
+                : r.folderId === selected && !r.isDirectShared)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
   }, [data, selected, search]);
@@ -467,15 +469,19 @@ export default function Home() {
       ? "Pinned Reels"
       : selected === "favorites"
         ? "Favorites"
+        : selected === "shared"
+          ? "Shared with Me"
         : activeFolder?.name || "All Reels";
   const sectionCount = (data?.reels || []).filter(
     (reel) =>
-      selected === "all" ||
+      (selected === "all" && !reel.isDirectShared) ||
       (selected === "pinned"
-        ? reel.isPinned
+        ? reel.isPinned && !reel.isDirectShared
         : selected === "favorites"
-          ? reel.isFavorite
-          : reel.folderId === selected),
+          ? reel.isFavorite && !reel.isDirectShared
+          : selected === "shared"
+            ? reel.isDirectShared
+            : reel.folderId === selected && !reel.isDirectShared),
   ).length;
 
   return (
@@ -503,11 +509,12 @@ export default function Home() {
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}
             folders={data.folders}
-            reelCount={data.reels.length}
+            reelCount={data.reels.filter((reel) => !reel.isDirectShared).length}
             selected={selected}
             onSelect={selectFolder}
-            pinnedCount={data.reels.filter((reel) => reel.isPinned).length}
-            favoriteCount={data.reels.filter((reel) => reel.isFavorite).length}
+            pinnedCount={data.reels.filter((reel) => reel.isPinned && !reel.isDirectShared).length}
+            favoriteCount={data.reels.filter((reel) => reel.isFavorite && !reel.isDirectShared).length}
+            sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
             onCreate={() => setModal({ type: "folder" })}
             onRename={(folder) => manageFolder(folder, "rename")}
             onShare={(folder) => manageFolder(folder, "share")}
@@ -595,6 +602,8 @@ export default function Home() {
                         ? "Pin a reel to find it here."
                         : selected === "favorites"
                           ? "Star a reel to add it to your favorites."
+                          : selected === "shared"
+                            ? "Reels sent by your friends will appear here automatically."
                           : "Add a reel, or open a folder above."}
                   </p>
                   <button
@@ -605,7 +614,7 @@ export default function Home() {
                   >
                     {search
                       ? "Clear search"
-                      : ["pinned", "favorites"].includes(selected)
+                      : ["pinned", "favorites", "shared"].includes(selected)
                         ? "Browse all reels"
                         : "Add your first reel"}
                   </button>

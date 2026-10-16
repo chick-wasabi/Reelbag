@@ -48,10 +48,10 @@ export default function ShareModal({ type, item, onClose, onChange }) {
     setError("");
     setMessage("");
     try {
-      await action();
+      const result = await action();
       await load();
       await onChange();
-      setMessage(success);
+      setMessage(typeof success === "function" ? success(result) : success);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -154,9 +154,9 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               const invitees = recipients;
               if (!invitees.length) return;
               run(async () => {
-                await Promise.all(
+                const results = await Promise.all(
                   invitees.map((invitee) =>
-                    api(`${base}/invite`, {
+                    api(`${base}/send`, {
                       method: "POST",
                       body: { username: invitee, role },
                     }),
@@ -165,7 +165,16 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 setUsername("");
                 setSelectedFriends([]);
                 setFriendPickerOpen(false);
-              }, `${invitees.length === 1 ? "Invitation" : `${invitees.length} invitations`} sent. Accepted members receive access immediately.`);
+                return results;
+              }, (results) => {
+                const requests = results.filter((result) => result.friendRequestSent).length;
+                const shared = results.length - requests;
+                if (requests && shared)
+                  return `Shared with ${shared}; sent ${requests} friend request${requests === 1 ? "" : "s"}. Share with them after they accept.`;
+                if (requests)
+                  return `${requests === 1 ? "Friend request" : `${requests} friend requests`} sent. Share with them after they accept.`;
+                return `${type === "reel" ? "Reel" : "Folder"} shared with ${shared} ${shared === 1 ? "friend" : "friends"}.`;
+              });
             }}
           >
             <h3>
@@ -291,7 +300,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               disabled={busy || !hasRecipients}
             >
               <span className="invite-button-label">
-                <Send size={16} /> Send Invite
+                <Send size={16} /> {type === "reel" ? "Send Reel" : "Share Folder"}
               </span>
             </button>
           </form>

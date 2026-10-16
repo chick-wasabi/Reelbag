@@ -10,6 +10,7 @@ import {
   Instagram,
   RefreshCw,
   Share2,
+  UserRound,
 } from "lucide-react";
 
 import { parseReelUrl } from "../utils/reels.mjs";
@@ -102,6 +103,11 @@ export default function ReelCard({
     >
       <div className="reel-heading">
         <div className="min-w-0">
+          {reel.isDirectShared && (
+            <span className="reel-shared-by">
+              <UserRound size={11} /> Shared by {reel.sharedByDisplayName || `@${reel.sharedBy}`}
+            </span>
+          )}
           <h2 title={reel.title}>{reel.title}</h2>
           {folder && <span className="reel-folder">{folder.name}</span>}
         </div>
