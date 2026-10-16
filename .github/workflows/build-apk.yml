@@ -75,6 +75,26 @@ jobs:
           grep -q 'minSdkVersion 24' android/app/build.gradle
           grep -q 'targetSdkVersion 36' android/app/build.gradle
 
+      - name: Generate Reelbag Android assets
+        run: |
+          cp public/icon-512.png public/icon.png
+          npx @capacitor/assets generate --android \
+            --assetPath public \
+            --iconBackgroundColor '#0f172a' \
+            --iconBackgroundColorDark '#0f172a' \
+            --splashBackgroundColor '#0b0f17' \
+            --splashBackgroundColorDark '#0b0f17'
+          sed -i -E \
+            's#<string name="app_name">[^<]*</string>#<string name="app_name">Reelbag</string>#' \
+            android/app/src/main/res/values/strings.xml
+          grep -q '<string name="app_name">Reelbag</string>' \
+            android/app/src/main/res/values/strings.xml
+          test -f android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          test -f android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          test -f android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+          test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+
       - name: Restore persistent release signing identity
         id: signing-cache
         uses: actions/cache/restore@v4
