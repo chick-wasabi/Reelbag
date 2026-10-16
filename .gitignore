@@ -4,6 +4,8 @@ out/
 .env*
 !.env.example
 .vercel/
+.android-signing/
+android/release.keystore
 coverage/
 playwright-report/
 test-results/

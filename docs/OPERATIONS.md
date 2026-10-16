@@ -114,16 +114,11 @@ Next.js metadata serves the default SVG, 32 px PNG (`app/icon1.png`), six-size I
 
 ## Signed Android releases and Digital Asset Links
 
-The Android release workflow requires one persistent signing identity. Generate the keystore once, keep an encrypted offline backup, and never commit it. Configure these GitHub Actions secrets:
+The Android release workflow generates its signing identity on the first run and restores it from a repository-scoped GitHub Actions cache on later runs. The private keystore and random password never enter the repository, logs, release assets, or Vercel settings. No manual Actions or Vercel secrets are required.
 
-- `ANDROID_KEYSTORE_BASE64`: base64 of the complete keystore file
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password
-- `ANDROID_KEY_ALIAS`: signing-key alias
-- `ANDROID_KEY_PASSWORD`: private-key password
+The workflow extracts the public certificate fingerprint, commits only that value to `android/signing-certificate.json`, and waits for Vercel to serve the matching `/.well-known/assetlinks.json` response before signing or publishing. A mismatch stops the release, preventing an APK whose TWA would fall back to a Chrome Custom Tab.
 
-Configure the public GitHub Actions variable `ANDROID_CERT_SHA256_FINGERPRINT` with the signing certificate's colon-delimited SHA-256 fingerprint. Configure the same value as `ANDROID_CERT_SHA256_FINGERPRINT` in the Vercel production environment and deploy before running the APK workflow. The app serves it at `/.well-known/assetlinks.json`.
-
-The workflow extracts the certificate fingerprint from the restored keystore and compares it with the configured value. It then checks the deployed Asset Links response before signing or publishing. A missing value or mismatch stops the release, preventing an APK whose TWA would fall back to a Chrome Custom Tab. Rotating the keystore requires updating both fingerprint settings and redeploying the website before building the next APK; existing installations cannot update across an unrelated signing key.
+GitHub Actions caches are not permanent signing-key custody: GitHub may evict a cache after inactivity or under repository cache limits. Back up `.android-signing/release.keystore` and its password from a controlled workflow before distributing the APK if update continuity matters. If the cache is lost, the workflow creates a new identity and updates Digital Asset Links automatically, but Android will require existing users to uninstall the old certificate's app before installing the newly signed APK.
 
 ## Validation
 

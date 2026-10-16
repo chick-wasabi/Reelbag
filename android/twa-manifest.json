@@ -1,5 +1,5 @@
 {
-  "packageId": "app.reelbag.twa",
+  "packageId": "app.vercel.reelbag.twa",
   "host": "reelbag.vercel.app",
   "name": "Reelbag",
   "launcherName": "Reelbag",

@@ -1,8 +1,11 @@
+import signingCertificate from "../../../android/signing-certificate.json";
+
 export const dynamic = "force-dynamic";
 
 const PACKAGE_NAME = "app.vercel.reelbag.twa";
 
-function normalizeFingerprint(value = "") {
+function normalizeFingerprint(value) {
+  if (typeof value !== "string") return null;
   const compact = value.trim().replaceAll(":", "").toUpperCase();
   if (!/^[0-9A-F]{64}$/.test(compact)) return null;
   return compact.match(/.{2}/g).join(":");
@@ -10,7 +13,7 @@ function normalizeFingerprint(value = "") {
 
 export function GET() {
   const fingerprint = normalizeFingerprint(
-    process.env.ANDROID_CERT_SHA256_FINGERPRINT,
+    signingCertificate.sha256_cert_fingerprint,
   );
 
   if (!fingerprint) {

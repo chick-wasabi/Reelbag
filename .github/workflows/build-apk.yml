@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-apk-${{ github.event.release.tag_name || inputs.release_tag || github.run_id }}
+  group: android-apk-release-signing
   cancel-in-progress: false
 
 jobs:
@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -59,33 +61,69 @@ jobs:
             '{jdkPath: $jdk, androidSdkPath: $sdk}' \
             > "$HOME/.bubblewrap/config.json"
 
-      - name: Restore and verify release signing key
+      - name: Restore persistent release signing identity
+        id: signing-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .android-signing
+          key: reelbag-android-release-signing-v1
+
+      - name: Generate or load release signing key
         id: signing
-        env:
-          ANDROID_CERT_SHA256_FINGERPRINT: ${{ vars.ANDROID_CERT_SHA256_FINGERPRINT }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          test -n "$ANDROID_CERT_SHA256_FINGERPRINT"
-          test -n "$ANDROID_KEY_ALIAS"
-          test -n "$ANDROID_KEYSTORE_BASE64"
-          test -n "$ANDROID_KEYSTORE_PASSWORD"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.keystore
+          mkdir -p .android-signing
+          if [ ! -s .android-signing/release.keystore ] || [ ! -s .android-signing/password ]; then
+            password="$(openssl rand -hex 24)"
+            keytool -genkeypair \
+              -keystore .android-signing/release.keystore \
+              -storetype PKCS12 \
+              -storepass "$password" \
+              -keypass "$password" \
+              -alias reelbag \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Reelbag, OU=Android, O=Reelbag, L=Unknown, ST=Unknown, C=US"
+            printf '%s' "$password" > .android-signing/password
+          fi
+          password="$(cat .android-signing/password)"
+          echo "::add-mask::$password"
+          cp .android-signing/release.keystore android/release.keystore
           chmod 600 android/release.keystore
           fingerprint="$(keytool -list -v \
             -keystore android/release.keystore \
-            -alias "$ANDROID_KEY_ALIAS" \
-            -storepass:env ANDROID_KEYSTORE_PASSWORD | \
+            -alias reelbag \
+            -storepass "$password" | \
             sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
           test -n "$fingerprint"
-          actual="$(printf '%s' "$fingerprint" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          expected="$(printf '%s' "$ANDROID_CERT_SHA256_FINGERPRINT" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          if [ "$actual" != "$expected" ]; then
-            echo "Release certificate does not match ANDROID_CERT_SHA256_FINGERPRINT." >&2
-            exit 1
-          fi
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+          echo "ANDROID_KEY_ALIAS=reelbag" >> "$GITHUB_ENV"
+          echo "BUBBLEWRAP_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "BUBBLEWRAP_KEY_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Save new release signing identity
+        if: steps.signing-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .android-signing
+          key: reelbag-android-release-signing-v1
+
+      - name: Publish signing certificate fingerprint
+        env:
+          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
+        run: |
+          jq --arg fingerprint "$CERT_FINGERPRINT" \
+            '.sha256_cert_fingerprint = $fingerprint' \
+            android/signing-certificate.json > android/signing-certificate.next.json
+          mv android/signing-certificate.next.json android/signing-certificate.json
+          if git diff --quiet -- android/signing-certificate.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/signing-certificate.json
+          git commit -m "Update Android signing certificate fingerprint"
+          git push origin HEAD:main
 
       - name: Set Android build version
         env:
@@ -121,26 +159,26 @@ jobs:
         env:
           CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
         run: |
-          response="$(curl --fail --silent --show-error \
-            --retry 12 --retry-delay 10 --retry-all-errors \
-            https://reelbag.vercel.app/.well-known/assetlinks.json)"
-          deployed="$(printf '%s' "$response" | jq -r \
-            'map(select(.target.package_name == "app.vercel.reelbag.twa")) | .[0].target.sha256_cert_fingerprints[0] // empty')"
           actual="$(printf '%s' "$CERT_FINGERPRINT" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          expected="$(printf '%s' "$deployed" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
-            echo "Deployed Digital Asset Links fingerprint does not match the signing key." >&2
-            exit 1
-          fi
+          for attempt in $(seq 1 18); do
+            response="$(curl --fail --silent --show-error \
+              https://reelbag.vercel.app/.well-known/assetlinks.json || true)"
+            deployed="$(printf '%s' "$response" | jq -r \
+              'map(select(.target.package_name == "app.vercel.reelbag.twa")) | .[0].target.sha256_cert_fingerprints[0] // empty' \
+              2>/dev/null || true)"
+            expected="$(printf '%s' "$deployed" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+            if [ -n "$expected" ] && [ "$actual" = "$expected" ]; then
+              exit 0
+            fi
+            echo "Waiting for Vercel to deploy the signing certificate (attempt ${attempt}/18)..."
+            sleep 10
+          done
+          echo "Deployed Digital Asset Links fingerprint does not match the signing key." >&2
+          exit 1
 
       - name: Build signed release APK
         working-directory: android
-        env:
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -n "$BUBBLEWRAP_KEY_PASSWORD"
           bubblewrap build \
             --skipPwaValidation \
             --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json" \
