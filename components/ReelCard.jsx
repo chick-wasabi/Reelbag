@@ -103,7 +103,7 @@ export default function ReelCard({
     >
       <div className="reel-heading">
         <div className="min-w-0">
-          <h2>{reel.title}</h2>
+          <h2 title={reel.title}>{reel.title}</h2>
           {folder && <span className="reel-folder">{folder.name}</span>}
         </div>
         <div className="reel-actions">

@@ -274,10 +274,15 @@ select option {
   min-height: 64px;
 }
 .reel-heading h2 {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.6;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .reel-folder {
   display: inline-block;
