@@ -59,14 +59,44 @@ jobs:
             '{jdkPath: $jdk, androidSdkPath: $sdk}' \
             > "$HOME/.bubblewrap/config.json"
 
+      - name: Restore and verify release signing key
+        id: signing
+        env:
+          ANDROID_CERT_SHA256_FINGERPRINT: ${{ vars.ANDROID_CERT_SHA256_FINGERPRINT }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$ANDROID_CERT_SHA256_FINGERPRINT"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.keystore
+          chmod 600 android/release.keystore
+          fingerprint="$(keytool -list -v \
+            -keystore android/release.keystore \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD | \
+            sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          test -n "$fingerprint"
+          actual="$(printf '%s' "$fingerprint" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          expected="$(printf '%s' "$ANDROID_CERT_SHA256_FINGERPRINT" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          if [ "$actual" != "$expected" ]; then
+            echo "Release certificate does not match ANDROID_CERT_SHA256_FINGERPRINT." >&2
+            exit 1
+          fi
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+
       - name: Set Android build version
         env:
+          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
           VERSION_CODE: ${{ github.run_number }}
         run: |
           jq \
             --arg version "1.0.${VERSION_CODE}" \
             --argjson code "$VERSION_CODE" \
-            '.appVersion = $version | .appVersionCode = $code' \
+            --arg fingerprint "$CERT_FINGERPRINT" \
+            '.appVersion = $version | .appVersionCode = $code | .fingerprints = [{name: "release", value: $fingerprint}]' \
             android/twa-manifest.json > android/twa-manifest.next.json
           mv android/twa-manifest.next.json android/twa-manifest.json
 
@@ -87,12 +117,36 @@ jobs:
           grep -q 'targetSdkVersion 36' android/app/build.gradle
           grep -q 'minSdkVersion 24' android/app/build.gradle
 
-      - name: Build installable debug APK
-        working-directory: android
+      - name: Verify deployed Digital Asset Links
+        env:
+          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
         run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Reelbag-Android.apk"
+          response="$(curl --fail --silent --show-error \
+            --retry 12 --retry-delay 10 --retry-all-errors \
+            https://reelbag.vercel.app/.well-known/assetlinks.json)"
+          deployed="$(printf '%s' "$response" | jq -r \
+            'map(select(.target.package_name == "app.vercel.reelbag.twa")) | .[0].target.sha256_cert_fingerprints[0] // empty')"
+          actual="$(printf '%s' "$CERT_FINGERPRINT" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          expected="$(printf '%s' "$deployed" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
+            echo "Deployed Digital Asset Links fingerprint does not match the signing key." >&2
+            exit 1
+          fi
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$BUBBLEWRAP_KEY_PASSWORD"
+          bubblewrap build \
+            --skipPwaValidation \
+            --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json" \
+            --signingKeyPath="$GITHUB_WORKSPACE/android/release.keystore" \
+            --signingKeyAlias="$ANDROID_KEY_ALIAS"
+          cp app-release-signed.apk "$GITHUB_WORKSPACE/Reelbag-Android.apk"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

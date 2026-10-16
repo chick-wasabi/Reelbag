@@ -112,6 +112,19 @@ API entry points are `/api/sharing/{folder|reel}/{id}` (owner settings), `/invit
 
 Next.js metadata serves the default SVG, 32 px PNG (`app/icon1.png`), six-size ICO at `public/favicon.ico` (16–256 px), and opaque 180 px Apple icon (`app/apple-icon.png`). `public/apple-touch-icon.png` supplies the conventional Apple path as well. The manifest provides 192/512 px home-screen icons and a separate 512 px maskable icon with safe-zone padding. Regenerate the checked-in PNG/ICO assets from `app/icon.svg` if the static artwork changes. Installed/bookmarked icons use the static default artwork. These assets and standalone metadata support home-screen shortcuts; cloud data and Instagram playback require a network connection.
 
+## Signed Android releases and Digital Asset Links
+
+The Android release workflow requires one persistent signing identity. Generate the keystore once, keep an encrypted offline backup, and never commit it. Configure these GitHub Actions secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: base64 of the complete keystore file
+- `ANDROID_KEYSTORE_PASSWORD`: keystore password
+- `ANDROID_KEY_ALIAS`: signing-key alias
+- `ANDROID_KEY_PASSWORD`: private-key password
+
+Configure the public GitHub Actions variable `ANDROID_CERT_SHA256_FINGERPRINT` with the signing certificate's colon-delimited SHA-256 fingerprint. Configure the same value as `ANDROID_CERT_SHA256_FINGERPRINT` in the Vercel production environment and deploy before running the APK workflow. The app serves it at `/.well-known/assetlinks.json`.
+
+The workflow extracts the certificate fingerprint from the restored keystore and compares it with the configured value. It then checks the deployed Asset Links response before signing or publishing. A missing value or mismatch stops the release, preventing an APK whose TWA would fall back to a Chrome Custom Tab. Rotating the keystore requires updating both fingerprint settings and redeploying the website before building the next APK; existing installations cannot update across an unrelated signing key.
+
 ## Validation
 
 ```sh
