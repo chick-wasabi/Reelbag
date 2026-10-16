@@ -29,7 +29,8 @@ import { parseReelUrl } from "../utils/reels.mjs";
 export default function Home() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [minLoadingPassed, setMinLoadingPassed] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const showLoading = loading || !minTimeElapsed;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selected, setSelected] = useState("all");
   const [search, setSearch] = useState("");
@@ -43,7 +44,7 @@ export default function Home() {
   const pending = useRef(0);
   const userId = data?.user?.id;
   useEffect(() => {
-    const timer = window.setTimeout(() => setMinLoadingPassed(true), 3000);
+    const timer = window.setTimeout(() => setMinTimeElapsed(true), 3000);
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
@@ -376,7 +377,7 @@ export default function Home() {
 
   return (
     <>
-      {loading || !minLoadingPassed ? (
+      {showLoading ? (
         <LoadingScreen />
       ) : !data?.user ? (
         <main className="gate">

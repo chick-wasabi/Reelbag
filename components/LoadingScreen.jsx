@@ -46,7 +46,10 @@ const REEL_TILES = Array.from({ length: 7 }, (_, index) => index);
 
 function ReelTile({ index }) {
   return (
-    <div className="loading-reel" aria-hidden="true">
+    <div
+      className={`loading-reel ${index % 3 === 0 ? "has-accent-glow" : ""}`}
+      aria-hidden="true"
+    >
       <div className={`loading-reel-art loading-reel-art-${(index % 4) + 1}`}>
         <span className="loading-reel-play" />
       </div>
@@ -73,22 +76,27 @@ function MarqueeTrack({ row }) {
 }
 
 export default function LoadingScreen() {
-  const [tipIndex, setTipIndex] = useState(0);
-  const [tipVisible, setTipVisible] = useState(true);
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [tipVisible, setTipVisible] = useState(false);
 
   useEffect(() => {
+    const revealFrame = window.requestAnimationFrame(() => {
+      setCurrentTipIndex(Math.floor(Math.random() * LOADING_TIPS.length));
+      setTipVisible(true);
+    });
     let fadeInterval;
     const firstFade = window.setTimeout(() => {
       setTipVisible(false);
-      fadeInterval = window.setInterval(() => setTipVisible(false), 2000);
-    }, 1700);
+      fadeInterval = window.setInterval(() => setTipVisible(false), 1500);
+    }, 1200);
     const rotateInterval = window.setInterval(() => {
-      setTipIndex((current) => (current + 1) % LOADING_TIPS.length);
+      setCurrentTipIndex((current) => (current + 1) % LOADING_TIPS.length);
       setTipVisible(true);
-    }, 2000);
+    }, 1500);
     return () => {
       window.clearInterval(rotateInterval);
       window.clearTimeout(firstFade);
+      window.cancelAnimationFrame(revealFrame);
       if (fadeInterval) window.clearInterval(fadeInterval);
     };
   }, []);
@@ -117,10 +125,10 @@ export default function LoadingScreen() {
           role="status"
           aria-live="polite"
         >
-          {LOADING_TIPS[tipIndex]}
+          {LOADING_TIPS[currentTipIndex]}
         </p>
         <div className="loading-progress" aria-hidden="true">
-          <span key={tipIndex} />
+          <span key={currentTipIndex} />
         </div>
       </section>
     </main>

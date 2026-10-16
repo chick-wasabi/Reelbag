@@ -2210,7 +2210,7 @@ select option {
     max(20px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom))
     max(20px, env(safe-area-inset-left));
-  background: #080b12;
+  background: #0b0f17;
 }
 .loading-marquee {
   position: absolute;
@@ -2257,35 +2257,43 @@ select option {
   padding-right: 18px;
 }
 .loading-reel {
-  width: clamp(86px, 8vw, 126px);
+  position: relative;
+  width: 112px;
+  aspect-ratio: 9 / 16;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 0.05);
-  border-radius: 14px;
-  background: #0e1420;
+  border-radius: 12px;
+  background: #12161f;
   box-shadow: 0 12px 35px rgb(0 0 0 / 0.28);
 }
+.loading-reel.has-accent-glow {
+  border-color: rgb(var(--accent-rgb) / 0.14);
+  box-shadow:
+    0 12px 35px rgb(0 0 0 / 0.3),
+    0 0 20px rgb(var(--accent-rgb) / 0.07);
+}
 .loading-reel-art {
-  position: relative;
-  aspect-ratio: 9 / 14;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background:
     linear-gradient(145deg, transparent 42%, rgb(var(--accent-rgb) / 0.11) 43%, transparent 44%),
-    radial-gradient(circle at 30% 28%, #3b4350, #171d28 32%, #0b0f17 68%);
+    radial-gradient(circle at 30% 28%, #30312f, #171918 32%, #0b0f17 68%);
 }
 .loading-reel-art-2 {
   background:
     linear-gradient(28deg, transparent 55%, rgb(var(--accent-rgb) / 0.09) 56%, transparent 57%),
-    radial-gradient(ellipse at 65% 70%, #343d49, #141a24 38%, #090d14 75%);
+    radial-gradient(ellipse at 65% 70%, #2b2d2a, #151716 38%, #0b0f17 75%);
 }
 .loading-reel-art-3 {
   background:
     linear-gradient(90deg, transparent 47%, rgb(var(--accent-rgb) / 0.1) 48%, transparent 50%),
-    radial-gradient(circle at 55% 38%, #414955, #161c26 30%, #090d14 70%);
+    radial-gradient(circle at 55% 38%, #343633, #181a19 30%, #0b0f17 70%);
 }
 .loading-reel-art-4 {
   background:
     linear-gradient(165deg, transparent 50%, rgb(var(--accent-rgb) / 0.08) 51%, transparent 53%),
-    radial-gradient(ellipse at 35% 78%, #37404d, #151b25 35%, #090d14 72%);
+    radial-gradient(ellipse at 35% 78%, #2e302d, #161817 35%, #0b0f17 72%);
 }
 .loading-reel-play {
   position: absolute;
@@ -2300,9 +2308,14 @@ select option {
   transform: translate(-35%, -50%);
 }
 .loading-reel-meta {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   gap: 6px;
-  padding: 10px;
+  padding: 26px 11px 12px;
+  background: linear-gradient(to top, rgb(11 15 23 / 0.94), transparent);
 }
 .loading-reel-meta span {
   display: block;
@@ -2320,8 +2333,8 @@ select option {
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(circle at center, rgb(8 11 18 / 0.97) 0%, rgb(8 11 18 / 0.88) 28%, rgb(8 11 18 / 0.38) 62%, rgb(8 11 18 / 0.76) 100%),
-    linear-gradient(to bottom, rgb(8 11 18 / 0.65), transparent 30%, transparent 70%, rgb(8 11 18 / 0.7));
+    radial-gradient(circle at center, rgb(11 15 23 / 0.97) 0%, rgb(11 15 23 / 0.88) 28%, rgb(11 15 23 / 0.38) 62%, rgb(11 15 23 / 0.76) 100%),
+    linear-gradient(to bottom, rgb(11 15 23 / 0.65), transparent 30%, transparent 70%, rgb(11 15 23 / 0.7));
 }
 .loading-card {
   position: relative;
@@ -2335,7 +2348,7 @@ select option {
   text-align: center;
   border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: 24px;
-  background: rgb(18 24 36 / 0.9);
+  background: rgb(18 22 31 / 0.9);
   box-shadow:
     0 0 50px rgb(0 0 0 / 0.8),
     inset 0 1px 0 rgb(255 255 255 / 0.035);
@@ -2383,7 +2396,7 @@ select option {
   width: 100%;
   min-height: 22px;
   margin: 25px 0 13px;
-  color: #aeb6c3;
+  color: #b8b8b8;
   font-size: 13px;
   line-height: 1.6;
   opacity: 0;
@@ -2411,7 +2424,7 @@ select option {
   background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.5), var(--accent));
   box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.45);
   transform-origin: left center;
-  animation: loading-progress-fill 2s linear both;
+  animation: loading-progress-fill 1.5s linear both;
 }
 @keyframes loading-marquee {
   from {
@@ -2448,12 +2461,14 @@ select option {
     transform: scaleX(1);
   }
 }
+@media (min-width: 640px) {
+  .loading-reel {
+    width: 144px;
+  }
+}
 @media (max-width: 639px) {
   .loading-marquee {
     gap: 18px;
-  }
-  .loading-reel {
-    width: 88px;
   }
   .loading-card {
     width: min(100%, 350px);
