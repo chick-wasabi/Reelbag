@@ -22,6 +22,7 @@ import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
 import FriendsModal from "../components/FriendsModal";
+import RecentlyDeletedModal from "../components/RecentlyDeletedModal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
@@ -430,9 +431,13 @@ export default function Home() {
       if (modal.type === "deleteFolder") {
         await mutate(`folders/${modal.folder.id}`, "DELETE");
         if (selected === modal.folder.id) setSelected("all");
-      } else await mutate(`reels/${modal.reel.id}`, "DELETE");
+      } else await mutate(`reels/${modal.reel.id}/trash`, "POST");
       setModal(null);
-      setNotice("Deleted from cloud.");
+      setNotice(
+        modal.type === "deleteFolder"
+          ? "Folder deleted. Its Reels remain in All Reels."
+          : "Reel moved to Recently Deleted.",
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -650,6 +655,15 @@ export default function Home() {
           onNotice={setNotice}
         />
       )}
+      {data?.user && modal?.type === "recentlyDeleted" && (
+        <RecentlyDeletedModal
+          user={data.user}
+          onClose={() => setModal(null)}
+          onLibraryChange={async () => {
+            await mutate("library", "GET");
+          }}
+        />
+      )}
       {data?.user && modal?.type === "share" && (
         <ShareModal
           type={modal.kind}
@@ -801,13 +815,13 @@ export default function Home() {
       )}
       {data?.user && ["deleteReel", "deleteFolder"].includes(modal?.type) && (
         <Modal
-          title={
-            modal.type === "deleteFolder" ? "Delete folder?" : "Delete reel?"
-          }
+          title={modal.type === "deleteFolder" ? "Delete folder?" : "Remove reel?"}
           description={
             modal.type === "deleteFolder"
               ? "The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN. This affects every device."
-              : "This removes the reel from your cloud library on every device. It cannot be undone."
+              : modal.reel.canManage === false
+                ? "This removes the shared Reel only from your account and moves it to Recently Deleted. The owner and other viewers keep their copy."
+                : "This moves the Reel to Recently Deleted, where you can restore it or permanently delete it later."
           }
           onClose={() => {
             if (!deleting) setModal(null);
@@ -827,8 +841,12 @@ export default function Home() {
               onClick={remove}
             >
               {deleting
-                ? "Deleting…"
-                : `Delete ${modal.type === "deleteFolder" ? "folder" : "reel"}`}
+                ? "Removing…"
+                : modal.type === "deleteFolder"
+                  ? "Delete folder"
+                  : modal.reel.canManage === false
+                    ? "Remove from My View"
+                    : "Move to Recently Deleted"}
             </button>
           </div>
         </Modal>

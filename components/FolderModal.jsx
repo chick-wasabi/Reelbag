@@ -31,7 +31,7 @@ export default function FolderModal({ folder, onSave, onClose }) {
   }
   return (
     <Modal
-      title={folder ? "Rename folder" : "New folder"}
+      title={folder ? "Folder settings" : "New folder"}
       onClose={() => {
         if (!busy) onClose();
       }}

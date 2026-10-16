@@ -215,6 +215,48 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(revoked.data.folders.some((folder) => folder.id === folderId), false);
 });
 
+test("recipients can trash shared reels privately, restore them, and protect Recently Deleted", async () => {
+  const sender = await account();
+  const recipient = await account();
+  const created = await call(
+    "reels",
+    "POST",
+    { title: "Keep the owner's copy", url: "https://www.instagram.com/reel/DPrivateTrash1/", folderId: null },
+    sender.cookie,
+  );
+  const reelId = created.data.reels[0].id;
+  const requested = await call("friends/request", "POST", { username: recipient.username }, sender.cookie);
+  const friendshipId = requested.data.outgoingFriendRequests[0].id;
+  await call(`notifications/${friendshipId}/respond`, "POST", { status: "accepted" }, recipient.cookie);
+  await call(`sharing/reel/${reelId}/send`, "POST", { username: recipient.username, role: "viewer" }, sender.cookie);
+
+  const trashed = await call(`reels/${reelId}/trash`, "POST", {}, recipient.cookie);
+  assert.equal(trashed.status, 200, JSON.stringify(trashed.data));
+  assert.equal(trashed.data.reels.some((reel) => reel.id === reelId), false);
+  assert.equal((await call("library", "GET", null, sender.cookie)).data.reels.some((reel) => reel.id === reelId), true);
+
+  const opened = await call("trash/open", "POST", {}, recipient.cookie);
+  assert.equal(opened.status, 200, JSON.stringify(opened.data));
+  assert.equal(opened.data.items[0].id, reelId);
+  assert.equal(opened.data.items[0].canManage, false);
+  const restored = await call(`trash/${reelId}/restore`, "POST", {}, recipient.cookie);
+  assert.equal(restored.status, 200);
+  assert.equal((await call("library", "GET", null, recipient.cookie)).data.reels.some((reel) => reel.id === reelId), true);
+
+  const pin = await call("trash/pin", "POST", { enabled: true, newPin: "6427" }, recipient.cookie);
+  assert.equal(pin.status, 200);
+  assert.equal(pin.data.protected, true);
+  assert.equal((await call("trash/open", "POST", {}, recipient.cookie)).status, 401);
+  assert.equal((await call("trash/open", "POST", { pin: "0000" }, recipient.cookie)).status, 403);
+  assert.equal((await call("trash/open", "POST", { pin: "6427" }, recipient.cookie)).status, 200);
+
+  await call(`reels/${reelId}/trash`, "POST", {}, recipient.cookie);
+  const removed = await call(`trash/${reelId}/permanent`, "POST", {}, recipient.cookie);
+  assert.equal(removed.status, 200);
+  assert.equal((await call("trash/open", "POST", { pin: "6427" }, recipient.cookie)).data.items.length, 0);
+  assert.equal((await call("library", "GET", null, sender.cookie)).data.reels.some((reel) => reel.id === reelId), true);
+});
+
 test("private or removed Instagram embeds are rejected before they enter the library", async () => {
   const user = await account();
   const unavailableApi = createApi({

@@ -136,8 +136,7 @@ export default function ReelCard({
                 <Star size={16} fill="currentColor" />
               </button>
           )}
-          {canManage && (
-            <details ref={menu} className="reel-menu">
+          <details ref={menu} className="reel-menu">
                 <summary
                   className="icon-button"
                   aria-label={`Actions for ${reel.title}`}
@@ -146,7 +145,7 @@ export default function ReelCard({
                   <MoreHorizontal size={19} />
                 </summary>
                 <div className="reel-menu-panel">
-                  <button
+                  {canManage && <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -155,8 +154,8 @@ export default function ReelCard({
                   >
                     <Star size={15} fill={reel.isFavorite ? "currentColor" : "none"} />
                     {reel.isFavorite ? "Remove Favorite" : "Add to Favorites"}
-                  </button>
-                  <button
+                  </button>}
+                  {canManage && <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -165,8 +164,8 @@ export default function ReelCard({
                   >
                     <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
                     {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
-                  </button>
-                  {onShare && (
+                  </button>}
+                  {canManage && onShare && (
                     <button
                       aria-label={`Share ${reel.title}`}
                       onClick={() => {
@@ -177,7 +176,7 @@ export default function ReelCard({
                       <Share2 size={15} /> Share
                     </button>
                   )}
-                  <button
+                  {canManage && <button
                     onClick={() => {
                       closeMenu();
                       onEdit();
@@ -186,8 +185,8 @@ export default function ReelCard({
                   >
                     <Pencil size={15} />
                     Edit Title
-                  </button>
-                  <button
+                  </button>}
+                  {canManage && <button
                     onClick={() => {
                       closeMenu();
                       onMove();
@@ -196,21 +195,20 @@ export default function ReelCard({
                   >
                     <FolderInput size={15} />
                     Move Folder
-                  </button>
+                  </button>}
                   <button
                     className="danger"
                     onClick={() => {
                       closeMenu();
                       onDelete();
                     }}
-                    aria-label={`Delete ${reel.title}`}
+                    aria-label={`${canManage ? "Move" : "Remove"} ${reel.title}`}
                   >
                     <Trash2 size={15} />
-                    Delete
+                    {canManage ? "Move to Recently Deleted" : "Remove from My View"}
                   </button>
                 </div>
             </details>
-          )}
         </div>
       </div>
       <div

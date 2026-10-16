@@ -341,6 +341,75 @@ select option {
   padding: 8px 12px;
   font-size: 12px;
 }
+.trash-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+}
+.trash-list,
+.trash-pin-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.018);
+}
+.trash-list {
+  min-height: 250px;
+  max-height: min(54vh, 520px);
+  overflow-y: auto;
+}
+.trash-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.trash-item:last-child { border-bottom: 0; }
+.trash-item strong,
+.trash-item span { display: block; }
+.trash-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.trash-item span {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.trash-item-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.trash-item-actions button { padding: 8px 10px; font-size: 12px; }
+.trash-empty {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 28px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.trash-empty strong { color: var(--text-primary); }
+.trash-empty span { max-width: 370px; font-size: 12px; line-height: 1.6; }
+.trash-pin-panel { padding: 16px; align-self: start; }
+.trash-pin-title { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.trash-pin-title svg { color: var(--accent); }
+.trash-pin-title strong,
+.trash-pin-title span { display: block; }
+.trash-pin-title span { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+@media (max-width: 720px) {
+  .trash-layout { grid-template-columns: 1fr; }
+  .trash-item { align-items: flex-start; flex-direction: column; }
+  .trash-item-actions { width: 100%; }
+  .trash-item-actions button { flex: 1; }
+}
 .reel-card:focus-within,
 .reel-card:hover {
   border-color: rgb(255 255 255 / 0.09);

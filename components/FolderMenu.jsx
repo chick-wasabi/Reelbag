@@ -165,7 +165,7 @@ export default function FolderMenu({
             {owner ? (
               <>
                 <button role="menuitem" onClick={() => act(onRename)}>
-                  <Pencil size={16} /> Rename Folder
+                  <Pencil size={16} /> Folder Settings
                 </button>
                 <button role="menuitem" onClick={() => act(onShare)}>
                   <Share2 size={16} /> Share Folder
