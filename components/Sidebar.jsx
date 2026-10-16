@@ -28,7 +28,7 @@ export default function Sidebar({
 }) {
   return (
     <aside
-      className={`sidebar hidden md:flex ${collapsed ? "sidebar-collapsed" : ""}`}
+      className={`sidebar sidebar-ambient hidden md:flex ${collapsed ? "sidebar-collapsed" : ""}`}
       data-collapsed={collapsed}
       aria-label="Desktop workspace"
     >

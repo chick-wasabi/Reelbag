@@ -1600,17 +1600,22 @@ test("motion preserves players across filters, cycles the avatar, and honors red
       .locator(".reel-fab")
       .evaluate((el) => getComputedStyle(el, "::before").animationDuration),
   ).toBe("12s");
-  const edges = await page.locator(".reel-card").evaluate((el) => {
+  const glass = await page.locator(".reel-card").evaluate((el) => {
     const style = getComputedStyle(el);
-    return [
-      style.borderTopColor,
-      style.borderLeftColor,
-      style.borderRightColor,
-      style.borderBottomColor,
-    ];
+    return {
+      edges: [
+        style.borderTopColor,
+        style.borderLeftColor,
+        style.borderRightColor,
+        style.borderBottomColor,
+      ],
+      backdrop: style.backdropFilter,
+      shadow: style.boxShadow,
+    };
   });
-  expect(edges[0]).not.toBe(edges[2]);
-  expect(edges[1]).not.toBe(edges[3]);
+  expect(new Set(glass.edges).size).toBe(1);
+  expect(glass.backdrop).toContain("blur");
+  expect(glass.shadow).toContain("rgba(0, 0, 0, 0.3)");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(avatar).toHaveAttribute("data-animating", "false");
   expect(
