@@ -94,21 +94,34 @@ export default function NotificationCenter({ onChange }) {
             <div className="notification-list">
               {data.items.map((item) => (
                 <section key={item.id} className="sharing-section form-stack">
-                  <p>
-                    <strong>@{item.sender}</strong> invited you to{" "}
-                    {item.role === "collaborator" ? "collaborate on" : "view"}{" "}
-                    <strong>{item.title}</strong>.
-                  </p>
-                  <p className="fine-print">
-                    {item.type === "folder_invite" ? "Folder" : "Reel"} ·{" "}
-                    {item.role === "collaborator"
-                      ? "Watch and add reels"
-                      : "Read-only player access"}
-                  </p>
+                  {item.type === "friend_request" ? (
+                    <>
+                      <p>
+                        <strong>@{item.sender}</strong> sent you a friend request.
+                      </p>
+                      <p className="fine-print">
+                        Friends can share Reels with you directly.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>@{item.sender}</strong> invited you to{" "}
+                        {item.role === "collaborator" ? "collaborate on" : "view"}{" "}
+                        <strong>{item.title}</strong>.
+                      </p>
+                      <p className="fine-print">
+                        {item.type === "folder_invite" ? "Folder" : "Reel"} ·{" "}
+                        {item.role === "collaborator"
+                          ? "Watch and add reels"
+                          : "Read-only player access"}
+                      </p>
+                    </>
+                  )}
                   <div className="flex flex-wrap gap-3">
                     <button
                       className="button-primary"
-                      aria-label={`Accept ${item.title}`}
+                      aria-label={`Accept ${item.type === "friend_request" ? `friend request from ${item.sender}` : item.title}`}
                       disabled={busy}
                       onClick={() => respond(item.id, "accepted")}
                     >
@@ -116,7 +129,7 @@ export default function NotificationCenter({ onChange }) {
                     </button>
                     <button
                       className="button-secondary"
-                      aria-label={`Decline ${item.title}`}
+                      aria-label={`Decline ${item.type === "friend_request" ? `friend request from ${item.sender}` : item.title}`}
                       disabled={busy}
                       onClick={() => respond(item.id, "declined")}
                     >

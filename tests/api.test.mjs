@@ -114,6 +114,17 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(requested.data.outgoingFriendRequests.length, 1);
   const friendshipId = requested.data.outgoingFriendRequests[0].id;
 
+  const notifications = await call(
+    "notifications",
+    "GET",
+    null,
+    recipient.cookie,
+  );
+  assert.equal(notifications.status, 200, JSON.stringify(notifications.data));
+  assert.equal(notifications.data.unread, 1);
+  assert.equal(notifications.data.items[0].type, "friend_request");
+  assert.equal(notifications.data.items[0].sender, sender.username);
+
   const denied = await call(
     `friends/${friendshipId}/share/${reelId}`,
     "POST",
@@ -123,13 +134,15 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(denied.status, 404);
 
   const accepted = await call(
-    `friends/${friendshipId}/respond`,
+    `notifications/${friendshipId}/respond`,
     "POST",
     { status: "accepted" },
     recipient.cookie,
   );
   assert.equal(accepted.status, 200, JSON.stringify(accepted.data));
-  assert.equal(accepted.data.friends[0].username, sender.username);
+  assert.equal(accepted.data.items.length, 0);
+  const recipientLibrary = await call("library", "GET", null, recipient.cookie);
+  assert.equal(recipientLibrary.data.friends[0].username, sender.username);
 
   const shared = await call(
     `friends/${friendshipId}/share/${reelId}`,
