@@ -178,13 +178,16 @@ jobs:
       - name: Build signed release APK
         working-directory: android
         run: |
-          mkdir -p "$HOME/.bubblewrap"
-          cat > "$HOME/.bubblewrap/config.json" <<EOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
-          }
-          EOF
+          # Bubblewrap 1.27 validates a root-level bin directory, while the
+          # hosted runner keeps current command-line tools under cmdline-tools.
+          if [ ! -e /usr/local/lib/android/sdk/bin ]; then
+            ln -s /usr/local/lib/android/sdk/cmdline-tools/latest/bin \
+              /usr/local/lib/android/sdk/bin
+          fi
+          npx --yes @bubblewrap/cli@1.27.0 updateConfig \
+            --androidSdkPath="/usr/local/lib/android/sdk" \
+            --jdkPath="$JAVA_HOME"
+          npx --yes @bubblewrap/cli@1.27.0 doctor
           npx --yes @bubblewrap/cli@1.27.0 build \
             --skipPwaValidation \
             --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json" \
