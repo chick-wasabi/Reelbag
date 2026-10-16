@@ -1,11 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { api } from "../utils/api.mjs";
 import AvatarPicker from "./AvatarPicker";
 import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
 import PasswordField from "./PasswordField";
 import RecoveryFields, { QUESTIONS } from "./RecoveryFields";
+
+function countdown(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
 
 export default function AuthScreen({ onSuccess }) {
   const [mode, setMode] = useState("login");
@@ -23,8 +28,26 @@ export default function AuthScreen({ onSuccess }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loginLockoutUntil, setLoginLockoutUntil] = useState(0);
+  const [lockoutRemaining, setLockoutRemaining] = useState(0);
   const signup = mode === "signup";
   const recovering = mode === "recovery";
+  const loginLocked = !signup && !recovering && lockoutRemaining > 0;
+  useEffect(() => {
+    if (!loginLockoutUntil) return;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((loginLockoutUntil - Date.now()) / 1000),
+      );
+      setLockoutRemaining(remaining);
+      if (!remaining) {
+        window.clearInterval(timer);
+        setLoginLockoutUntil(0);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [loginLockoutUntil]);
   function changeMode(next) {
     setMode(next);
     setError("");
@@ -83,7 +106,12 @@ export default function AuthScreen({ onSuccess }) {
         await onSuccess();
       }
     } catch (err) {
-      setError(err.message);
+      if (!signup && !recovering && err.status === 429) {
+        const retryAfter = Math.max(1, err.retryAfter || 300);
+        setLoginLockoutUntil(Date.now() + retryAfter * 1000);
+        setLockoutRemaining(retryAfter);
+        setError("");
+      } else setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -137,7 +165,7 @@ export default function AuthScreen({ onSuccess }) {
               setChallenge(null);
               setAnswer("");
             }}
-            disabled={busy || !!challenge}
+            disabled={busy || loginLocked || !!challenge}
             placeholder="Your username"
           />
         </label>
@@ -147,7 +175,7 @@ export default function AuthScreen({ onSuccess }) {
             autoComplete={signup ? "new-password" : "current-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
+            disabled={busy || loginLocked}
             placeholder="At least 8 characters"
           />
         )}
@@ -238,6 +266,11 @@ export default function AuthScreen({ onSuccess }) {
             {error}
           </p>
         )}
+        {loginLocked && (
+          <p className="security-lockout" role="status" aria-live="polite">
+            Account locked. Please wait {countdown(lockoutRemaining)}
+          </p>
+        )}
         {message && (
           <p className="success-text" role="status">
             {message}
@@ -245,7 +278,11 @@ export default function AuthScreen({ onSuccess }) {
         )}
         <button
           className="button-primary w-full"
-          disabled={busy || (recovering && challenge && !challenge.question)}
+          disabled={
+            busy ||
+            loginLocked ||
+            (recovering && challenge && !challenge.question)
+          }
         >
           {busy ? (
             <Loader2 size={17} className="animate-spin" />

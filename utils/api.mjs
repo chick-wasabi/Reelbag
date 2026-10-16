@@ -1,7 +1,8 @@
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, retryAfter = 0) {
     super(message);
     this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 export async function api(path, { method = "GET", body, signal } = {}) {
@@ -39,6 +40,7 @@ export async function api(path, { method = "GET", body, signal } = {}) {
     throw new ApiError(
       data.error || "Request failed. Please try again.",
       response.status,
+      Number(response.headers.get("retry-after") || data.retryAfter || 0),
     );
   return data;
 }

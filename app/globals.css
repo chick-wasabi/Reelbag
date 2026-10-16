@@ -2623,6 +2623,17 @@ select option {
   font-size: 12px;
   line-height: 1.5;
 }
+.security-lockout {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  color: #ff9297;
+  border: 1px solid rgb(255 146 151 / 0.2);
+  border-radius: 9px;
+  background: rgb(255 146 151 / 0.055);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+}
 .admin-unlock-button {
   width: 100%;
   margin-top: 18px;

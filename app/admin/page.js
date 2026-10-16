@@ -24,6 +24,11 @@ const METRICS = [
   { key: "activeSharedFolders", label: "Active Shared Links", icon: Link2 },
 ];
 
+function countdown(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
@@ -40,6 +45,10 @@ export default function AdminPage() {
   });
   const [pinSaving, setPinSaving] = useState(false);
   const [pinFeedback, setPinFeedback] = useState(null);
+  const [failedAdminAttempts, setFailedAdminAttempts] = useState(0);
+  const [adminLockoutUntil, setAdminLockoutUntil] = useState(0);
+  const [adminLockoutRemaining, setAdminLockoutRemaining] = useState(0);
+  const adminLocked = adminLockoutRemaining > 0;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,9 +73,38 @@ export default function AdminPage() {
     return () => controller.abort();
   }, [router]);
 
+  useEffect(() => {
+    if (!adminLockoutUntil) return;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((adminLockoutUntil - Date.now()) / 1000),
+      );
+      setAdminLockoutRemaining(remaining);
+      if (!remaining) {
+        window.clearInterval(timer);
+        setAdminLockoutUntil(0);
+        setFailedAdminAttempts(0);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [adminLockoutUntil]);
+
+  function applyAdminLockout(response, payload) {
+    const retryAfter = Math.max(
+      1,
+      Number(response.headers.get("retry-after") || payload.retryAfter || 300),
+    );
+    setFailedAdminAttempts((attempts) => Math.max(3, attempts + 1));
+    setAdminLockoutUntil(Date.now() + retryAfter * 1000);
+    setAdminLockoutRemaining(retryAfter);
+    setError("");
+  }
+
   async function unlock(event) {
     event.preventDefault();
-    if (!/^(?:\d{4}|\d{6})$/.test(pin) || submitting) return;
+    if (adminLocked || !/^(?:\d{4}|\d{6})$/.test(pin) || submitting)
+      return;
     setSubmitting(true);
     setError("");
     try {
@@ -80,11 +118,18 @@ export default function AdminPage() {
         router.replace("/");
         return;
       }
+      if (response.status === 429) {
+        applyAdminLockout(response, payload);
+        return;
+      }
       if (!response.ok)
         throw new Error(payload.error || "Unable to unlock the admin panel.");
       setAnalytics(payload);
       setPin("");
+      setFailedAdminAttempts(0);
     } catch (requestError) {
+      if (requestError.message === "The admin security PIN is incorrect.")
+        setFailedAdminAttempts((attempts) => attempts + 1);
       setError(requestError.message);
     } finally {
       setSubmitting(false);
@@ -136,6 +181,20 @@ export default function AdminPage() {
         router.replace("/");
         return;
       }
+      if (response.status === 429) {
+        applyAdminLockout(response, payload);
+        setPinFeedback({
+          type: "error",
+          message: `Too many failed attempts. Try again in ${countdown(
+            Number(
+              response.headers.get("retry-after") ||
+                payload.retryAfter ||
+                300,
+            ),
+          )}`,
+        });
+        return;
+      }
       if (!response.ok)
         throw new Error(payload.error || "Unable to update the admin PIN.");
       setPinForm({ currentPin: "", newPin: "", confirmPin: "" });
@@ -171,16 +230,17 @@ export default function AdminPage() {
         <Link href="/" className="admin-back-link">
           <ArrowLeft size={16} /> Back to Vault
         </Link>
-        <form className="admin-lock-card" onSubmit={unlock}>
+        <form
+          className="admin-lock-card"
+          data-has-failed-attempts={failedAdminAttempts > 0 || undefined}
+          onSubmit={unlock}
+        >
           <div className="admin-lock-icon">
             <ShieldCheck size={29} />
           </div>
           <span className="admin-eyebrow">Restricted access</span>
           <h1>Admin Control Center</h1>
-          <p>
-            Enter the four-digit master PIN or your six-digit custom PIN to view
-            Reelbag analytics.
-          </p>
+          <p>Enter Security PIN to authenticate.</p>
           <label className="admin-pin-label">
             Security PIN
             <span className="admin-pin-input">
@@ -195,7 +255,14 @@ export default function AdminPage() {
                 onChange={(event) =>
                   setPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                 }
-                aria-describedby={error ? "admin-pin-error" : undefined}
+                aria-describedby={
+                  adminLocked
+                    ? "admin-lockout-status"
+                    : error
+                      ? "admin-pin-error"
+                      : undefined
+                }
+                disabled={adminLocked}
                 autoFocus
                 required
               />
@@ -206,9 +273,24 @@ export default function AdminPage() {
               {error}
             </p>
           )}
+          {adminLocked && (
+            <p
+              className="security-lockout"
+              id="admin-lockout-status"
+              role="status"
+              aria-live="polite"
+            >
+              Too many failed attempts. Try again in{" "}
+              {countdown(adminLockoutRemaining)}
+            </p>
+          )}
           <button
             className="button-primary admin-unlock-button"
-            disabled={!/^(?:\d{4}|\d{6})$/.test(pin) || submitting}
+            disabled={
+              adminLocked ||
+              !/^(?:\d{4}|\d{6})$/.test(pin) ||
+              submitting
+            }
           >
             {submitting ? "Verifying…" : "Unlock Dashboard"}
           </button>

@@ -181,6 +181,46 @@ test("admin analytics require the named account and a constant-time PIN check", 
     ).status,
     200,
   );
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const failed = await call("admin/users", "GET", null, admin.cookie, {
+      "x-admin-pin": "0000",
+    });
+    assert.equal(failed.status, 401);
+  }
+  const locked = await call("admin/users", "GET", null, admin.cookie, {
+    "x-admin-pin": "0000",
+  });
+  assert.equal(locked.status, 429);
+  assert.equal(locked.response.headers.get("retry-after"), "300");
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, admin.cookie, {
+        "x-admin-pin": "8842",
+      })
+    ).status,
+    429,
+  );
+  await app.db.query(
+    `UPDATE security_lockouts SET lockout_until=now()-interval '1 second'
+     WHERE escalated=true`,
+  );
+  const relocked = await call("admin/users", "GET", null, admin.cookie, {
+    "x-admin-pin": "0000",
+  });
+  assert.equal(relocked.status, 429);
+  assert.equal(relocked.response.headers.get("retry-after"), "300");
+  await app.db.query(
+    `UPDATE security_lockouts SET lockout_until=now()-interval '1 second'
+     WHERE escalated=true`,
+  );
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, admin.cookie, {
+        "x-admin-pin": "8842",
+      })
+    ).status,
+    200,
+  );
 });
 
 test("two devices see the same Postgres reels while a different account cannot read or mutate them", async () => {
@@ -502,15 +542,23 @@ test("portable backups contain no credential hashes; imports append atomically w
   );
 });
 
-test("database-backed authentication throttling survives a fresh application instance", async () => {
+test("database-backed login lockouts escalate after three failures and survive a fresh instance", async () => {
   const user = await account();
   let result;
-  for (let i = 0; i < 10; i++)
+  for (let i = 0; i < 2; i++) {
     result = await call("auth/login", "POST", {
       username: user.username,
       password: "wrong-password",
     });
+    assert.equal(result.status, 401);
+  }
+  result = await call("auth/login", "POST", {
+    username: user.username,
+    password: "wrong-password",
+  });
   assert.equal(result.status, 429);
+  assert.equal(result.response.headers.get("retry-after"), "300");
+  assert.equal(result.data.retryAfter, 300);
   const fresh = createApi({
     db: createDatabase(app.adapter),
     secureCookies: false,
@@ -524,7 +572,28 @@ test("database-backed authentication throttling survives a fresh application ins
     fresh,
   );
   assert.equal(result.status, 429);
-  assert.equal(result.response.headers.get("retry-after"), "900");
+  assert.ok(Number(result.response.headers.get("retry-after")) <= 300);
+
+  await app.db.query(
+    `UPDATE security_lockouts SET lockout_until=now()-interval '1 second'
+     WHERE escalated=true`,
+  );
+  result = await call("auth/login", "POST", {
+    username: user.username,
+    password: "wrong-password",
+  });
+  assert.equal(result.status, 429);
+  assert.equal(result.response.headers.get("retry-after"), "300");
+
+  await app.db.query(
+    `UPDATE security_lockouts SET lockout_until=now()-interval '1 second'
+     WHERE escalated=true`,
+  );
+  result = await call("auth/login", "POST", {
+    username: user.username,
+    password: user.password,
+  });
+  assert.equal(result.status, 200);
 });
 
 test("a session-store failure returns a safe API error instead of an uncaught rejection", async (t) => {
