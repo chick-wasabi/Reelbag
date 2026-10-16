@@ -1038,7 +1038,8 @@ select option {
   border: 1px solid #ffffff15;
   box-shadow: 0 14px 45px #0009;
 }
-.reel-menu-panel button {
+.reel-menu-panel button,
+.reel-menu-panel a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1049,7 +1050,8 @@ select option {
   padding: 11px 10px;
   border-radius: 6px;
 }
-.reel-menu-panel button:hover {
+.reel-menu-panel button:hover,
+.reel-menu-panel a:hover {
   background: #ffffff08;
 }
 .reel-menu-panel button.danger {
@@ -1266,9 +1268,14 @@ select option {
 }
 .reel-actions .is-pinned {
   color: var(--accent);
+  filter: drop-shadow(0 0 5px rgb(var(--accent-rgb) / 0.8));
 }
 .reel-actions .is-favorite {
-  color: var(--accent);
+  color: #facc15;
+  filter: drop-shadow(0 0 5px rgb(250 204 21 / 0.85));
+}
+.reel-actions .active-flag {
+  background: rgb(255 255 255 / 0.025);
 }
 .reel-actions .flag-toggle:hover {
   background: rgb(var(--accent-rgb) / 0.063);
@@ -1712,7 +1719,8 @@ select option {
   color: #202530;
   border-color: #19212d24;
 }
-:root[data-theme="light"] .reel-menu-panel button {
+:root[data-theme="light"] .reel-menu-panel button,
+:root[data-theme="light"] .reel-menu-panel a {
   color: var(--text-secondary);
 }
 

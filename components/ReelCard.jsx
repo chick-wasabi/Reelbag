@@ -11,6 +11,8 @@ import {
   Instagram,
   RefreshCw,
   Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 
 import { parseReelUrl } from "../utils/reels.mjs";
@@ -34,6 +36,8 @@ export default function ReelCard({
     ? `https://www.instagram.com/reel/${parsed.shortcode}/embed/`
     : null;
   const [toggling, setToggling] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef(null);
   async function toggle(flag) {
     setToggling(true);
     try {
@@ -64,8 +68,19 @@ export default function ReelCard({
     return () => {
       document.removeEventListener("pointerdown", outside);
       document.removeEventListener("keydown", escape);
+      window.clearTimeout(copyTimer.current);
     };
   }, []);
+  async function copyInstagramLink() {
+    try {
+      await navigator.clipboard.writeText(reel.url);
+      setCopied(true);
+      window.clearTimeout(copyTimer.current);
+      copyTimer.current = window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.prompt("Copy this Instagram Reel link:", reel.url);
+    }
+  }
   const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -107,40 +122,30 @@ export default function ReelCard({
           {folder && <span className="reel-folder">{folder.name}</span>}
         </div>
         <div className="reel-actions">
-          <a
-            className="icon-button"
-            href={reel.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${reel.title} on Instagram`}
-          >
-            <ExternalLink size={15} />
-          </a>
-          {canManage && (
-            <>
+          {canManage && reel.isPinned && (
               <button
-                className={`icon-button flag-toggle ${reel.isPinned ? "is-pinned" : ""}`}
-                aria-label={`${reel.isPinned ? "Unpin" : "Pin"} ${reel.title}`}
-                aria-pressed={Boolean(reel.isPinned)}
-                title={reel.isPinned ? "Unpin reel" : "Pin reel"}
+                className="icon-button flag-toggle is-pinned active-flag"
+                aria-label={`Unpin ${reel.title}`}
+                aria-pressed="true"
+                title="Pinned — click to unpin"
                 disabled={toggling}
                 onClick={() => toggle("isPinned")}
               >
-                <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
+                <Pin size={15} fill="currentColor" />
               </button>
+          )}
+          {canManage && reel.isFavorite && (
               <button
-                className={`icon-button flag-toggle ${reel.isFavorite ? "is-favorite" : ""}`}
-                aria-label={`${reel.isFavorite ? "Unfavorite" : "Favorite"} ${reel.title}`}
-                aria-pressed={Boolean(reel.isFavorite)}
-                title={reel.isFavorite ? "Remove favorite" : "Add favorite"}
+                className="icon-button flag-toggle is-favorite active-flag"
+                aria-label={`Remove ${reel.title} from favorites`}
+                aria-pressed="true"
+                title="Favorite — click to remove"
                 disabled={toggling}
                 onClick={() => toggle("isFavorite")}
               >
-                <Star
-                  size={16}
-                  fill={reel.isFavorite ? "currentColor" : "none"}
-                />
+                <Star size={16} fill="currentColor" />
               </button>
+          )}
               <details ref={menu} className="reel-menu">
                 <summary
                   className="icon-button"
@@ -150,7 +155,19 @@ export default function ReelCard({
                   <MoreHorizontal size={19} />
                 </summary>
                 <div className="reel-menu-panel">
-                  {onShare && (
+                  <a
+                    href={reel.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open ${reel.title} on Instagram`}
+                  >
+                    <ExternalLink size={15} /> Open on Instagram
+                  </a>
+                  <button onClick={copyInstagramLink}>
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                    {copied ? "Instagram link copied" : "Copy Instagram Link"}
+                  </button>
+                  {canManage && onShare && (
                     <button
                       aria-label={`Share ${reel.title}`}
                       onClick={() => {
@@ -158,9 +175,31 @@ export default function ReelCard({
                         onShare();
                       }}
                     >
-                      <Share2 size={15} /> Share
+                      <Share2 size={15} /> Share via Reelbag
                     </button>
                   )}
+                  {canManage && (
+                    <>
+                      <button
+                        disabled={toggling}
+                        onClick={async () => {
+                          closeMenu();
+                          await toggle("isPinned");
+                        }}
+                      >
+                        <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
+                        {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
+                      </button>
+                      <button
+                        disabled={toggling}
+                        onClick={async () => {
+                          closeMenu();
+                          await toggle("isFavorite");
+                        }}
+                      >
+                        <Star size={15} fill={reel.isFavorite ? "currentColor" : "none"} />
+                        {reel.isFavorite ? "Remove Favorite" : "Add to Favorites"}
+                      </button>
                   <button
                     onClick={() => {
                       closeMenu();
@@ -192,10 +231,10 @@ export default function ReelCard({
                     <Trash2 size={15} />
                     Delete
                   </button>
+                    </>
+                  )}
                 </div>
               </details>
-            </>
-          )}
         </div>
       </div>
       <div
