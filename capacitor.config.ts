@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "app.vercel.reelbag.native",
+  appId: "app.vercel.reelbag.mobile",
   appName: "Reelbag",
   webDir: "public",
   server: {

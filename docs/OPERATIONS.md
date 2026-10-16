@@ -114,7 +114,7 @@ Next.js metadata serves the default SVG, 32 px PNG (`app/icon1.png`), six-size I
 
 ## Native Android releases with Capacitor
 
-The Android release workflow uses Capacitor to generate a native Android project around the live Vercel application. The package ID is `app.vercel.reelbag.native`; the app runs inside Android's embedded WebView without a Trusted Web Activity, Chrome toolbar, Digital Asset Links, or Bubblewrap. `public/index.html` is the required local launch fallback when the remote service is unavailable.
+The Android release workflow uses Capacitor to generate a native Android project around the live Vercel application. The package ID is `app.vercel.reelbag.mobile`; the app runs inside Android's embedded WebView without a Trusted Web Activity, Chrome toolbar, Digital Asset Links, or Bubblewrap. `public/index.html` is the required local launch fallback when the remote service is unavailable. CI pins compile and target SDK 36 with minimum SDK 24 after generating the native project.
 
 On every release or manual dispatch, CI installs the locked npm dependencies, initializes Capacitor, generates the Android project, and builds a signed release APK named `Reelbag-Native-App.apk`. The workflow generates its signing identity on the first run and restores it from a repository-scoped GitHub Actions cache on later runs. The private keystore and random password never enter the repository, logs, release assets, or Vercel settings. No manual Actions or Vercel secrets are required.
 

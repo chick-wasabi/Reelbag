@@ -47,7 +47,7 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Android SDK
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
         run: npm ci
@@ -55,10 +55,25 @@ jobs:
       - name: Initialize Capacitor and add Android
         run: |
           if [ ! -f capacitor.config.ts ]; then
-            npx cap init Reelbag app.vercel.reelbag.native --web-dir public
+            npx cap init Reelbag app.vercel.reelbag.mobile --web-dir public
           fi
           npx cap add android
           npx cap sync android
+
+      - name: Set Android package and SDK levels
+        run: |
+          sed -i -E \
+            -e 's/namespace "[^"]+"/namespace "app.vercel.reelbag.mobile"/' \
+            -e 's/applicationId "[^"]+"/applicationId "app.vercel.reelbag.mobile"/' \
+            -e 's/compileSdk rootProject\.ext\.compileSdkVersion/compileSdkVersion 36/' \
+            -e 's/minSdkVersion rootProject\.ext\.minSdkVersion/minSdkVersion 24/' \
+            -e 's/targetSdkVersion rootProject\.ext\.targetSdkVersion/targetSdkVersion 36/' \
+            android/app/build.gradle
+          grep -q 'namespace "app.vercel.reelbag.mobile"' android/app/build.gradle
+          grep -q 'applicationId "app.vercel.reelbag.mobile"' android/app/build.gradle
+          grep -q 'compileSdkVersion 36' android/app/build.gradle
+          grep -q 'minSdkVersion 24' android/app/build.gradle
+          grep -q 'targetSdkVersion 36' android/app/build.gradle
 
       - name: Restore persistent release signing identity
         id: signing-cache
@@ -128,7 +143,7 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify \
             --verbose app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Reelbag-Native-App.apk"
 
