@@ -1,20 +1,28 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Check, Copy, Instagram, Link2, Send, UserRound, X } from "lucide-react";
 import Modal from "./Modal";
+import Avatar from "./Avatar";
 import { api } from "../utils/api.mjs";
 
 export default function ShareModal({ type, item, onClose, onChange }) {
   const [details, setDetails] = useState(null);
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("viewer");
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [friendPickerOpen, setFriendPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [instagramCopied, setInstagramCopied] = useState(false);
   const copiedTimer = useRef(null);
-  const hasUsername = username.trim() !== "";
+  const friendListId = useId();
+  const recipients = [
+    ...selectedFriends,
+    ...(username.trim() ? [username.trim().toLowerCase()] : []),
+  ].filter((value, index, values) => values.indexOf(value) === index);
+  const hasRecipients = recipients.length > 0;
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const base = `sharing/${type}/${item.id}`;
   const load = useCallback(
@@ -143,33 +151,125 @@ export default function ShareModal({ type, item, onClose, onChange }) {
             className="sharing-section form-stack"
             onSubmit={(e) => {
               e.preventDefault();
+              const invitees = recipients;
+              if (!invitees.length) return;
               run(async () => {
-                await api(`${base}/invite`, {
-                  method: "POST",
-                  body: { username: username.trim(), role },
-                });
+                await Promise.all(
+                  invitees.map((invitee) =>
+                    api(`${base}/invite`, {
+                      method: "POST",
+                      body: { username: invitee, role },
+                    }),
+                  ),
+                );
                 setUsername("");
-              }, "Invitation sent. Accepted members receive role updates immediately.");
+                setSelectedFriends([]);
+                setFriendPickerOpen(false);
+              }, `${invitees.length === 1 ? "Invitation" : `${invitees.length} invitations`} sent. Accepted members receive access immediately.`);
             }}
           >
             <h3>
               <UserRound size={17} />
               {type === "reel" ? "Send to Reelbag user" : "Invite by username"}
             </h3>
-            <label className="field-label">
+            <label
+              className="field-label friend-picker-field"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget))
+                  setFriendPickerOpen(false);
+              }}
+            >
               Reelbag username
               <input
-                required
                 maxLength={32}
                 pattern="[a-zA-Z0-9_]{3,32}"
                 autoCapitalize="none"
                 autoComplete="off"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onFocus={() => setFriendPickerOpen(true)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setFriendPickerOpen(true);
+                }}
                 placeholder="friend_username"
                 disabled={busy}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
+                aria-expanded={friendPickerOpen}
+                aria-controls={friendListId}
               />
+              {friendPickerOpen && details.friends?.length > 0 && (
+                <div
+                  id={friendListId}
+                  className="friend-picker-dropdown"
+                  role="listbox"
+                  aria-label="Select friends"
+                  aria-multiselectable="true"
+                >
+                  {details.friends
+                    .filter((friend) => {
+                      const query = username.trim().toLowerCase();
+                      return (
+                        !query ||
+                        friend.username.includes(query) ||
+                        friend.displayName.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((friend) => {
+                      const selected = selectedFriends.includes(friend.username);
+                      return (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          className={`friend-picker-option ${selected ? "is-selected" : ""}`}
+                          key={friend.id}
+                          onClick={() =>
+                            setSelectedFriends((current) =>
+                              selected
+                                ? current.filter((name) => name !== friend.username)
+                                : [...current, friend.username],
+                            )
+                          }
+                        >
+                          <Avatar
+                            url={friend.avatarUrl}
+                            frame={friend.avatarFrame}
+                            name={friend.displayName}
+                            size={34}
+                          />
+                          <span>
+                            <strong>{friend.displayName}</strong>
+                            <small>@{friend.username}</small>
+                          </span>
+                          <span className="friend-picker-check" aria-hidden="true">
+                            {selected ? <Check size={14} /> : null}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </label>
+            {selectedFriends.length > 0 && (
+              <div className="selected-friend-chips" aria-label="Selected friends">
+                {selectedFriends.map((name) => (
+                  <button
+                    type="button"
+                    key={name}
+                    onClick={() =>
+                      setSelectedFriends((current) =>
+                        current.filter((selected) => selected !== name),
+                      )
+                    }
+                    aria-label={`Remove @${name}`}
+                  >
+                    @{name} <X size={12} />
+                  </button>
+                ))}
+              </div>
+            )}
             {type === "folder" && (
               <label className="field-label">
                 Access role
@@ -187,8 +287,8 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               </label>
             )}
             <button
-              className={`invite-button ${hasUsername ? "is-ready" : ""}`}
-              disabled={busy}
+              className={`invite-button ${hasRecipients ? "is-ready" : ""}`}
+              disabled={busy || !hasRecipients}
             >
               <span className="invite-button-label">
                 <Send size={16} /> Send Invite

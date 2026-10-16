@@ -143,6 +143,15 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(accepted.data.items.length, 0);
   const recipientLibrary = await call("library", "GET", null, recipient.cookie);
   assert.equal(recipientLibrary.data.friends[0].username, sender.username);
+  const sharePicker = await call(
+    `sharing/reel/${reelId}`,
+    "GET",
+    null,
+    sender.cookie,
+  );
+  assert.equal(sharePicker.status, 200, JSON.stringify(sharePicker.data));
+  assert.equal(sharePicker.data.friends[0].username, recipient.username);
+  assert.equal(typeof sharePicker.data.friends[0].avatarUrl, "string");
 
   const shared = await call(
     `friends/${friendshipId}/share/${reelId}`,
