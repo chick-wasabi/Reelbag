@@ -72,6 +72,13 @@ export default function ReelCard({
   const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [playerReady, setPlayerReady] = useState(false);
+  function replay() {
+    if (!playerReady) return;
+    setFailed(false);
+    setPlayerReady(false);
+    setAttempt((value) => value + 1);
+  }
   useEffect(() => {
     if (!("IntersectionObserver" in window)) {
       const frame = requestAnimationFrame(() => setVisible(true));
@@ -112,7 +119,7 @@ export default function ReelCard({
             </span>
           )}
           <h2 title={reel.title}>{reel.title}</h2>
-          {folder && <span className="reel-folder">{folder.name}</span>}
+          <span className="reel-folder">{folder?.name || "\u00a0"}</span>
         </div>
         <div className="reel-actions">
           {canManage && reel.isPinned && (
@@ -139,6 +146,7 @@ export default function ReelCard({
                 <Star size={16} fill="currentColor" />
               </button>
           )}
+          <div className="reel-menu-stack">
           <details ref={menu} className="reel-menu">
                 <summary
                   className="icon-button"
@@ -223,6 +231,16 @@ export default function ReelCard({
                   </>}
                 </div>
             </details>
+            <button
+              className={`replay-icon-button ${playerReady ? "is-ready" : ""}`}
+              aria-label={`Replay ${reel.title}`}
+              title={playerReady ? "Replay" : "Player loading"}
+              disabled={!playerReady}
+              onClick={replay}
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
       </div>
       <div
@@ -245,8 +263,14 @@ export default function ReelCard({
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
-              onLoad={() => setFailed(false)}
-              onError={() => setFailed(true)}
+              onLoad={() => {
+                setFailed(false);
+                setPlayerReady(true);
+              }}
+              onError={() => {
+                setFailed(true);
+                setPlayerReady(false);
+              }}
             />
           ) : (
             <div className="embed-fallback">
@@ -256,19 +280,7 @@ export default function ReelCard({
           )}
         </div>
       </div>
-      <div className="reel-playback-actions">
-        <button
-          className="replay-button"
-          aria-label={`Replay ${reel.title}`}
-          onClick={() => {
-            setFailed(false);
-            setAttempt((value) => value + 1);
-          }}
-        >
-          <RefreshCw size={15} />
-          Replay
-        </button>
-      </div>
+      <div className="reel-card-tail" aria-hidden="true" />
       {failed && (
         <div className="embed-error">
           <span>
@@ -280,6 +292,7 @@ export default function ReelCard({
           <button
             onClick={() => {
               setFailed(false);
+              setPlayerReady(false);
               setAttempt((a) => a + 1);
             }}
           >

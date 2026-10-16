@@ -271,7 +271,9 @@ select option {
   background: linear-gradient(135deg, #1c222af5, #131820f5);
   border-radius: 12px 12px 0 0;
   margin-bottom: 8px;
-  min-height: 64px;
+  height: 92px;
+  min-height: 92px;
+  overflow: visible;
 }
 .reel-heading h2 {
   display: block;
@@ -285,11 +287,14 @@ select option {
   white-space: nowrap;
 }
 .reel-folder {
-  display: inline-block;
+  display: block;
+  min-height: 18px;
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 4px;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .reel-actions {
   display: flex;
@@ -325,21 +330,37 @@ select option {
   display: block;
   background: #0f172a;
 }
-.reel-playback-actions {
+.reel-menu-stack {
   display: flex;
-  justify-content: flex-start;
-  padding: 4px 12px 12px;
-}
-.replay-button {
-  display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
+  flex-shrink: 0;
+  gap: 1px;
+}
+.replay-icon-button {
+  display: grid;
+  width: 25px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-muted);
+  opacity: 0.32;
+  cursor: default;
+}
+.replay-icon-button.is-ready {
   color: var(--accent);
-  background: rgb(var(--accent-rgb) / 0.043);
-  border: 1px solid rgb(var(--accent-rgb) / 0.149);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
+  opacity: 1;
+  cursor: pointer;
+  border-color: rgb(var(--accent-rgb) / 0.14);
+  background: rgb(var(--accent-rgb) / 0.04);
+}
+.replay-icon-button.is-ready:hover {
+  background: rgb(var(--accent-rgb) / 0.11);
+  box-shadow: 0 0 14px rgb(var(--accent-rgb) / 0.12);
+}
+.reel-card-tail {
+  height: 3px;
 }
 .trash-pin-title { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .trash-pin-title svg { color: var(--accent); }

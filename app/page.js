@@ -639,7 +639,7 @@ export default function Home() {
             >
               {reels.length ? (
                 <div
-                  className="reel-grid grid grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-0"
+                  className="reel-grid grid grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-x-0 gap-y-6"
                   role="region"
                   aria-label="Saved Reels"
                 >
