@@ -1463,3 +1463,72 @@ test("locked folder management resumes its action after PIN verification without
     }),
   ).toBeVisible();
 });
+
+test("secret-link action follows the accent and reports clipboard success without false positives", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          if (window.__rejectCopy) throw new Error("Clipboard unavailable");
+          window.__copiedLink = value;
+        },
+      },
+    });
+  });
+  await register(page);
+  await folder(page, "Shimmer sharing");
+  const saved = await page.evaluate(
+    async () =>
+      (
+        await fetch("/api/account/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appearance: {
+              theme: "dark",
+              accent: "#3b82f6",
+              columns: "auto",
+              spacing: "comfortable",
+            },
+          }),
+        })
+      ).status,
+  );
+  expect(saved).toBe(200);
+  await page.reload();
+  await folderAction(page, "Shimmer sharing", "Share Folder");
+  const button = page.locator(".secret-link-button");
+  await expect(button).toHaveCSS("background-color", "rgb(59, 130, 246)");
+  expect(
+    await button.evaluate(
+      (el) => getComputedStyle(el, "::before").animationName,
+    ),
+  ).toBe("secret-link-shimmer");
+  await button.click();
+  await expect(button).toHaveText("✓ Link Copied!");
+  await expect(button).toHaveClass(/is-copied/);
+  const copied = await page.evaluate(() => window.__copiedLink);
+  await expect(
+    page.getByLabel("Secret share URL", { exact: true }),
+  ).toHaveValue(copied);
+  expect(copied).toMatch(/\/share\/folder\/[a-f0-9-]{36}$/);
+  await expect(button).toHaveText("Copy Secret Link", { timeout: 5000 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    await button.evaluate(
+      (el) => getComputedStyle(el, "::before").animationName,
+    ),
+  ).toBe("none");
+  await page.evaluate(() => {
+    window.__rejectCopy = true;
+  });
+  await button.click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "Select and copy",
+  );
+  await expect(button).toHaveText("Copy Secret Link");
+  await expect(button).not.toHaveClass(/is-copied/);
+});

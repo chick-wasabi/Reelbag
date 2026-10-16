@@ -1677,3 +1677,78 @@ select option {
     opacity: 1;
   }
 }
+
+/* Keep the secret-link action tied to the active account accent. */
+.secret-link-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--accent);
+  color: var(--on-accent, #101214);
+  border: 1px solid rgb(var(--accent-rgb) / 0.75);
+  box-shadow: 0 0 20px rgb(var(--accent-rgb) / 0.22);
+  transition: box-shadow 180ms ease;
+}
+.secret-link-button::before {
+  content: "";
+  position: absolute;
+  inset: -50% auto -50% 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.5),
+    transparent
+  );
+  transform: translateX(-180%) skewX(-20deg);
+  animation: secret-link-shimmer 2.8s linear infinite;
+  opacity: 0.65;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.secret-link-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.secret-link-button:hover:not(:disabled),
+.secret-link-button:focus-visible {
+  box-shadow: 0 0 30px rgb(var(--accent-rgb) / 0.42);
+}
+.secret-link-button:hover:not(:disabled)::before {
+  opacity: 1;
+}
+.secret-link-button.is-copied {
+  animation: secret-link-success 650ms ease-out;
+}
+@keyframes secret-link-shimmer {
+  from {
+    transform: translateX(-180%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(400%) skewX(-20deg);
+  }
+}
+@keyframes secret-link-success {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgb(var(--accent-rgb) / 0.22);
+  }
+  35% {
+    box-shadow:
+      0 0 0 4px rgb(var(--accent-rgb) / 0.25),
+      0 0 36px rgb(var(--accent-rgb) / 0.65);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .secret-link-button::before,
+  .secret-link-button.is-copied {
+    animation: none;
+  }
+  .secret-link-button::before {
+    opacity: 0;
+  }
+}

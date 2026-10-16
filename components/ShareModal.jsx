@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Link2, Send, UserRound, X } from "lucide-react";
 import Modal from "./Modal";
 import { api } from "../utils/api.mjs";
@@ -11,6 +11,9 @@ export default function ShareModal({ type, item, onClose, onChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const base = `sharing/${type}/${item.id}`;
   const load = useCallback(
     async (signal) => {
@@ -28,6 +31,8 @@ export default function ShareModal({ type, item, onClose, onChange }) {
     return () => controller.abort();
   }, [base]);
   async function run(action, success) {
+    clearTimeout(copiedTimer.current);
+    setCopied(false);
     setBusy(true);
     setError("");
     setMessage("");
@@ -127,7 +132,8 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               </label>
             )}
             <button
-              className="button-secondary"
+              className={`button-primary secret-link-button ${copied ? "is-copied" : ""}`}
+              type="button"
               disabled={busy}
               onClick={() =>
                 run(async () => {
@@ -142,6 +148,11 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                   const url = `${window.location.origin}/share/${type}/${result.shareToken}`;
                   try {
                     await navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    copiedTimer.current = setTimeout(
+                      () => setCopied(false),
+                      2200,
+                    );
                   } catch {
                     throw new Error(
                       "Link created. Select and copy the Secret share URL above.",
@@ -150,7 +161,19 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 }, "Secret link copied.")
               }
             >
-              <Copy size={16} /> Copy Secret Link
+              <span
+                className="secret-link-label"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {copied ? (
+                  "✓ Link Copied!"
+                ) : (
+                  <>
+                    <Copy size={16} aria-hidden="true" /> Copy Secret Link
+                  </>
+                )}
+              </span>
             </button>
             {link && (
               <button
