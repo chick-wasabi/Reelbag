@@ -86,7 +86,8 @@ export default function ReelCard({
   }, []);
   return (
     <article
-      className="reel-card ambient-glass-card w-full max-w-[380px] justify-self-center"
+      className="reel-card ambient-glass-card justify-self-center"
+      style={{ width: "calc(100% - 80px)", maxWidth: "300px" }}
       ref={ref}
     >
       <div className="reel-heading">
@@ -190,7 +191,10 @@ export default function ReelCard({
         className="embed-viewport relative mb-2 h-[430px] w-full overflow-hidden rounded-xl bg-slate-900 md:h-[460px]"
         aria-label={`Video player: ${reel.title}`}
       >
-        <div className="embed-shell absolute left-0 top-[-10px] h-[450px] w-full overflow-hidden rounded-xl bg-slate-900 md:h-[480px]">
+        <div
+          className="embed-shell absolute top-[-10px] h-[450px] overflow-hidden rounded-xl bg-slate-900 md:h-[480px]"
+          style={{ left: "-40px", width: "calc(100% + 80px)" }}
+        >
           {visible && embedUrl ? (
             <iframe
               key={`${embedUrl}-${attempt}`}
