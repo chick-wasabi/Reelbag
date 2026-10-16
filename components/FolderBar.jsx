@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderPlus, LockKeyhole, Pencil } from "lucide-react";
+import { FolderPlus, LockKeyhole, Pencil, Share2 } from "lucide-react";
 
 export default function FolderBar({
   folders,
@@ -9,6 +9,7 @@ export default function FolderBar({
   onSelect,
   onCreate,
   onEdit,
+  onShare,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -35,7 +36,7 @@ export default function FolderBar({
         ))}
       </nav>
       {current && <span className="current-folder-name">{current.name}</span>}
-      {current && (
+      {current && current.role === "owner" && (
         <button
           className="icon-button"
           aria-label="Edit folder"
@@ -44,6 +45,19 @@ export default function FolderBar({
         >
           <Pencil size={16} />
         </button>
+      )}
+      {current?.role === "owner" && (
+        <button
+          className="icon-button"
+          aria-label="Share folder"
+          title="Share folder"
+          onClick={() => onShare(current)}
+        >
+          <Share2 size={16} />
+        </button>
+      )}
+      {current && current.role !== "owner" && (
+        <span className="shared-role">{current.role}</span>
       )}
       {current?.pin && (
         <button

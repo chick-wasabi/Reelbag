@@ -1,6 +1,7 @@
 "use client";
 import {
   Folder,
+  Users,
   FolderPlus,
   Grid2X2,
   Pin,
@@ -106,32 +107,74 @@ export default function Sidebar({
           </button>
         </div>
         <div className="sidebar-folder-list">
-          {folders.map((folder) => (
-            <button
-              key={folder.id}
-              className={`sidebar-link folder-link ${selected === folder.id ? "active" : ""}`}
-              aria-label={`Open folder ${folder.name}`}
-              aria-current={selected === folder.id ? "page" : undefined}
-              title={folder.name}
-              onClick={() => onSelect(folder.id)}
-            >
-              {folder.pin && !folder.unlocked ? (
-                <LockKeyhole size={17} />
-              ) : (
-                <Folder size={17} />
-              )}
-              <span className="sidebar-label">{folder.name}</span>
-              <span className="sidebar-count" aria-hidden="true">
-                {folder.pin && !folder.unlocked ? "—" : counts[folder.id] || 0}
-              </span>
-            </button>
-          ))}
-          {!folders.length && (
+          {folders
+            .filter((folder) => folder.role === "owner")
+            .map((folder) => (
+              <button
+                key={folder.id}
+                className={`sidebar-link folder-link ${selected === folder.id ? "active" : ""}`}
+                aria-label={`Open folder ${folder.name}`}
+                aria-current={selected === folder.id ? "page" : undefined}
+                title={folder.name}
+                onClick={() => onSelect(folder.id)}
+              >
+                {folder.pin && !folder.unlocked ? (
+                  <LockKeyhole size={17} />
+                ) : (
+                  <Folder size={17} />
+                )}
+                <span className="sidebar-label">{folder.name}</span>
+                {folder.isShared && (
+                  <Users
+                    className="sidebar-share-badge"
+                    size={13}
+                    aria-label="Shared folder"
+                  />
+                )}
+                <span className="sidebar-count" aria-hidden="true">
+                  {folder.pin && !folder.unlocked
+                    ? "—"
+                    : counts[folder.id] || 0}
+                </span>
+              </button>
+            ))}
+          {!folders.some((folder) => folder.role === "owner") && (
             <p className="sidebar-empty sidebar-label">
               A folder for every kind of inspiration.
             </p>
           )}
         </div>
+        {folders.some((folder) => folder.role !== "owner") && (
+          <>
+            <div className="sidebar-folder-heading">
+              <span className="sidebar-label">SHARED WITH ME</span>
+              <Users size={16} aria-hidden="true" />
+            </div>
+            <div className="sidebar-folder-list shared-folder-list">
+              {folders
+                .filter((folder) => folder.role !== "owner")
+                .map((folder) => (
+                  <button
+                    key={folder.id}
+                    className={`sidebar-link ${selected === folder.id ? "active" : ""}`}
+                    aria-label={`Open shared folder ${folder.name}`}
+                    title={`${folder.name} — ${folder.role}`}
+                    aria-current={selected === folder.id ? "page" : undefined}
+                    onClick={() => onSelect(folder.id)}
+                  >
+                    <Users size={17} />
+                    <span className="sidebar-label">
+                      {folder.name}
+                      <small className="shared-role">{folder.role}</small>
+                    </span>
+                    <span className="sidebar-count" aria-hidden="true">
+                      {counts[folder.id] || 0}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </>
+        )}
       </nav>
       <div className="sidebar-bottom">
         <button

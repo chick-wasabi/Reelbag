@@ -10,6 +10,7 @@ import {
   Trash2,
   Instagram,
   RefreshCw,
+  Share2,
 } from "lucide-react";
 
 import { parseReelUrl } from "../utils/reels.mjs";
@@ -21,7 +22,9 @@ export default function ReelCard({
   onMove,
   onDelete,
   onToggle,
+  onShare,
 }) {
+  const canManage = reel.canManage !== false && Boolean(onEdit);
   const ref = useRef(null);
   const menu = useRef(null);
   const parsed = parseReelUrl(reel.url);
@@ -82,7 +85,10 @@ export default function ReelCard({
     return () => observer.disconnect();
   }, []);
   return (
-    <article className="reel-card w-full max-w-[380px] justify-self-center" ref={ref}>
+    <article
+      className="reel-card w-full max-w-[380px] justify-self-center"
+      ref={ref}
+    >
       <div className="reel-heading">
         <div className="min-w-0">
           <h2>{reel.title}</h2>
@@ -98,71 +104,92 @@ export default function ReelCard({
           >
             <ExternalLink size={15} />
           </a>
-          <button
-            className={`icon-button flag-toggle ${reel.isPinned ? "is-pinned" : ""}`}
-            aria-label={`${reel.isPinned ? "Unpin" : "Pin"} ${reel.title}`}
-            aria-pressed={Boolean(reel.isPinned)}
-            title={reel.isPinned ? "Unpin reel" : "Pin reel"}
-            disabled={toggling}
-            onClick={() => toggle("isPinned")}
-          >
-            <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
-          </button>
-          <button
-            className={`icon-button flag-toggle ${reel.isFavorite ? "is-favorite" : ""}`}
-            aria-label={`${reel.isFavorite ? "Unfavorite" : "Favorite"} ${reel.title}`}
-            aria-pressed={Boolean(reel.isFavorite)}
-            title={reel.isFavorite ? "Remove favorite" : "Add favorite"}
-            disabled={toggling}
-            onClick={() => toggle("isFavorite")}
-          >
-            <Star size={16} fill={reel.isFavorite ? "currentColor" : "none"} />
-          </button>
-          <details ref={menu} className="reel-menu">
-            <summary
-              className="icon-button"
-              aria-label={`Actions for ${reel.title}`}
-              title="Reel actions"
-            >
-              <MoreHorizontal size={19} />
-            </summary>
-            <div className="reel-menu-panel">
+          {canManage && (
+            <>
               <button
-                onClick={() => {
-                  closeMenu();
-                  onEdit();
-                }}
-                aria-label={`Edit ${reel.title}`}
+                className={`icon-button flag-toggle ${reel.isPinned ? "is-pinned" : ""}`}
+                aria-label={`${reel.isPinned ? "Unpin" : "Pin"} ${reel.title}`}
+                aria-pressed={Boolean(reel.isPinned)}
+                title={reel.isPinned ? "Unpin reel" : "Pin reel"}
+                disabled={toggling}
+                onClick={() => toggle("isPinned")}
               >
-                <Pencil size={15} />
-                Edit Title
+                <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
               </button>
               <button
-                onClick={() => {
-                  closeMenu();
-                  onMove();
-                }}
-                aria-label={`Move ${reel.title}`}
+                className={`icon-button flag-toggle ${reel.isFavorite ? "is-favorite" : ""}`}
+                aria-label={`${reel.isFavorite ? "Unfavorite" : "Favorite"} ${reel.title}`}
+                aria-pressed={Boolean(reel.isFavorite)}
+                title={reel.isFavorite ? "Remove favorite" : "Add favorite"}
+                disabled={toggling}
+                onClick={() => toggle("isFavorite")}
               >
-                <FolderInput size={15} />
-                Move Folder
+                <Star
+                  size={16}
+                  fill={reel.isFavorite ? "currentColor" : "none"}
+                />
               </button>
-              <button
-                className="danger"
-                onClick={() => {
-                  closeMenu();
-                  onDelete();
-                }}
-                aria-label={`Delete ${reel.title}`}
-              >
-                <Trash2 size={15} />
-                Delete
-              </button>
-            </div>
-          </details>
+              <details ref={menu} className="reel-menu">
+                <summary
+                  className="icon-button"
+                  aria-label={`Actions for ${reel.title}`}
+                  title="Reel actions"
+                >
+                  <MoreHorizontal size={19} />
+                </summary>
+                <div className="reel-menu-panel">
+                  {onShare && (
+                    <button
+                      aria-label={`Share ${reel.title}`}
+                      onClick={() => {
+                        closeMenu();
+                        onShare();
+                      }}
+                    >
+                      <Share2 size={15} /> Share
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onEdit();
+                    }}
+                    aria-label={`Edit ${reel.title}`}
+                  >
+                    <Pencil size={15} />
+                    Edit Title
+                  </button>
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onMove();
+                    }}
+                    aria-label={`Move ${reel.title}`}
+                  >
+                    <FolderInput size={15} />
+                    Move Folder
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      closeMenu();
+                      onDelete();
+                    }}
+                    aria-label={`Delete ${reel.title}`}
+                  >
+                    <Trash2 size={15} />
+                    Delete
+                  </button>
+                </div>
+              </details>
+            </>
+          )}
         </div>
       </div>
-      <div className="embed-shell relative overflow-hidden rounded-xl bg-slate-900 w-full h-[450px] md:h-[480px]" aria-label={`Video player: ${reel.title}`}>
+      <div
+        className="embed-shell relative overflow-hidden rounded-xl bg-slate-900 w-full h-[450px] md:h-[480px]"
+        aria-label={`Video player: ${reel.title}`}
+      >
         {visible && embedUrl ? (
           <iframe
             key={`${embedUrl}-${attempt}`}

@@ -41,6 +41,7 @@ Now you’re opening old links one by one, trying to remember which video had th
 | 📌 **Pin what’s next** | Keep your next remake or go-to reference at the top of the grid. Jump into **Pinned** or **Favorites** whenever you need it. |
 | 📂 **Folders that fit your life** | Create folders for any hobby or project. Keep folder-free Reels in the main stream and search saved titles to find them fast. |
 | 🔐 **A little more privacy** | Protect individual folders with optional four-digit PINs. Passwords and folder PINs are hashed on the server, with account ownership enforced on every request. |
+| 🤝 **Share securely** | Invite exact usernames, accept or decline in-app notifications, or send a revocable UUID link. Viewers watch; folder collaborators can add reels. Accepted folders live under **Shared with me**. |
 | 🎨 **Make it feel like yours** | Choose from **30 pixel-art avatars**, set a display name, and preview custom accent colors across the logo, sidebar, buttons, and tab icon. Pick dark/light themes and in-app preset or hex colors, with an automatic responsive grid. |
 | 📱 **Built for your screen** | A collapsible desktop sidebar, mobile filter tabs, and a bottom-right **+ Add Reel** button keep your library easy to navigate. |
 | 💾 **Keep a portable copy** | Export JSON backups, import links from another device, or migrate a previous Reelbag browser library through **Data & Backups**. |

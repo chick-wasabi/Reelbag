@@ -1,8 +1,16 @@
 "use client";
 import { Search } from "lucide-react";
 import Brand from "./Brand";
+import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
-export default function Header({ user, search, onSearch, onOpen, onLogout }) {
+export default function Header({
+  user,
+  search,
+  onSearch,
+  onOpen,
+  onLogout,
+  onLibraryChange,
+}) {
   return (
     <header className="topbar">
       <div className="mobile-brand">
@@ -20,6 +28,7 @@ export default function Header({ user, search, onSearch, onOpen, onLogout }) {
         />
       </label>
       <div className="header-actions">
+        <NotificationCenter key={user.id} onChange={onLibraryChange} />
         <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} />
       </div>
     </header>

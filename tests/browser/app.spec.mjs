@@ -515,10 +515,23 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
   await expect(sidebar).toHaveCSS("width", "84px");
-  const toggleIcon = await sidebar.getByRole("button", { name: "Expand sidebar", exact: true }).locator("svg").boundingBox();
-  const navIcon = await sidebar.getByRole("button", { name: "All Reels", exact: true }).locator("svg").boundingBox();
-  expect(Math.abs(toggleIcon.x + toggleIcon.width / 2 - navIcon.x - navIcon.width / 2)).toBeLessThan(1);
-  await expect(sidebar.locator(".sidebar-toggle")).toHaveCSS("position", "static");
+  const toggleIcon = await sidebar
+    .getByRole("button", { name: "Expand sidebar", exact: true })
+    .locator("svg")
+    .boundingBox();
+  const navIcon = await sidebar
+    .getByRole("button", { name: "All Reels", exact: true })
+    .locator("svg")
+    .boundingBox();
+  expect(
+    Math.abs(
+      toggleIcon.x + toggleIcon.width / 2 - navIcon.x - navIcon.width / 2,
+    ),
+  ).toBeLessThan(1);
+  await expect(sidebar.locator(".sidebar-toggle")).toHaveCSS(
+    "position",
+    "static",
+  );
 
   await page
     .getByRole("button", { name: "Expand sidebar", exact: true })
@@ -764,7 +777,7 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
     "rgb(181, 243, 109)",
   );
   const header = page.getByRole("banner");
-  await expect(header.getByRole("button")).toHaveCount(1);
+  await expect(header.getByRole("button")).toHaveCount(2);
   await expect(header.getByRole("button", { name: "Add Reel" })).toHaveCount(0);
   await expect(header.getByRole("combobox")).toHaveCount(0);
   await expect(header.locator(".header-actions img")).toHaveAttribute(
@@ -823,14 +836,35 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
   await page.setViewportSize({ width: 1600, height: 1000 });
   const name = await register(page);
   await addReel(page, "Appearance reel", "APPEAR");
-  const legacySave = await page.evaluate(async () => (await fetch("/api/account/profile", {
-    method: "PATCH", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ appearance: { theme: "dark", accent: "#b5f36d", columns: "5", spacing: "compact" } }),
-  })).status);
+  const legacySave = await page.evaluate(
+    async () =>
+      (
+        await fetch("/api/account/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appearance: {
+              theme: "dark",
+              accent: "#b5f36d",
+              columns: "5",
+              spacing: "compact",
+            },
+          }),
+        })
+      ).status,
+  );
   expect(legacySave).toBe(200);
   await page.reload();
   await expect(page.locator(".reel-grid")).toHaveCSS("gap", "24px");
-  await expect.poll(() => page.locator(".reel-grid").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(4);
+  await expect
+    .poll(() =>
+      page
+        .locator(".reel-grid")
+        .evaluate(
+          (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+        ),
+    )
+    .toBe(4);
 
   const trigger = page.getByRole("button", {
     name: "Open profile menu",
@@ -853,11 +887,20 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
   await expect(page.getByLabel("Desktop grid", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Card spacing", { exact: true })).toHaveCount(0);
   await expect(page.locator('input[type="color"]')).toHaveCount(0);
-  await page.getByRole("button", { name: "Use Electric Blue", exact: true }).click();
-  await expect(page.getByLabel("Accent color", { exact: true })).toHaveValue("#3b82f6");
+  await page
+    .getByRole("button", { name: "Use Electric Blue", exact: true })
+    .click();
+  await expect(page.getByLabel("Accent color", { exact: true })).toHaveValue(
+    "#3b82f6",
+  );
   await page.getByLabel("Accent color", { exact: true }).fill("#zz");
-  await expect(page.getByRole("button", { name: "Save appearance", exact: true })).toBeDisabled();
-  await expect(page.locator(".reel-fab")).toHaveCSS("background-color", "rgb(59, 130, 246)");
+  await expect(
+    page.getByRole("button", { name: "Save appearance", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(59, 130, 246)",
+  );
   await page.getByLabel("Accent color", { exact: true }).fill("#8a65ee");
   await page
     .getByRole("button", { name: "Save appearance", exact: true })
@@ -990,7 +1033,10 @@ test("accent previews recolor outlined logos, sidebar, favicon, buttons and focu
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await openProfileItem(page, "Appearance & Settings");
   await page.getByLabel("Accent color", { exact: true }).fill("abc");
-  await expect(page.locator(".reel-fab")).toHaveCSS("background-color", "rgb(170, 187, 204)");
+  await expect(page.locator(".reel-fab")).toHaveCSS(
+    "background-color",
+    "rgb(170, 187, 204)",
+  );
   await page.locator(".modal-backdrop").click({ position: { x: 5, y: 5 } });
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".reel-fab")).toHaveCSS(
@@ -1027,4 +1073,160 @@ test("accent previews recolor outlined logos, sidebar, favicon, buttons and focu
     "fill",
     "rgb(181, 243, 109)",
   );
+});
+
+test("username invitations notify recipients, accepted folders respect roles, and owners can revoke access", async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await folder(page, "Crew edits");
+  await addReel(page, "Owner inspiration", "SHARE_OWNER");
+  const friendContext = await browser.newContext({
+    viewport: { width: 1536, height: 1000 },
+  });
+  await connect(friendContext);
+  const friend = await friendContext.newPage();
+  try {
+    const friendName = await register(friend);
+    await page
+      .getByRole("button", { name: "Share folder", exact: true })
+      .click();
+    await page.getByLabel("Reelbag username", { exact: true }).fill(friendName);
+    await page
+      .getByLabel("Access role", { exact: true })
+      .selectOption("collaborator");
+    await page
+      .getByRole("button", { name: "Send Invite", exact: true })
+      .click();
+    await expect(page.getByRole("dialog").getByRole("status")).toContainText(
+      "Invitation sent",
+    );
+    await friend.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await friend
+      .getByRole("button", { name: "Notifications, 1 unread", exact: true })
+      .click();
+    await expect(friend.getByText(/invited you to collaborate/)).toBeVisible();
+    await friend
+      .getByRole("button", { name: "Accept Crew edits", exact: true })
+      .click();
+    await expect(
+      friend.getByRole("button", {
+        name: "Open shared folder Crew edits",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await friend
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    await friend
+      .getByRole("button", {
+        name: "Open shared folder Crew edits",
+        exact: true,
+      })
+      .click();
+    await expect(
+      friend.getByRole("heading", { name: "Owner inspiration", exact: true }),
+    ).toBeVisible();
+    await expect(
+      friend.getByLabel("Actions for Owner inspiration", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      friend.getByRole("button", { name: "Share folder", exact: true }),
+    ).toHaveCount(0);
+    await addReel(friend, "Friend contribution", "SHARE_FRIEND");
+    await expect(
+      friend.getByRole("heading", { name: "Friend contribution", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: `Revoke ${friendName}`, exact: true })
+      .click();
+    await expect(page.getByRole("dialog").getByRole("status")).toHaveText(
+      "Access revoked.",
+    );
+    await friend.reload();
+    await expect(
+      friend.getByRole("button", {
+        name: "Open shared folder Crew edits",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(friend.getByRole("article")).toHaveCount(0);
+  } finally {
+    await friendContext.close();
+  }
+});
+
+test("secret links keep previews private, return through login, join read-only, and can be disabled", async ({
+  page,
+  browser,
+}) => {
+  await register(page);
+  await folder(page, "Link-only folder");
+  await addReel(page, "Hidden until joined", "SECRET_REEL");
+  await page.getByRole("button", { name: "Share folder", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Copy Secret Link", exact: true })
+    .click();
+  const urlInput = page.getByLabel("Secret share URL", { exact: true });
+  await expect(urlInput).toBeVisible();
+  const link = await urlInput.inputValue();
+  expect(link).toMatch(/\/share\/folder\/[a-f0-9-]{36}$/);
+  const guestContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  await connect(guestContext);
+  const guest = await guestContext.newPage();
+  try {
+    await guest.goto(link);
+    await expect(
+      guest.getByRole("link", { name: "Log In or Sign Up", exact: true }),
+    ).toBeVisible();
+    await expect(
+      guest.getByText("Hidden until joined", { exact: true }),
+    ).toHaveCount(0);
+    await expect(guest.locator("iframe")).toHaveCount(0);
+    await guest
+      .getByRole("link", { name: "Log In or Sign Up", exact: true })
+      .click();
+    await guest.getByRole("button", { name: "Sign Up", exact: true }).click();
+    await guest.getByLabel("Username", { exact: true }).fill(username());
+    await guest.getByLabel("Password or PIN", { exact: true }).fill(secret);
+    await guest
+      .getByRole("button", { name: "Create account", exact: true })
+      .click();
+    await expect(guest).toHaveURL(link);
+    await expect(
+      guest.getByRole("button", { name: "Join as viewer", exact: true }),
+    ).toBeVisible();
+    await expect(guest.getByRole("article")).toHaveCount(0);
+    await guest
+      .getByRole("button", { name: "Join as viewer", exact: true })
+      .click();
+    await expect(
+      guest.getByRole("heading", { name: "Hidden until joined", exact: true }),
+    ).toBeVisible();
+    await expect(
+      guest.getByLabel("Actions for Hidden until joined", { exact: true }),
+    ).toHaveCount(0);
+    expect(
+      await guest.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("button", { name: "Disable secret link", exact: true })
+      .click();
+    await expect(page.getByRole("dialog").getByRole("status")).toHaveText(
+      "Secret link disabled.",
+    );
+    await guest.reload();
+    await expect(
+      guest.locator(".share-intro").getByRole("alert"),
+    ).toContainText("revoked");
+    await expect(guest.getByRole("article")).toHaveCount(0);
+  } finally {
+    await guestContext.close();
+  }
 });

@@ -9,7 +9,12 @@ import { MIGRATIONS } from "../lib/server/schema.mjs";
 test("additive migrations retain an existing account and reel and initialize new flags safely", async () => {
   const app = await testApplication();
   try {
-    const previous = MIGRATIONS.filter(
+    const previous = MIGRATIONS.slice(
+      0,
+      MIGRATIONS.findIndex((sql) =>
+        sql.includes("ADD COLUMN IF NOT EXISTS share_token"),
+      ),
+    ).filter(
       (sql) =>
         !sql.startsWith("ALTER TABLE") &&
         !sql.includes("reels_user_pinned_created"),

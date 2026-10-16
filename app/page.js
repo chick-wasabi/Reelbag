@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bookmark, Check, Plus, X } from "lucide-react";
 import Brand from "../components/Brand";
+import ShareModal from "../components/ShareModal";
 import Sidebar from "../components/Sidebar";
 import RecoverySettingsModal from "../components/RecoverySettingsModal";
 import MoveReelModal from "../components/MoveReelModal";
@@ -78,11 +79,7 @@ export default function Home() {
       favicon.remove();
       if (previousTheme != null)
         browserTheme?.setAttribute("content", previousTheme);
-      for (const name of [
-        "--accent",
-        "--accent-rgb",
-        "--on-accent",
-      ])
+      for (const name of ["--accent", "--accent-rgb", "--on-accent"])
         root.style.removeProperty(name);
       delete root.dataset.theme;
     };
@@ -139,6 +136,13 @@ export default function Home() {
           if (!controller.signal.aborted) {
             apply(library);
             const params = new URLSearchParams(window.location.search);
+            const folderId = params.get("folder");
+            if (
+              library.folders.some(
+                (folder) => folder.id === folderId && folder.unlocked,
+              )
+            )
+              setSelected(folderId);
             const link = parseReelUrl(
               params.get("url") ||
                 params.get("text")?.match(/https?:\/\/[^\s]+/)?.[0],
@@ -201,7 +205,10 @@ export default function Home() {
     const version = ++epoch.current;
     pending.current += 1;
     try {
-      const next = await api(path, { method, body });
+      const next = await api(path, {
+        method,
+        body: method === "GET" ? undefined : body,
+      });
       if (version === epoch.current) apply(next);
       return next;
     } catch (err) {
@@ -214,6 +221,12 @@ export default function Home() {
   async function login() {
     const next = await api("library");
     apply(next);
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get("returnTo");
+    if (/^\/share\/(folder|reel)\/[a-f0-9-]{36}$/i.test(returnTo || "")) {
+      window.location.assign(returnTo);
+      return;
+    }
     setModal(sharedUrl ? { type: "reel", initialUrl: sharedUrl } : null);
   }
   async function logout() {
@@ -355,6 +368,7 @@ export default function Home() {
               onSearch={setSearch}
               onOpen={(type) => setModal({ type })}
               onLogout={logout}
+              onLibraryChange={() => mutate("library", "GET")}
             />
             <div className="stream-navigation">
               <FolderBar
@@ -364,6 +378,9 @@ export default function Home() {
                 onSelect={selectFolder}
                 onCreate={() => setModal({ type: "folder" })}
                 onEdit={editFolder}
+                onShare={(folder) =>
+                  setModal({ type: "share", kind: "folder", item: folder })
+                }
               />
             </div>
             <main className="stream" id="main-content">
@@ -378,6 +395,9 @@ export default function Home() {
                       key={reel.id}
                       reel={reel}
                       folder={data.folders.find((f) => f.id === reel.folderId)}
+                      onShare={() =>
+                        setModal({ type: "share", kind: "reel", item: reel })
+                      }
                       onEdit={() => setModal({ type: "reel", reel })}
                       onToggle={async (flag) => {
                         try {
@@ -446,10 +466,18 @@ export default function Home() {
           }}
         />
       )}
+      {data?.user && modal?.type === "share" && (
+        <ShareModal
+          type={modal.kind}
+          item={modal.item}
+          onClose={() => setModal(null)}
+          onChange={() => mutate("library", "GET")}
+        />
+      )}
       {data?.user && modal?.type === "moveReel" && (
         <MoveReelModal
           reel={modal.reel}
-          folders={data.folders}
+          folders={data.folders.filter((folder) => folder.role === "owner")}
           onClose={() => setModal(null)}
           onSave={(folderId) => saveReel({ ...modal.reel, folderId })}
         />
@@ -459,9 +487,15 @@ export default function Home() {
           reel={modal.reel}
           draft={modal.draft}
           initialUrl={modal.initialUrl}
-          folders={data.folders}
+          folders={data.folders.filter(
+            (folder) =>
+              folder.role === "owner" ||
+              (!modal.reel && folder.role === "collaborator"),
+          )}
           folderId={
-            data.folders.some((folder) => folder.id === selected)
+            data.folders.some(
+              (folder) => folder.id === selected && folder.role !== "viewer",
+            )
               ? selected
               : null
           }
