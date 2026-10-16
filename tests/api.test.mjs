@@ -153,6 +153,35 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(revoked.data.reels.some((reel) => reel.id === reelId), false);
 });
 
+test("private or removed Instagram embeds are rejected before they enter the library", async () => {
+  const user = await account();
+  const unavailableApi = createApi({
+    db: app.db,
+    secureCookies: false,
+    fetchImpl: async () =>
+      new Response(
+        "The link to this photo or video may be broken, or the post may have been removed.",
+        { status: 200 },
+      ),
+  });
+  const result = await call(
+    "reels",
+    "POST",
+    {
+      title: "Private reel",
+      url: "https://www.instagram.com/reel/DPrivateReel/",
+      folderId: null,
+    },
+    user.cookie,
+    {},
+    unavailableApi,
+  );
+  assert.equal(result.status, 422);
+  assert.match(result.data.error, /private account|removed/i);
+  const library = await call("library", "GET", null, user.cookie);
+  assert.equal(library.data.reels.length, 0);
+});
+
 test("admin analytics require the named account and a constant-time PIN check", async () => {
   const password = "Strong-admin-test-8842";
   const admin = await call("auth/signup", "POST", {

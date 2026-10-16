@@ -104,7 +104,7 @@ export default function ReelModal({
           className="button-primary w-full"
           disabled={busy || !title.trim()}
         >
-          {busy ? "Saving…" : reel ? "Save changes" : "Save reel"}
+          {busy ? "Checking Reel…" : reel ? "Save changes" : "Save reel"}
         </button>
       </form>
     </Modal>

@@ -17,5 +17,15 @@ export async function testApplication({ secureCookies = false } = {}) {
       }),
   };
   const db = createDatabase(adapter);
-  return { pg, db, adapter, handle: createApi({ db, secureCookies }) };
+  const fetchImpl = async () =>
+    new Response("<html><body>Public Instagram embed</body></html>", {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+  return {
+    pg,
+    db,
+    adapter,
+    handle: createApi({ db, secureCookies, fetchImpl }),
+  };
 }
