@@ -1473,7 +1473,7 @@ test("locked folder management resumes its action after PIN verification without
   ).toBeVisible();
 });
 
-test("secret-link action follows the accent and reports clipboard success without false positives", async ({
+test("sharing actions follow the accent and report clipboard success without false positives", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -1509,6 +1509,28 @@ test("secret-link action follows the accent and reports clipboard success withou
   expect(saved).toBe(200);
   await page.reload();
   await folderAction(page, "Shimmer sharing", "Share Folder");
+  const username = page.getByLabel("Reelbag username", { exact: true });
+  const invite = page.locator(".invite-button");
+  await expect(invite).not.toHaveClass(/is-ready/);
+  await expect(invite).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(invite).toHaveCSS("border-color", "rgb(59, 130, 246)");
+  await expect(invite).toHaveCSS("color", "rgb(59, 130, 246)");
+  expect(
+    await invite.evaluate(
+      (el) => getComputedStyle(el, "::before").animationName,
+    ),
+  ).toBe("none");
+  await username.fill("   ");
+  await expect(invite).not.toHaveClass(/is-ready/);
+  await username.fill("friend_username");
+  await expect(invite).toHaveClass(/is-ready/);
+  await expect(invite).toHaveCSS("background-color", "rgb(59, 130, 246)");
+  await expect(invite).toHaveCSS("color", "rgb(15, 23, 42)");
+  expect(
+    await invite.evaluate(
+      (el) => getComputedStyle(el, "::before").animationName,
+    ),
+  ).toBe("secret-link-shimmer");
   const button = page.locator(".secret-link-button");
   await expect(button).toHaveCSS("background-color", "rgb(59, 130, 246)");
   expect(
@@ -1526,6 +1548,11 @@ test("secret-link action follows the accent and reports clipboard success withou
   expect(copied).toMatch(/\/share\/folder\/[a-f0-9-]{36}$/);
   await expect(button).toHaveText("Copy Secret Link", { timeout: 5000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    await invite.evaluate(
+      (el) => getComputedStyle(el, "::before").animationName,
+    ),
+  ).toBe("none");
   expect(
     await button.evaluate(
       (el) => getComputedStyle(el, "::before").animationName,

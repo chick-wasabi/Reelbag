@@ -1672,7 +1672,64 @@ select option {
   }
 }
 
-/* Keep the secret-link action tied to the active account accent. */
+/* Keep the primary sharing actions tied to the active account accent. */
+.invite-button {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--accent);
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 0 0 rgb(var(--accent-rgb) / 0);
+}
+.invite-button.is-ready {
+  background: var(--accent);
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgb(var(--accent-rgb) / 0.2);
+}
+.invite-button.is-ready::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -45% -60%;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgb(255 255 255 / 0.08) 45%,
+    rgb(255 255 255 / 0.42) 50%,
+    rgb(255 255 255 / 0.08) 55%,
+    transparent 65%
+  );
+  transform: translateX(-55%) skewX(-14deg);
+  animation: secret-link-shimmer 2.8s linear infinite;
+  pointer-events: none;
+}
+.invite-button-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.invite-button:hover:not(:disabled) {
+  box-shadow: 0 8px 25px rgb(var(--accent-rgb) / 0.2);
+}
+.invite-button.is-ready:hover:not(:disabled),
+.invite-button.is-ready:focus-visible {
+  box-shadow: 0 10px 32px rgb(var(--accent-rgb) / 0.4);
+}
+
 .secret-link-button {
   position: relative;
   overflow: hidden;
@@ -1739,9 +1796,11 @@ select option {
 }
 @media (prefers-reduced-motion: reduce) {
   .secret-link-button::before,
+  .invite-button.is-ready::before,
   .secret-link-button.is-copied {
     animation: none;
   }
+  .invite-button.is-ready::before,
   .secret-link-button::before {
     opacity: 0;
   }

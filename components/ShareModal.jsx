@@ -13,6 +13,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef(null);
+  const hasUsername = username.trim() !== "";
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const base = `sharing/${type}/${item.id}`;
   const load = useCallback(
@@ -108,8 +109,13 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 )}
               </select>
             </label>
-            <button className="button-primary" disabled={busy}>
-              <Send size={16} /> Send Invite
+            <button
+              className={`invite-button ${hasUsername ? "is-ready" : ""}`}
+              disabled={busy}
+            >
+              <span className="invite-button-label">
+                <Send size={16} /> Send Invite
+              </span>
             </button>
           </form>
           <section className="sharing-section form-stack">
