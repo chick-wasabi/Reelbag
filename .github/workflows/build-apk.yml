@@ -44,8 +44,8 @@ jobs:
       - name: Accept Android SDK Licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Install Android API 36 build tools
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android API 34 build tools
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli@1.27.0
@@ -76,6 +76,16 @@ jobs:
           --skipVersionUpgrade
           --directory="$GITHUB_WORKSPACE/android"
           --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json"
+
+      - name: Pin generated Android SDK levels
+        run: |
+          sed -i -E \
+            -e 's/compileSdkVersion [0-9]+/compileSdkVersion 34/' \
+            -e 's/targetSdkVersion [0-9]+/targetSdkVersion 34/' \
+            android/app/build.gradle
+          grep -q 'compileSdkVersion 34' android/app/build.gradle
+          grep -q 'targetSdkVersion 34' android/app/build.gradle
+          grep -q 'minSdkVersion 24' android/app/build.gradle
 
       - name: Build installable debug APK
         working-directory: android
