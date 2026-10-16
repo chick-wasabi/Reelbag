@@ -2648,6 +2648,15 @@ select option {
   gap: 24px;
   margin-bottom: 30px;
 }
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-change-pin {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.18);
+}
 .admin-title-lockup {
   display: flex;
   align-items: center;
@@ -2783,6 +2792,24 @@ select option {
   text-align: center;
   font-size: 13px;
 }
+.admin-pin-feedback {
+  margin: -3px 0 0;
+  padding: 11px 12px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.admin-pin-feedback.is-error {
+  color: #ff9297;
+  border-color: rgb(255 146 151 / 0.18);
+  background: rgb(255 146 151 / 0.045);
+}
+.admin-pin-feedback.is-success {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.18);
+  background: rgb(var(--accent-rgb) / 0.05);
+}
 .profile-menu .admin-menu-link {
   color: var(--accent);
   border: 1px solid rgb(var(--accent-rgb) / 0.14);
@@ -2813,6 +2840,11 @@ select option {
   .admin-header .button-secondary,
   .admin-search {
     width: 100%;
+  }
+  .admin-header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
   }
   .admin-metrics {
     grid-template-columns: 1fr 1fr;

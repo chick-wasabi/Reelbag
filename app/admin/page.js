@@ -9,11 +9,13 @@ import {
   KeyRound,
   Link2,
   Search,
+  Settings,
   ShieldCheck,
   Users,
   Video,
 } from "lucide-react";
 import Logo from "../../components/Logo";
+import Modal from "../../components/Modal";
 
 const METRICS = [
   { key: "totalUsers", label: "Total Users", icon: Users },
@@ -30,6 +32,14 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinForm, setPinForm] = useState({
+    currentPin: "",
+    newPin: "",
+    confirmPin: "",
+  });
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pinFeedback, setPinFeedback] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,7 +66,7 @@ export default function AdminPage() {
 
   async function unlock(event) {
     event.preventDefault();
-    if (!/^\d{4}$/.test(pin) || submitting) return;
+    if (!/^(?:\d{4}|\d{6})$/.test(pin) || submitting) return;
     setSubmitting(true);
     setError("");
     try {
@@ -78,6 +88,62 @@ export default function AdminPage() {
       setError(requestError.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function closePinModal() {
+    if (pinSaving) return;
+    setPinModalOpen(false);
+    setPinForm({ currentPin: "", newPin: "", confirmPin: "" });
+    setPinFeedback(null);
+  }
+
+  async function savePin(event) {
+    event.preventDefault();
+    setPinFeedback(null);
+    if (!/^(?:\d{4}|\d{6})$/.test(pinForm.currentPin)) {
+      setPinFeedback({
+        type: "error",
+        message: "Enter your current custom PIN or the four-digit master PIN.",
+      });
+      return;
+    }
+    if (!/^\d{6}$/.test(pinForm.newPin)) {
+      setPinFeedback({
+        type: "error",
+        message: "Your new custom PIN must contain exactly six digits.",
+      });
+      return;
+    }
+    if (pinForm.newPin !== pinForm.confirmPin) {
+      setPinFeedback({ type: "error", message: "The new PINs do not match." });
+      return;
+    }
+    setPinSaving(true);
+    try {
+      const response = await fetch("/api/admin/pin", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPin: pinForm.currentPin,
+          newPin: pinForm.newPin,
+        }),
+      });
+      const payload = await response.json();
+      if (response.status === 403) {
+        router.replace("/");
+        return;
+      }
+      if (!response.ok)
+        throw new Error(payload.error || "Unable to update the admin PIN.");
+      setPinForm({ currentPin: "", newPin: "", confirmPin: "" });
+      setPinFeedback({ type: "success", message: payload.message });
+    } catch (requestError) {
+      setPinFeedback({ type: "error", message: requestError.message });
+    } finally {
+      setPinSaving(false);
     }
   }
 
@@ -111,7 +177,10 @@ export default function AdminPage() {
           </div>
           <span className="admin-eyebrow">Restricted access</span>
           <h1>Admin Control Center</h1>
-          <p>Enter the four-digit security PIN to view Reelbag analytics.</p>
+          <p>
+            Enter the four-digit master PIN or your six-digit custom PIN to view
+            Reelbag analytics.
+          </p>
           <label className="admin-pin-label">
             Security PIN
             <span className="admin-pin-input">
@@ -120,11 +189,11 @@ export default function AdminPage() {
                 type="password"
                 inputMode="numeric"
                 autoComplete="off"
-                maxLength={4}
-                pattern="[0-9]{4}"
+                maxLength={6}
+                pattern="([0-9]{4}|[0-9]{6})"
                 value={pin}
                 onChange={(event) =>
-                  setPin(event.target.value.replace(/\D/g, "").slice(0, 4))
+                  setPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                 }
                 aria-describedby={error ? "admin-pin-error" : undefined}
                 autoFocus
@@ -139,7 +208,7 @@ export default function AdminPage() {
           )}
           <button
             className="button-primary admin-unlock-button"
-            disabled={pin.length !== 4 || submitting}
+            disabled={!/^(?:\d{4}|\d{6})$/.test(pin) || submitting}
           >
             {submitting ? "Verifying…" : "Unlock Dashboard"}
           </button>
@@ -149,7 +218,8 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="admin-dashboard">
+    <>
+      <main className="admin-dashboard">
       <header className="admin-header">
         <div className="admin-title-lockup">
           <span className="admin-title-logo">
@@ -160,9 +230,20 @@ export default function AdminPage() {
             <h1>Admin Control Center</h1>
           </div>
         </div>
-        <Link href="/" className="button-secondary">
-          <ArrowLeft size={16} /> Back to Vault
-        </Link>
+        <div className="admin-header-actions">
+          <button
+            className="button-secondary admin-change-pin"
+            onClick={() => {
+              setPinFeedback(null);
+              setPinModalOpen(true);
+            }}
+          >
+            <Settings size={16} /> Change PIN
+          </button>
+          <Link href="/" className="button-secondary">
+            <ArrowLeft size={16} /> Back to Vault
+          </Link>
+        </div>
       </header>
 
       <section className="admin-metrics" aria-label="Global vault metrics">
@@ -219,6 +300,93 @@ export default function AdminPage() {
           {!users.length && <p className="admin-empty">No usernames match your search.</p>}
         </div>
       </section>
-    </main>
+      </main>
+      {pinModalOpen && (
+        <Modal
+          title="Change Admin PIN"
+          description="Set a private six-digit PIN. The master PIN remains available as an emergency override."
+          onClose={closePinModal}
+        >
+          <form className="form-stack admin-pin-form" onSubmit={savePin}>
+            <label className="field-label">
+              Current PIN / Master PIN
+              <input
+                data-autofocus
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={6}
+                pattern="([0-9]{4}|[0-9]{6})"
+                value={pinForm.currentPin}
+                onChange={(event) =>
+                  setPinForm((current) => ({
+                    ...current,
+                    currentPin: event.target.value.replace(/\D/g, "").slice(0, 6),
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="field-label">
+              New 6-Digit PIN
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                value={pinForm.newPin}
+                onChange={(event) =>
+                  setPinForm((current) => ({
+                    ...current,
+                    newPin: event.target.value.replace(/\D/g, "").slice(0, 6),
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="field-label">
+              Confirm New 6-Digit PIN
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                value={pinForm.confirmPin}
+                onChange={(event) =>
+                  setPinForm((current) => ({
+                    ...current,
+                    confirmPin: event.target.value.replace(/\D/g, "").slice(0, 6),
+                  }))
+                }
+                required
+              />
+            </label>
+            {pinFeedback && (
+              <p
+                className={`admin-pin-feedback is-${pinFeedback.type}`}
+                role={pinFeedback.type === "error" ? "alert" : "status"}
+              >
+                {pinFeedback.message}
+              </p>
+            )}
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={closePinModal}
+                disabled={pinSaving}
+              >
+                Cancel
+              </button>
+              <button className="button-primary" disabled={pinSaving}>
+                {pinSaving ? "Saving…" : "Save New PIN"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
   );
 }

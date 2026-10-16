@@ -137,6 +137,50 @@ test("admin analytics require the named account and a constant-time PIN check", 
       "username",
     ],
   );
+
+  const deniedUpdate = await call(
+    "admin/pin",
+    "POST",
+    { currentPin: "8842", newPin: "135790" },
+    regular.cookie,
+  );
+  assert.equal(deniedUpdate.status, 403);
+  const wrongCurrent = await call(
+    "admin/pin",
+    "POST",
+    { currentPin: "0000", newPin: "135790" },
+    admin.cookie,
+  );
+  assert.equal(wrongCurrent.status, 401);
+  const updated = await call(
+    "admin/pin",
+    "POST",
+    { currentPin: "8842", newPin: "135790" },
+    admin.cookie,
+  );
+  assert.equal(updated.status, 200, JSON.stringify(updated.data));
+  const [setting] = await app.db.query(
+    "SELECT value,updated_at FROM admin_settings WHERE key='admin_pin'",
+  );
+  assert.match(setting.value, /^\$2[aby]\$12\$/);
+  assert.notEqual(setting.value, "135790");
+  assert.ok(setting.updated_at);
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, admin.cookie, {
+        "x-admin-pin": "135790",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, admin.cookie, {
+        "x-admin-pin": "8842",
+      })
+    ).status,
+    200,
+  );
 });
 
 test("two devices see the same Postgres reels while a different account cannot read or mutate them", async () => {
