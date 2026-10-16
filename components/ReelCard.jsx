@@ -87,7 +87,7 @@ export default function ReelCard({
   return (
     <article
       className="reel-card ambient-glass-card justify-self-center"
-      style={{ width: "calc(100% - 110px)", maxWidth: "270px" }}
+      style={{ width: "270px", maxWidth: "100%" }}
       ref={ref}
     >
       <div className="reel-heading">

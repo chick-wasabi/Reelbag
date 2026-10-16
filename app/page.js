@@ -436,7 +436,7 @@ export default function Home() {
             >
               {reels.length ? (
                 <div
-                  className="reel-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                  className="reel-grid grid grid-cols-[repeat(auto-fill,270px)] justify-center gap-6"
                   role="region"
                   aria-label="Saved Reels"
                 >
