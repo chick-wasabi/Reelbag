@@ -384,7 +384,7 @@ select option {
   color: var(--accent);
   margin-bottom: 23px;
 }
-.empty-state h1 {
+.empty-state h2 {
   font-size: 22px;
   letter-spacing: -0.5px;
   font-weight: 500;
@@ -763,26 +763,6 @@ select option {
   font-size: 11px;
   line-height: 1.9;
 }
-.sidebar-bottom {
-  padding-top: 18px;
-  margin-top: auto;
-}
-.sidebar-account {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 13px 3px;
-  margin-top: 14px;
-  border-top: 1px solid #ffffff0b;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.sidebar-account small {
-  display: block;
-  margin-top: 5px;
-  color: var(--text-muted);
-  font-size: 10px;
-}
 .account-dot {
   width: 6px;
   height: 6px;
@@ -821,11 +801,6 @@ select option {
 .sidebar-collapsed .sidebar-folder-heading {
   justify-content: center;
   margin: 25px 0 10px;
-}
-.sidebar-collapsed .sidebar-account {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
 }
 .mobile-brand {
   display: none;
@@ -1035,7 +1010,7 @@ select option {
     min-height: calc(100dvh - 310px);
     padding: 45px 10px;
   }
-  .empty-state h1 {
+  .empty-state h2 {
     font-size: 20px;
   }
   .toast {
@@ -1565,4 +1540,70 @@ select option {
 .share-intro .button-primary,
 .share-intro .button-secondary {
   width: fit-content;
+}
+
+/* The active view stays above search in the sticky header. */
+.topbar .section-heading {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.section-heading > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.section-heading h1 {
+  margin: 0;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.section-count {
+  flex-shrink: 0;
+  border-radius: 8px;
+  padding: 3px 8px;
+  background: rgb(var(--accent-rgb) / 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.topbar .header-actions {
+  grid-column: 2;
+  grid-row: 1;
+}
+.topbar .search-box {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  max-width: none;
+}
+.sidebar-folders {
+  flex: 1;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--accent-rgb) / 0.3) transparent;
+}
+.sidebar-folders .sidebar-folder-list {
+  overflow: visible;
+  flex: none;
+}
+@media (max-width: 767px) {
+  .topbar .section-heading {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .topbar .search-box {
+    grid-row: 3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-folders {
+    scroll-behavior: auto;
+  }
 }

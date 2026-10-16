@@ -1,5 +1,5 @@
 "use client";
-import { Search } from "lucide-react";
+import { Search, Folder, Grid2X2, Pin, Star } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -10,11 +10,26 @@ export default function Header({
   onOpen,
   onLogout,
   onLibraryChange,
+  sectionTitle,
+  sectionCount,
+  sectionKind,
 }) {
+  const SectionIcon =
+    { folder: Folder, pinned: Pin, favorites: Star }[sectionKind] || Grid2X2;
   return (
     <header className="topbar">
       <div className="mobile-brand">
         <Brand slogan />
+      </div>
+      <div className="section-heading" role="region" aria-label="Current view">
+        <SectionIcon size={22} aria-hidden="true" />
+        <h1>{sectionTitle}</h1>
+        <span
+          className="section-count"
+          aria-label={`${sectionCount} ${sectionCount === 1 ? "reel" : "reels"} in this view`}
+        >
+          {sectionCount}
+        </span>
       </div>
       <label className="search-box">
         <Search size={17} />

@@ -200,6 +200,9 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
     fullPage: true,
   });
   await selectFilter(page, "Bike Edits");
+  await expect(
+    page.getByRole("heading", { name: "Bike Edits", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Edit folder", exact: true }).click();
   await page
     .getByRole("button", { name: "Delete folder", exact: true })
@@ -267,7 +270,7 @@ test("another device sees saved Postgres data while another user is isolated and
       library.reels[0].id,
     );
     expect(status).toBe(404);
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await openProfileItem(page, "Sign Out");
     await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
     await mobile.reload();
     await expect(
@@ -515,6 +518,15 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
   await expect(sidebar).toHaveCSS("width", "84px");
+  await expect(
+    page.getByRole("heading", { name: "All Reels", exact: true }),
+  ).toBeVisible();
+  await expect(
+    sidebar.getByRole("button", { name: "Settings", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    sidebar.getByRole("button", { name: "Sign out", exact: true }),
+  ).toHaveCount(0);
   const toggleIcon = await sidebar
     .getByRole("button", { name: "Expand sidebar", exact: true })
     .locator("svg")
@@ -645,7 +657,7 @@ test("optional custom recovery accepts a typo, password eye toggles work, and re
     page.getByRole("button", { name: "Add Reel", exact: true }),
   ).toBeVisible();
   await addReel(page, "Keep after recovery", "RECOVER", "");
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await openProfileItem(page, "Sign Out");
   await page
     .getByRole("button", { name: "Forgot password?", exact: true })
     .click();
@@ -720,6 +732,9 @@ test("pins reorder the grid, stars filter favorites, and both flags survive relo
     }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Pinned", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Pinned Reels", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(1);
   await page.getByRole("button", { name: "Favorites", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -732,6 +747,9 @@ test("pins reorder the grid, stars filter favorites, and both flags survive relo
   ).toHaveAttribute("aria-pressed", "true");
   await page.setViewportSize({ width: 390, height: 844 });
   await selectFilter(page, "Favorites");
+  await expect(
+    page.getByRole("heading", { name: "Favorites", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Unfavorite Older inspiration", exact: true })
@@ -808,10 +826,7 @@ test("30 avatars, profile syncing, public password hints, clean header and brand
   await expect(
     page.getByRole("banner").locator(".header-actions img"),
   ).toHaveAttribute("src", /seed=pixel_cyber_bot/);
-  await expect(page.locator(".sidebar-account img")).toHaveAttribute(
-    "src",
-    /seed=pixel_cyber_bot/,
-  );
+  await expect(page.locator(".sidebar-account")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".reel-fab")).toBeVisible();
   await openProfileItem(page, "Sign Out");
@@ -1127,6 +1142,9 @@ test("username invitations notify recipients, accepted folders respect roles, an
       })
       .click();
     await expect(
+      friend.getByRole("heading", { name: "Crew edits", exact: true }),
+    ).toBeVisible();
+    await expect(
       friend.getByRole("heading", { name: "Owner inspiration", exact: true }),
     ).toBeVisible();
     await expect(
@@ -1228,5 +1246,114 @@ test("secret links keep previews private, return through login, join read-only, 
     await expect(guest.getByRole("article")).toHaveCount(0);
   } finally {
     await guestContext.close();
+  }
+});
+
+test("owned and shared folders stay reachable in one sidebar scroll region with persistent view context", async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const recipient = await register(page);
+  const statuses = await page.evaluate(async () => {
+    const results = [];
+    for (let i = 1; i <= 24; i++)
+      results.push(
+        (
+          await fetch("/api/folders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `Folder ${String(i).padStart(2, "0")}`,
+              protected: false,
+            }),
+          })
+        ).status,
+      );
+    return results;
+  });
+  expect(statuses.every((status) => status === 201)).toBe(true);
+  const ownerContext = await browser.newContext();
+  await connect(ownerContext);
+  const owner = await ownerContext.newPage();
+  try {
+    await register(owner);
+    const inviteStatus = await owner.evaluate(async (username) => {
+      const folder = await (
+        await fetch("/api/folders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Shared navigation", protected: false }),
+        })
+      ).json();
+      return (
+        await fetch(`/api/sharing/folder/${folder.folderId}/invite`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, role: "viewer" }),
+        })
+      ).status;
+    }, recipient);
+    expect(inviteStatus).toBe(200);
+    const accepted = await page.evaluate(async () => {
+      const notifications = await (await fetch("/api/notifications")).json();
+      return (
+        await fetch(`/api/notifications/${notifications.items[0].id}/respond`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "accepted" }),
+        })
+      ).status;
+    });
+    expect(accepted).toBe(200);
+    await page.reload();
+    const folders = page.locator(".sidebar-folders");
+    await expect(folders.getByRole("button")).toHaveCount(26);
+    expect(
+      await folders.evaluate((el) => el.scrollHeight > el.clientHeight),
+    ).toBe(true);
+    await page
+      .getByRole("button", {
+        name: "Open shared folder Shared navigation",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Shared navigation", exact: true }),
+    ).toBeVisible();
+    expect(await folders.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(
+      page.getByRole("button", { name: "All Reels", exact: true }),
+    ).toBeInViewport();
+    await page
+      .getByRole("button", { name: "Open folder Folder 01", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Folder 01", exact: true }),
+    ).toBeVisible();
+    await selectFilter(page, "All reels");
+    await addReel(page, "Context count", "CONTEXT_COUNT", "");
+    await expect(
+      page.getByLabel("1 reel in this view", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("searchbox", { name: "Search reels" })
+      .fill("no matching reel");
+    await expect(page.getByRole("article")).toHaveCount(0);
+    await expect(
+      page.getByLabel("1 reel in this view", { exact: true }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const heading = await page.locator(".section-heading").boundingBox();
+    const search = await page
+      .getByRole("searchbox", { name: "Search reels" })
+      .boundingBox();
+    expect(heading.y + heading.height).toBeLessThan(search.y);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await expect(
+      page.getByRole("heading", { name: "All Reels", exact: true }),
+    ).toBeInViewport();
+  } finally {
+    await ownerContext.close();
   }
 });

@@ -327,6 +327,23 @@ export default function Home() {
     );
   }, [data, selected, search]);
 
+  const activeFolder = data?.folders.find((folder) => folder.id === selected);
+  const sectionTitle =
+    selected === "pinned"
+      ? "Pinned Reels"
+      : selected === "favorites"
+        ? "Favorites"
+        : activeFolder?.name || "All Reels";
+  const sectionCount = (data?.reels || []).filter(
+    (reel) =>
+      selected === "all" ||
+      (selected === "pinned"
+        ? reel.isPinned
+        : selected === "favorites"
+          ? reel.isFavorite
+          : reel.folderId === selected),
+  ).length;
+
   return (
     <>
       {loading ? (
@@ -356,14 +373,13 @@ export default function Home() {
             pinnedCount={data.reels.filter((reel) => reel.isPinned).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite).length}
             onCreate={() => setModal({ type: "folder" })}
-            onSettings={() => setModal({ type: "appearance" })}
-            onLogout={logout}
-            username={data.user.displayName || data.user.username}
-            avatarUrl={data.user.avatarUrl}
           />
           <div className="workspace">
             <Header
               user={data.user}
+              sectionTitle={sectionTitle}
+              sectionCount={sectionCount}
+              sectionKind={activeFolder ? "folder" : selected}
               search={search}
               onSearch={setSearch}
               onOpen={(type) => setModal({ type })}
@@ -416,11 +432,11 @@ export default function Home() {
               ) : (
                 <section className="empty-state">
                   <Bookmark size={30} strokeWidth={1.3} />
-                  <h1>
+                  <h2>
                     {search
                       ? "No matching reels."
                       : "A place for the good ones."}
-                  </h1>
+                  </h2>
                   <p>
                     {search
                       ? "Try another title."
