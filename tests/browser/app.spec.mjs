@@ -491,22 +491,29 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
           .map((animation) => animation.finished.catch(() => {})),
       ),
     );
-  const clip = card.locator(".embed-shell");
+  const clip = card.locator(".embed-viewport");
+  const shell = card.locator(".embed-shell");
   const clipped = await clip.boundingBox();
+  const shellBox = await shell.boundingBox();
   const frame = await iframe.boundingBox();
   const cardBox = await card.boundingBox();
   expect(Math.abs(clipped.width - (cardBox.width - 2))).toBeLessThan(1);
-  expect(clipped.height).toBeLessThanOrEqual(480);
+  expect(clipped.height).toBeLessThanOrEqual(460);
   await expect(clip).toHaveCSS("overflow", "hidden");
-  expect(frame.y).toBe(clipped.y - 50);
-  expect(Math.abs(frame.height - clipped.height - 210)).toBeLessThan(1);
+  expect(shellBox.y).toBe(clipped.y - 10);
+  expect(frame.y).toBe(shellBox.y - 50);
+  expect(Math.abs(frame.height - shellBox.height - 210)).toBeLessThan(1);
   for (const width of [390, 768, 1536]) {
     await page.setViewportSize({ width, height: 1000 });
-    await expect(clip).toHaveCSS("height", width < 768 ? "450px" : "480px");
+    await expect(clip).toHaveCSS("height", width < 768 ? "430px" : "460px");
+    await expect(shell).toHaveCSS("height", width < 768 ? "450px" : "480px");
     const viewportBox = await clip.boundingBox();
+    const embedBox = await shell.boundingBox();
     const iframeBox = await iframe.boundingBox();
-    expect(iframeBox.y).toBe(viewportBox.y - 50);
-    expect(iframeBox.height - viewportBox.height).toBe(210);
+    expect(embedBox.y).toBe(viewportBox.y - 10);
+    expect(embedBox.height - viewportBox.height).toBe(20);
+    expect(iframeBox.y).toBe(embedBox.y - 50);
+    expect(iframeBox.height - embedBox.height).toBe(210);
   }
   const player = card.frameLocator("iframe");
   await player.getByRole("button", { name: "Play video", exact: true }).click();

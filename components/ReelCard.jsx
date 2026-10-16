@@ -187,30 +187,32 @@ export default function ReelCard({
         </div>
       </div>
       <div
-        className="embed-shell relative overflow-hidden rounded-xl bg-slate-900 w-full h-[450px] md:h-[480px]"
+        className="embed-viewport relative mb-2 h-[430px] w-full overflow-hidden rounded-xl bg-slate-900 md:h-[460px]"
         aria-label={`Video player: ${reel.title}`}
       >
-        {visible && embedUrl ? (
-          <iframe
-            key={`${embedUrl}-${attempt}`}
-            className="reel-iframe absolute top-[-50px] left-0 w-full h-[calc(100%+210px)] object-cover"
-            src={`${embedUrl}${attempt > 0 ? "?autoplay=1&muted=0" : ""}`}
-            title={`Instagram Reel: ${reel.title}`}
-            // Do not allow popups or top navigation, including on user gestures.
-            // Player controls remain native; an overlay would swallow play/pause.
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            onLoad={() => setFailed(false)}
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <div className="embed-fallback">
-            <Instagram size={29} />
-            <span>{embedUrl ? "Loading preview…" : "Invalid Reel link"}</span>
-          </div>
-        )}
+        <div className="embed-shell absolute left-0 top-[-10px] h-[450px] w-full overflow-hidden rounded-xl bg-slate-900 md:h-[480px]">
+          {visible && embedUrl ? (
+            <iframe
+              key={`${embedUrl}-${attempt}`}
+              className="reel-iframe absolute top-[-50px] left-0 w-full h-[calc(100%+210px)] object-cover"
+              src={`${embedUrl}${attempt > 0 ? "?autoplay=1&muted=0" : ""}`}
+              title={`Instagram Reel: ${reel.title}`}
+              // Do not allow popups or top navigation, including on user gestures.
+              // Player controls remain native; an overlay would swallow play/pause.
+              sandbox="allow-scripts allow-same-origin allow-presentation"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+              onLoad={() => setFailed(false)}
+              onError={() => setFailed(true)}
+            />
+          ) : (
+            <div className="embed-fallback">
+              <Instagram size={29} />
+              <span>{embedUrl ? "Loading preview…" : "Invalid Reel link"}</span>
+            </div>
+          )}
+        </div>
       </div>
       <div className="reel-playback-actions">
         <button
