@@ -87,7 +87,7 @@ export default function ReelCard({
   return (
     <article
       className="reel-card ambient-glass-card justify-self-center"
-      style={{ width: "calc(100% - 80px)", maxWidth: "300px" }}
+      style={{ width: "calc(100% - 110px)", maxWidth: "270px" }}
       ref={ref}
     >
       <div className="reel-heading">
@@ -193,7 +193,7 @@ export default function ReelCard({
       >
         <div
           className="embed-shell absolute top-[-10px] h-[450px] overflow-hidden rounded-xl bg-slate-900 md:h-[480px]"
-          style={{ left: "-40px", width: "calc(100% + 80px)" }}
+          style={{ left: "-55px", width: "calc(100% + 110px)" }}
         >
           {visible && embedUrl ? (
             <iframe
