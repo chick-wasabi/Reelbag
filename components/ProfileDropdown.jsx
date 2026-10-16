@@ -7,6 +7,7 @@ import {
   Database,
   LogOut,
   UsersRound,
+  Download,
 } from "lucide-react";
 import Avatar from "./Avatar";
 const ITEMS = [
@@ -122,6 +123,17 @@ export default function ProfileDropdown({ user, onOpen, onLogout }) {
               {item.label}
             </button>
           ))}
+          <div className="profile-menu-divider" />
+          <a
+            role="menuitem"
+            href="https://github.com/chick-wasabi/Reelbag/releases/latest"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => close(false)}
+          >
+            <Download size={17} aria-hidden="true" />
+            Download Android App
+          </a>
           <div className="profile-menu-divider" />
           <button
             role="menuitem"

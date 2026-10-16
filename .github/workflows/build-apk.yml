@@ -1,0 +1,100 @@
+name: Build Android APK
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to attach the APK to (a release is created when omitted)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.event.release.tag_name || inputs.release_tag || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || format('android-build-{0}', github.run_number) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36 build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Bubblewrap
+        run: npm install --global @bubblewrap/cli@1.27.0
+
+      - name: Configure Bubblewrap
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          jq -n \
+            --arg jdk "$JAVA_HOME" \
+            --arg sdk "$ANDROID_SDK_ROOT" \
+            '{jdkPath: $jdk, androidSdkPath: $sdk}' \
+            > "$HOME/.bubblewrap/config.json"
+
+      - name: Set Android build version
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          jq \
+            --arg version "1.0.${VERSION_CODE}" \
+            --argjson code "$VERSION_CODE" \
+            '.appVersion = $version | .appVersionCode = $code' \
+            android/twa-manifest.json > android/twa-manifest.next.json
+          mv android/twa-manifest.next.json android/twa-manifest.json
+
+      - name: Generate Android wrapper
+        run: >-
+          bubblewrap update
+          --skipVersionUpgrade
+          --directory="$GITHUB_WORKSPACE/android"
+          --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json"
+
+      - name: Build installable debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Reelbag-Android.apk"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reelbag-Android
+          path: Reelbag-Android.apk
+          if-no-files-found: error
+
+      - name: Attach APK to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Reelbag Android ${{ env.RELEASE_TAG }}
+          generate_release_notes: ${{ github.event_name == 'workflow_dispatch' }}
+          files: Reelbag-Android.apk
+          fail_on_unmatched_files: true

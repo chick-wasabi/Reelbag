@@ -6,6 +6,7 @@ export const metadata = {
   description:
     "A quiet home for your Instagram Reels. Save links, organize folders, and keep your favorites close.",
   applicationName: "Reelbag",
+  manifest: "/manifest.json",
   // Explicit links complement Next.js file metadata and the conventional paths.
   icons: {
     icon: [
@@ -20,14 +21,16 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     title: "Reelbag",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black",
   },
 };
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#b5f36d",
+  themeColor: "#0b0f17",
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }) {
