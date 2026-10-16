@@ -594,7 +594,7 @@ select option {
   position: fixed;
   z-index: 95;
   left: 50%;
-  top: 12px;
+  top: max(12px, calc(env(safe-area-inset-top, 0px) + 8px));
   transform: translateX(-50%);
   width: max-content;
   max-width: calc(100vw - 30px);
@@ -1290,15 +1290,22 @@ select option {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 54px;
-  padding: 0 20px;
-  border-radius: 18px;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border-radius: 17px;
   background: var(--accent);
   color: var(--on-accent, #101214);
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 8px 34px #0009;
+}
+.reel-fab > span {
+  display: none;
+}
+.reel-fab > svg {
+  width: 24px;
+  height: 24px;
 }
 .reel-fab:hover,
 .button-primary:hover {
@@ -2415,6 +2422,12 @@ select option {
   }
   .topbar.safe-area-header {
     padding-top: max(12px, env(safe-area-inset-top, 0px));
+  }
+  :root[data-native-app="true"] .topbar.safe-area-header {
+    padding-top: max(42px, calc(env(safe-area-inset-top, 0px) + 14px));
+  }
+  :root[data-native-app="true"] .error-banner {
+    top: max(42px, calc(env(safe-area-inset-top, 0px) + 10px));
   }
   .mobile-feed-padding {
     padding-right: 1rem;

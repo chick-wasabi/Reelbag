@@ -56,6 +56,7 @@ export default function Home() {
   }, [modal]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    document.documentElement.dataset.nativeApp = "true";
     let lastBackPress = 0;
     let listener;
     CapacitorApp.addListener("backButton", () => {
@@ -81,7 +82,10 @@ export default function Home() {
     }).then((handle) => {
       listener = handle;
     });
-    return () => listener?.remove();
+    return () => {
+      delete document.documentElement.dataset.nativeApp;
+      listener?.remove();
+    };
   }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => setMinTimeElapsed(true), 3000);
@@ -257,7 +261,7 @@ export default function Home() {
       }
     }
     window.addEventListener("focus", refresh);
-    const interval = setInterval(refresh, 30000);
+    const interval = setInterval(refresh, 5000);
     return () => {
       active = false;
       clearInterval(interval);

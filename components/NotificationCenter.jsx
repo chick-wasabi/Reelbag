@@ -27,7 +27,7 @@ export default function NotificationCenter({ onChange }) {
         }
       });
     refresh();
-    const interval = setInterval(refresh, 30000);
+    const interval = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     return () => {
       controller.abort();
