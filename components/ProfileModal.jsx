@@ -2,9 +2,16 @@
 import { useState } from "react";
 import Modal from "./Modal";
 import AvatarPicker from "./AvatarPicker";
-import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
+import {
+  DEFAULT_AVATAR,
+  DEFAULT_AVATAR_FRAME,
+} from "../utils/avatars.mjs";
+import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 export default function ProfileModal({ user, onClose, onSaveProfile }) {
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || DEFAULT_AVATAR);
+  const [avatarFrame, setAvatarFrame] = useState(
+    user.appearance?.avatarFrame || DEFAULT_AVATAR_FRAME,
+  );
   const [displayName, setDisplayName] = useState(
     user.displayName || user.username,
   );
@@ -26,7 +33,15 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
           setError("");
           setSaved(false);
           try {
-            await onSaveProfile({ avatarUrl, displayName });
+            await onSaveProfile({
+              avatarUrl,
+              displayName,
+              appearance: {
+                ...DEFAULT_APPEARANCE,
+                ...user.appearance,
+                avatarFrame,
+              },
+            });
             setSaved(true);
           } catch (err) {
             setError(err.message);
@@ -38,6 +53,8 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
         <AvatarPicker
           value={avatarUrl}
           onChange={setAvatarUrl}
+          frame={avatarFrame}
+          onFrameChange={setAvatarFrame}
           disabled={busy}
         />
         <label className="field-label">

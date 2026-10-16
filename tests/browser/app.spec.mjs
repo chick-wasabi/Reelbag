@@ -1576,7 +1576,7 @@ test("sharing actions follow the accent and report clipboard success without fal
   await expect(button).not.toHaveClass(/is-copied/);
 });
 
-test("motion preserves players across filters, cycles the avatar, and honors reduced motion", async ({
+test("motion preserves players across filters, keeps avatars still, and honors reduced motion", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1536, height: 1000 });
@@ -1589,9 +1589,12 @@ test("motion preserves players across filters, cycles the avatar, and honors red
   await frame.evaluate((element) => {
     window.__motionPlayer = element;
   });
-  const avatar = page.locator(".avatar-button .profile-avatar-live");
-  await expect(avatar).toHaveAttribute("data-animating", "true");
-  const initialMotion = await avatar.getAttribute("data-motion");
+  const avatar = page.locator(".avatar-button .profile-avatar");
+  await expect(avatar).not.toHaveAttribute("data-motion", /.+/);
+  await expect(avatar.locator(".profile-avatar-art")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
   await page.getByRole("button", { name: "Favorites", exact: true }).click();
   expect(
     await frame.evaluate((element) => element === window.__motionPlayer),
@@ -1599,9 +1602,6 @@ test("motion preserves players across filters, cycles the avatar, and honors red
   await expect(
     page.getByRole("heading", { name: "Favorites", exact: true }),
   ).toBeVisible();
-  await expect
-    .poll(() => avatar.getAttribute("data-motion"), { timeout: 10000 })
-    .not.toBe(initialMotion);
   expect(
     await page
       .locator(".reel-fab")
@@ -1624,7 +1624,6 @@ test("motion preserves players across filters, cycles the avatar, and honors red
   expect(glass.backdrop).toContain("blur");
   expect(glass.shadow).toContain("rgba(0, 0, 0, 0.3)");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(avatar).toHaveAttribute("data-animating", "false");
   expect(
     await page
       .locator(".reel-fab")

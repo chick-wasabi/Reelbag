@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { api } from "../utils/api.mjs";
 import AvatarPicker from "./AvatarPicker";
-import { DEFAULT_AVATAR } from "../utils/avatars.mjs";
+import {
+  DEFAULT_AVATAR,
+  DEFAULT_AVATAR_FRAME,
+} from "../utils/avatars.mjs";
+import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import PasswordField from "./PasswordField";
 import RecoveryFields, { QUESTIONS } from "./RecoveryFields";
 
@@ -16,6 +20,7 @@ export default function AuthScreen({ onSuccess }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
+  const [avatarFrame, setAvatarFrame] = useState(DEFAULT_AVATAR_FRAME);
   const [passwordHint, setPasswordHint] = useState("");
   const [password, setPassword] = useState("");
   const [recovery, setRecovery] = useState(false);
@@ -93,7 +98,13 @@ export default function AuthScreen({ onSuccess }) {
           body: {
             username,
             password,
-            ...(signup ? { avatarUrl, passwordHint } : {}),
+            ...(signup
+              ? {
+                  avatarUrl,
+                  passwordHint,
+                  appearance: { ...DEFAULT_APPEARANCE, avatarFrame },
+                }
+              : {}),
             ...(signup && recovery
               ? {
                   securityQuestion:
@@ -184,6 +195,8 @@ export default function AuthScreen({ onSuccess }) {
             <AvatarPicker
               value={avatarUrl}
               onChange={setAvatarUrl}
+              frame={avatarFrame}
+              onFrameChange={setAvatarFrame}
               disabled={busy}
             />
             <label className="field-label">

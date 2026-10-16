@@ -65,5 +65,13 @@ export const DEFAULT_AVATAR = AVATARS[0].url;
 export const isAvatarUrl = (value) =>
   AVATARS.some((avatar) => avatar.url === value);
 
-// Every motion transforms the whole artwork, so all 30 portraits share one rig.
-export const AVATAR_MOTIONS = ["tilt", "look", "nod", "rise"];
+export const AVATAR_FRAMES = [
+  { id: "accent", name: "Accent", description: "Your active theme color" },
+  { id: "radiant", name: "Radiant", description: "A slow prismatic shimmer" },
+  { id: "sovereign", name: "Sovereign", description: "Royal gold and crown points" },
+  { id: "arcane", name: "Arcane", description: "Mystic violet and cyan energy" },
+  { id: "obsidian", name: "Obsidian", description: "Dark forged prestige" },
+];
+export const DEFAULT_AVATAR_FRAME = AVATAR_FRAMES[0].id;
+export const isAvatarFrame = (value) =>
+  AVATAR_FRAMES.some((frame) => frame.id === value);

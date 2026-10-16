@@ -1029,6 +1029,7 @@ test("display name and appearance persist independently of the login username an
     accent: "#8a65ee",
     columns: "5",
     spacing: "compact",
+    avatarFrame: "sovereign",
   };
   const saved = await call(
     "account/profile",
@@ -1063,6 +1064,13 @@ test("display name and appearance persist independently of the login username an
       spacing: "compact",
     },
     { theme: "dark", accent: "#b5f36d", columns: "100", spacing: "compact" },
+    {
+      theme: "dark",
+      accent: "#b5f36d",
+      columns: "auto",
+      spacing: "comfortable",
+      avatarFrame: "diamond",
+    },
   ]) {
     assert.equal(
       (await call("account/profile", "PATCH", { appearance }, user.cookie))
