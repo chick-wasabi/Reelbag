@@ -135,6 +135,20 @@ export default function ProfileDropdown({ user, onOpen, onLogout }) {
             Download Android App
           </a>
           <div className="profile-menu-divider" />
+          {user.username === "chick_wasabi" && (
+            <>
+              <a
+                role="menuitem"
+                href="/admin"
+                className="admin-menu-link"
+                onClick={() => close(false)}
+              >
+                <ShieldCheck size={17} aria-hidden="true" />
+                Admin Panel
+              </a>
+              <div className="profile-menu-divider" />
+            </>
+          )}
           <button
             role="menuitem"
             onClick={() => {

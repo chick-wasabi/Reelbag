@@ -88,6 +88,57 @@ test("automatic initialization is repeatable and accounts use bcrypt with opaque
   assert.equal((await call("auth/session")).data.user, null);
 });
 
+test("admin analytics require the named account and a constant-time PIN check", async () => {
+  const password = "Strong-admin-test-8842";
+  const admin = await call("auth/signup", "POST", {
+    username: "chick_wasabi",
+    password,
+  });
+  assert.equal(admin.status, 200, JSON.stringify(admin.data));
+  const regular = await account();
+
+  assert.equal((await call("admin/users")).status, 401);
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, regular.cookie, {
+        "x-admin-pin": "8842",
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await call("admin/users", "GET", null, admin.cookie, {
+        "x-admin-pin": "0000",
+      })
+    ).status,
+    401,
+  );
+
+  const result = await call("admin/users", "GET", null, admin.cookie, {
+    "x-admin-pin": "8842",
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  assert.ok(result.data.stats.totalUsers >= 2);
+  assert.equal(typeof result.data.stats.totalReels, "number");
+  assert.equal(typeof result.data.stats.totalFolders, "number");
+  assert.equal(typeof result.data.stats.activeSharedFolders, "number");
+  assert.equal(typeof result.data.stats.totalInvites, "number");
+  assert.deepEqual(
+    Object.keys(
+      result.data.users.find((user) => user.username === "chick_wasabi"),
+    ).sort(),
+    [
+      "accountStatus",
+      "createdAt",
+      "foldersCount",
+      "id",
+      "reelsCount",
+      "username",
+    ],
+  );
+});
+
 test("two devices see the same Postgres reels while a different account cannot read or mutate them", async () => {
   const alice = await account();
   const bob = await account();
