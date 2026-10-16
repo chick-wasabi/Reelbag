@@ -902,9 +902,18 @@ test("pin and favorite flags persist, sort pinned reels first, and enforce owner
 });
 
 test("avatar and optional hint persist across devices with validation, isolation, and no backup leakage", async () => {
-  const { AVATARS, DEFAULT_AVATAR } = await import("../utils/avatars.mjs");
+  const {
+    AVATARS,
+    DEFAULT_AVATAR,
+    LEGACY_AVATAR_REPLACEMENTS,
+    normalizeAvatarUrl,
+  } = await import("../utils/avatars.mjs");
   assert.equal(AVATARS.length, 30);
   assert.equal(new Set(AVATARS.map((a) => a.url)).size, 30);
+  assert.equal(
+    normalizeAvatarUrl(LEGACY_AVATAR_REPLACEMENTS[0].from),
+    AVATARS[0].url,
+  );
   const username = name();
   const password = "Secure-profile-9876";
   const user = await call("auth/signup", "POST", {

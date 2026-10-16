@@ -10,7 +10,7 @@ export default function AvatarPicker({ value, onChange, disabled }) {
           <Avatar url={value} size={40} name="Selected avatar" />
           <span>Choose your avatar</span>
         </summary>
-        <div className="avatar-grid" role="group" aria-label="30 pixel avatars">
+        <div className="avatar-grid" role="group" aria-label="30 premium avatars">
           {AVATARS.map((avatar) => (
             <button
               type="button"
@@ -19,7 +19,7 @@ export default function AvatarPicker({ value, onChange, disabled }) {
               aria-pressed={value === avatar.url}
               onClick={() => onChange(avatar.url)}
             >
-              <Avatar url={avatar.url} name={avatar.name} size={38} />
+              <Avatar url={avatar.url} name={avatar.name} size={48} />
             </button>
           ))}
         </div>
