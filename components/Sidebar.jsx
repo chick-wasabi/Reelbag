@@ -8,6 +8,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   UserPlus,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import SidebarFolderItem from "./SidebarFolderItem";
 import Brand from "./Brand";
@@ -24,6 +26,7 @@ export default function Sidebar({
   pinnedCount,
   favoriteCount,
   sharedCount,
+  trashCount,
   onCreate,
   onRename,
   onShare,
@@ -33,6 +36,7 @@ export default function Sidebar({
   friendRequestCount = 0,
   onOpenFriends,
   onDropReel,
+  onTrashSettings,
 }) {
   const [dropTarget, setDropTarget] = useState(null);
   return (
@@ -101,6 +105,26 @@ export default function Sidebar({
             </span>
           </button>
         ))}
+        <div className={`sidebar-trash-row ${selected === "trash" ? "is-active" : ""}`}>
+          <button
+            className={`sidebar-link ${selected === "trash" ? "active" : ""}`}
+            onClick={() => onSelect("trash")}
+            aria-current={selected === "trash" ? "page" : undefined}
+            title="Recently Deleted"
+          >
+            <Trash2 size={18} />
+            <span className="sidebar-label">Recently Deleted</span>
+            <span className="sidebar-count" aria-hidden="true">{trashCount}</span>
+          </button>
+          <button
+            className="icon-button sidebar-trash-settings"
+            onClick={onTrashSettings}
+            aria-label="Recently Deleted settings"
+            title="Recently Deleted settings"
+          >
+            <MoreHorizontal size={17} />
+          </button>
+        </div>
         <div
           className="sidebar-folders overflow-y-auto max-h-[calc(100vh-160px)]"
           aria-label="Folders"

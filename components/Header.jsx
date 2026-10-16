@@ -1,5 +1,5 @@
 "use client";
-import { Search, Folder, Grid2X2, Pin, Star, Users } from "lucide-react";
+import { Search, Folder, Grid2X2, Pin, Star, Trash2, Users } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -15,7 +15,7 @@ export default function Header({
   sectionKind,
 }) {
   const SectionIcon =
-    { folder: Folder, pinned: Pin, favorites: Star, shared: Users }[sectionKind] || Grid2X2;
+    { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
   return (
     <header className="topbar safe-area-header">
       <div className="mobile-brand">

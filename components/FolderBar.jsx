@@ -1,7 +1,7 @@
 "use client";
 
 import FolderMenu from "./FolderMenu";
-import { FolderPlus, LockKeyhole, Users } from "lucide-react";
+import { FolderPlus, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
 
 export default function FolderBar({
   folders,
@@ -13,6 +13,7 @@ export default function FolderBar({
   onDelete,
   onLock,
   onShare,
+  onTrashSettings,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -23,6 +24,7 @@ export default function FolderBar({
           { id: "pinned", name: "Pinned" },
           { id: "favorites", name: "Favorites" },
           { id: "shared", name: "Shared with me", virtual: true },
+          { id: "trash", name: "Recently deleted", trash: true },
           ...folders,
         ].map((folder) => (
           <button
@@ -33,6 +35,7 @@ export default function FolderBar({
             onClick={() => onSelect(folder.id)}
           >
             {folder.virtual && <Users size={13} />}
+            {folder.trash && <Trash2 size={13} />}
             {folder.pin && !unlocked.has(folder.id) && (
               <LockKeyhole size={13} />
             )}
@@ -49,6 +52,11 @@ export default function FolderBar({
           onLock={onLock}
           onSelect={onSelect}
         />
+      )}
+      {selected === "trash" && (
+        <button className="icon-button" onClick={onTrashSettings} aria-label="Recently Deleted settings" title="Recently Deleted settings">
+          <MoreHorizontal size={17} />
+        </button>
       )}
       <button
         className="icon-button folder-create"

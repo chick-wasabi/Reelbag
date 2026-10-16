@@ -233,6 +233,7 @@ test("recipients can trash shared reels privately, restore them, and protect Rec
   const trashed = await call(`reels/${reelId}/trash`, "POST", {}, recipient.cookie);
   assert.equal(trashed.status, 200, JSON.stringify(trashed.data));
   assert.equal(trashed.data.reels.some((reel) => reel.id === reelId), false);
+  assert.equal(trashed.data.trashCount, 1);
   assert.equal((await call("library", "GET", null, sender.cookie)).data.reels.some((reel) => reel.id === reelId), true);
 
   const opened = await call("trash/open", "POST", {}, recipient.cookie);
@@ -241,7 +242,9 @@ test("recipients can trash shared reels privately, restore them, and protect Rec
   assert.equal(opened.data.items[0].canManage, false);
   const restored = await call(`trash/${reelId}/restore`, "POST", {}, recipient.cookie);
   assert.equal(restored.status, 200);
-  assert.equal((await call("library", "GET", null, recipient.cookie)).data.reels.some((reel) => reel.id === reelId), true);
+  const afterRestore = await call("library", "GET", null, recipient.cookie);
+  assert.equal(afterRestore.data.reels.some((reel) => reel.id === reelId), true);
+  assert.equal(afterRestore.data.trashCount, 0);
 
   const pin = await call("trash/pin", "POST", { enabled: true, newPin: "6427" }, recipient.cookie);
   assert.equal(pin.status, 200);

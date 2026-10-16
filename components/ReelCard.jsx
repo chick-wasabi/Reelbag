@@ -25,6 +25,9 @@ export default function ReelCard({
   onShare,
   onDragStart,
   onDragEnd,
+  trashMode = false,
+  onRestore,
+  onPermanentDelete,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
   const ref = useRef(null);
@@ -145,6 +148,16 @@ export default function ReelCard({
                   <MoreHorizontal size={19} />
                 </summary>
                 <div className="reel-menu-panel">
+                  {trashMode ? (
+                    <>
+                      <button onClick={() => { closeMenu(); onRestore(); }}>
+                        <RefreshCw size={15} /> Restore
+                      </button>
+                      <button className="danger" onClick={() => { closeMenu(); onPermanentDelete(); }}>
+                        <Trash2 size={15} /> Delete Permanently
+                      </button>
+                    </>
+                  ) : <>
                   {canManage && <button
                     disabled={toggling}
                     onClick={async () => {
@@ -205,8 +218,9 @@ export default function ReelCard({
                     aria-label={`${canManage ? "Move" : "Remove"} ${reel.title}`}
                   >
                     <Trash2 size={15} />
-                    {canManage ? "Move to Recently Deleted" : "Remove from My View"}
+                    Delete
                   </button>
+                  </>}
                 </div>
             </details>
         </div>

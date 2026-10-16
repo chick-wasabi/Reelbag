@@ -22,7 +22,7 @@ import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
 import FriendsModal from "../components/FriendsModal";
-import RecentlyDeletedModal from "../components/RecentlyDeletedModal";
+import TrashSettingsModal from "../components/TrashSettingsModal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
@@ -43,6 +43,8 @@ export default function Home() {
   const [error, setError] = useState("");
   const [sharedUrl, setSharedUrl] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deletedReels, setDeletedReels] = useState([]);
+  const [trashUnlocked, setTrashUnlocked] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const feed = useRef(null);
@@ -51,6 +53,7 @@ export default function Home() {
   const modalRef = useRef(null);
   const pullStart = useRef(null);
   const pullDistanceRef = useRef(0);
+  const trashPinRef = useRef("");
   const userId = data?.user?.id;
   useEffect(() => {
     modalRef.current = modal;
@@ -197,6 +200,9 @@ export default function Home() {
     setSelected("all");
     setSearch("");
     setModal(null);
+    setDeletedReels([]);
+    setTrashUnlocked(false);
+    trashPinRef.current = "";
   }, []);
 
   useEffect(() => {
@@ -374,6 +380,25 @@ export default function Home() {
       }
       return;
     }
+    if (id === "trash") {
+      if (data.user.trashProtected && !trashUnlocked) {
+        setModal({ type: "unlockTrash" });
+        return;
+      }
+      try {
+        const result = await api("trash/open", {
+          method: "POST",
+          body: data.user.trashProtected ? { pin: trashPinRef.current } : {},
+        });
+        setDeletedReels(result.items);
+        setTrashUnlocked(true);
+        setSelected("trash");
+        setSearch("");
+      } catch (err) {
+        setError(err.message);
+      }
+      return;
+    }
     const folder = data.folders.find((f) => f.id === id);
     if (folder?.pin && !folder.unlocked) {
       setModal({ type: "unlockFolder", folder });
@@ -424,24 +449,37 @@ export default function Home() {
     setModal(null);
     setNotice("Library copied to your cloud account.");
   }
-  async function remove() {
+  async function removeFolder() {
     if (deleting) return;
     setDeleting(true);
     try {
-      if (modal.type === "deleteFolder") {
-        await mutate(`folders/${modal.folder.id}`, "DELETE");
-        if (selected === modal.folder.id) setSelected("all");
-      } else await mutate(`reels/${modal.reel.id}/trash`, "POST");
+      await mutate(`folders/${modal.folder.id}`, "DELETE");
+      if (selected === modal.folder.id) setSelected("all");
       setModal(null);
-      setNotice(
-        modal.type === "deleteFolder"
-          ? "Folder deleted. Its Reels remain in All Reels."
-          : "Reel moved to Recently Deleted.",
-      );
+      setNotice("Folder deleted. Its Reels remain in All Reels.");
     } catch (err) {
       setError(err.message);
     } finally {
       setDeleting(false);
+    }
+  }
+  async function deleteReel(reel) {
+    try {
+      await mutate(`reels/${reel.id}/trash`, "POST");
+      setNotice("Reel moved to Recently Deleted.");
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+  async function updateDeletedReel(reel, action) {
+    if (action === "permanent" && !window.confirm(`Permanently delete “${reel.title}”? This cannot be undone.`)) return;
+    try {
+      await api(`trash/${reel.id}/${action}`, { method: "POST", body: {} });
+      setDeletedReels((items) => items.filter((item) => item.id !== reel.id));
+      await mutate("library", "GET");
+      setNotice(action === "restore" ? "Reel restored." : "Reel permanently deleted.");
+    } catch (err) {
+      setError(err.message);
     }
   }
   async function shareWithFriend(friend, reelId) {
@@ -454,9 +492,10 @@ export default function Home() {
   }
   const reels = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (data?.reels || []).filter(
+    const source = selected === "trash" ? deletedReels : (data?.reels || []);
+    return source.filter(
       (r) =>
-        ((selected === "all" && !r.isDirectShared) ||
+        (selected === "trash" || (selected === "all" && !r.isDirectShared) ||
           (selected === "pinned"
             ? r.isPinned && !r.isDirectShared
             : selected === "favorites"
@@ -466,7 +505,7 @@ export default function Home() {
                 : r.folderId === selected && !r.isDirectShared)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
-  }, [data, selected, search]);
+  }, [data, deletedReels, selected, search]);
 
   const activeFolder = data?.folders.find((folder) => folder.id === selected);
   const sectionTitle =
@@ -476,8 +515,10 @@ export default function Home() {
         ? "Favorites"
         : selected === "shared"
           ? "Shared with Me"
+        : selected === "trash"
+          ? "Recently Deleted"
         : activeFolder?.name || "All Reels";
-  const sectionCount = (data?.reels || []).filter(
+  const sectionCount = selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
     (reel) =>
       (selected === "all" && !reel.isDirectShared) ||
       (selected === "pinned"
@@ -520,6 +561,7 @@ export default function Home() {
             pinnedCount={data.reels.filter((reel) => reel.isPinned && !reel.isDirectShared).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite && !reel.isDirectShared).length}
             sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
+            trashCount={data.trashCount || 0}
             onCreate={() => setModal({ type: "folder" })}
             onRename={(folder) => manageFolder(folder, "rename")}
             onShare={(folder) => manageFolder(folder, "share")}
@@ -529,6 +571,7 @@ export default function Home() {
             friendRequestCount={data.friendRequests?.length || 0}
             onOpenFriends={() => setModal({ type: "friends" })}
             onDropReel={shareWithFriend}
+            onTrashSettings={() => setModal({ type: "trashSettings" })}
           />
           <div className="workspace">
             <Header
@@ -553,6 +596,7 @@ export default function Home() {
                 onShare={(folder) => manageFolder(folder, "share")}
                 onDelete={(folder) => manageFolder(folder, "delete")}
                 onLock={(folder) => selectFolder(selected, folder.id)}
+                onTrashSettings={() => setModal({ type: "trashSettings" })}
               />
             </div>
             <main
@@ -586,7 +630,10 @@ export default function Home() {
                         }
                       }}
                       onMove={() => setModal({ type: "moveReel", reel })}
-                      onDelete={() => setModal({ type: "deleteReel", reel })}
+                      onDelete={() => deleteReel(reel)}
+                      trashMode={selected === "trash"}
+                      onRestore={() => updateDeletedReel(reel, "restore")}
+                      onPermanentDelete={() => updateDeletedReel(reel, "permanent")}
                       onDragStart={() => setNotice(`Drop “${reel.title}” onto a friend in the sidebar.`)}
                       onDragEnd={() => setNotice("")}
                     />
@@ -609,17 +656,21 @@ export default function Home() {
                           ? "Star a reel to add it to your favorites."
                           : selected === "shared"
                             ? "Reels sent by your friends will appear here automatically."
+                          : selected === "trash"
+                            ? "Deleted Reels will wait here until you restore or permanently delete them."
                           : "Add a reel, or open a folder above."}
                   </p>
                   <button
                     className="button-secondary"
-                    onClick={() =>
-                      search ? setSearch("") : setModal({ type: "reel" })
-                    }
+                    onClick={() => {
+                      if (search) setSearch("");
+                      else if (["pinned", "favorites", "shared", "trash"].includes(selected)) setSelected("all");
+                      else setModal({ type: "reel" });
+                    }}
                   >
                     {search
                       ? "Clear search"
-                      : ["pinned", "favorites", "shared"].includes(selected)
+                      : ["pinned", "favorites", "shared", "trash"].includes(selected)
                         ? "Browse all reels"
                         : "Add your first reel"}
                   </button>
@@ -627,14 +678,14 @@ export default function Home() {
               )}
             </main>
           </div>
-          <button
+          {selected !== "trash" && <button
             className="reel-fab"
             aria-label="Add Reel"
             onClick={() => setModal({ type: "reel" })}
           >
             <Plus size={21} />
             <span>Add Reel</span>
-          </button>
+          </button>}
         </div>
       )}
 
@@ -655,12 +706,35 @@ export default function Home() {
           onNotice={setNotice}
         />
       )}
-      {data?.user && modal?.type === "recentlyDeleted" && (
-        <RecentlyDeletedModal
-          user={data.user}
+      {data?.user && modal?.type === "unlockTrash" && (
+        <Modal title="Recently Deleted" description="This view is PIN protected." onClose={() => setModal(null)}>
+          <PinForm
+            label="Recently Deleted PIN"
+            submitLabel="Open Recently Deleted"
+            onVerify={async (pin) => {
+              const result = await api("trash/open", { method: "POST", body: { pin } });
+              trashPinRef.current = pin;
+              setDeletedReels(result.items);
+              setTrashUnlocked(true);
+              setSelected("trash");
+              setSearch("");
+              setModal(null);
+            }}
+          />
+        </Modal>
+      )}
+      {data?.user && modal?.type === "trashSettings" && (
+        <TrashSettingsModal
+          protectedTrash={data.user.trashProtected}
           onClose={() => setModal(null)}
-          onLibraryChange={async () => {
+          onSaved={async (protectedTrash) => {
             await mutate("library", "GET");
+            if (protectedTrash) {
+              setTrashUnlocked(false);
+              trashPinRef.current = "";
+            }
+            setModal(null);
+            setNotice(protectedTrash ? "Recently Deleted PIN saved." : "Recently Deleted PIN removed.");
           }}
         />
       )}
@@ -813,16 +887,10 @@ export default function Home() {
           <LegacyImport data={modal.backup} onComplete={importLibrary} />
         </Modal>
       )}
-      {data?.user && ["deleteReel", "deleteFolder"].includes(modal?.type) && (
+      {data?.user && modal?.type === "deleteFolder" && (
         <Modal
-          title={modal.type === "deleteFolder" ? "Delete folder?" : "Remove reel?"}
-          description={
-            modal.type === "deleteFolder"
-              ? "The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN. This affects every device."
-              : modal.reel.canManage === false
-                ? "This removes the shared Reel only from your account and moves it to Recently Deleted. The owner and other viewers keep their copy."
-                : "This moves the Reel to Recently Deleted, where you can restore it or permanently delete it later."
-          }
+          title="Delete folder?"
+          description="The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN. This affects every device."
           onClose={() => {
             if (!deleting) setModal(null);
           }}
@@ -838,15 +906,11 @@ export default function Home() {
             <button
               className="button-danger"
               disabled={deleting}
-              onClick={remove}
+              onClick={removeFolder}
             >
               {deleting
                 ? "Removing…"
-                : modal.type === "deleteFolder"
-                  ? "Delete folder"
-                  : modal.reel.canManage === false
-                    ? "Remove from My View"
-                    : "Move to Recently Deleted"}
+                : "Delete folder"}
             </button>
           </div>
         </Modal>
