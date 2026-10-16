@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Link2, Send, UserRound, X } from "lucide-react";
+import { Check, Copy, Instagram, Link2, Send, UserRound, X } from "lucide-react";
 import Modal from "./Modal";
 import { api } from "../utils/api.mjs";
 
@@ -12,6 +12,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const [instagramCopied, setInstagramCopied] = useState(false);
   const copiedTimer = useRef(null);
   const hasUsername = username.trim() !== "";
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
@@ -34,6 +35,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
   async function run(action, success) {
     clearTimeout(copiedTimer.current);
     setCopied(false);
+    setInstagramCopied(false);
     setBusy(true);
     setError("");
     setMessage("");
@@ -118,6 +120,38 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               </span>
             </button>
           </form>
+          {type === "reel" && (
+            <section className="sharing-section form-stack">
+              <h3>
+                <Instagram size={17} /> Original Instagram Reel
+              </h3>
+              <p className="muted-copy">
+                Copy the original Instagram link without granting Reelbag access.
+              </p>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  try {
+                    setCopied(false);
+                    await navigator.clipboard.writeText(item.url);
+                    setInstagramCopied(true);
+                    clearTimeout(copiedTimer.current);
+                    copiedTimer.current = setTimeout(
+                      () => setInstagramCopied(false),
+                      2200,
+                    );
+                  } catch {
+                    setError("Could not access your clipboard. Copy the Reel link from Instagram instead.");
+                  }
+                }}
+              >
+                {instagramCopied ? <Check size={16} /> : <Copy size={16} />}
+                {instagramCopied ? "Instagram Link Copied!" : "Copy Instagram Link"}
+              </button>
+            </section>
+          )}
           <section className="sharing-section form-stack">
             <h3>
               <Link2 size={17} /> Secret link
