@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Native Android APK
 
 on:
   release:
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-apk-release-signing
+  group: android-native-release-signing
   cancel-in-progress: false
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
-      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || format('android-build-{0}', github.run_number) }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || format('android-native-{0}', github.run_number) }}
 
     steps:
       - name: Check out repository
@@ -43,22 +43,22 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Install Android API 36 build tools
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android SDK
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Configure Bubblewrap SDK
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Initialize Capacitor and add Android
         run: |
-          mkdir -p "$HOME/.bubblewrap"
-          cat > "$HOME/.bubblewrap/config.json" <<EOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
-          }
-          EOF
-          test "$(jq -r '.androidSdkPath' "$HOME/.bubblewrap/config.json")" = "/usr/local/lib/android/sdk"
+          if [ ! -f capacitor.config.ts ]; then
+            npx cap init Reelbag app.vercel.reelbag.native --web-dir public
+          fi
+          npx cap add android
+          npx cap sync android
 
       - name: Restore persistent release signing identity
         id: signing-cache
@@ -68,7 +68,6 @@ jobs:
           key: reelbag-android-release-signing-v1
 
       - name: Generate or load release signing key
-        id: signing
         run: |
           mkdir -p .android-signing
           if [ ! -s .android-signing/release.keystore ] || [ ! -s .android-signing/password ]; then
@@ -87,18 +86,10 @@ jobs:
           fi
           password="$(cat .android-signing/password)"
           echo "::add-mask::$password"
-          cp .android-signing/release.keystore android/release.keystore
-          chmod 600 android/release.keystore
-          fingerprint="$(keytool -list -v \
-            -keystore android/release.keystore \
-            -alias reelbag \
-            -storepass "$password" | \
-            sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
-          test -n "$fingerprint"
-          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
-          echo "ANDROID_KEY_ALIAS=reelbag" >> "$GITHUB_ENV"
-          echo "BUBBLEWRAP_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
-          echo "BUBBLEWRAP_KEY_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "REELBAG_KEYSTORE_PATH=$GITHUB_WORKSPACE/.android-signing/release.keystore" >> "$GITHUB_ENV"
+          echo "REELBAG_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "REELBAG_KEY_ALIAS=reelbag" >> "$GITHUB_ENV"
+          echo "REELBAG_KEY_PASSWORD=$password" >> "$GITHUB_ENV"
 
       - name: Save new release signing identity
         if: steps.signing-cache.outputs.cache-hit != 'true'
@@ -107,106 +98,52 @@ jobs:
           path: .android-signing
           key: reelbag-android-release-signing-v1
 
-      - name: Publish signing certificate fingerprint
-        env:
-          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
-        run: |
-          jq --arg fingerprint "$CERT_FINGERPRINT" \
-            '.sha256_cert_fingerprint = $fingerprint' \
-            android/signing-certificate.json > android/signing-certificate.next.json
-          mv android/signing-certificate.next.json android/signing-certificate.json
-          if git diff --quiet -- android/signing-certificate.json; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add android/signing-certificate.json
-          git commit -m "Update Android signing certificate fingerprint"
-          git push origin HEAD:main
-
-      - name: Set Android build version
-        env:
-          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
-          VERSION_CODE: ${{ github.run_number }}
-        run: |
-          jq \
-            --arg version "1.0.${VERSION_CODE}" \
-            --argjson code "$VERSION_CODE" \
-            --arg fingerprint "$CERT_FINGERPRINT" \
-            '.appVersion = $version | .appVersionCode = $code | .fingerprints = [{name: "release", value: $fingerprint}]' \
-            android/twa-manifest.json > android/twa-manifest.next.json
-          mv android/twa-manifest.next.json android/twa-manifest.json
-
-      - name: Generate Android wrapper
-        run: >-
-          npx --yes @bubblewrap/cli@1.27.0 update
-          --skipVersionUpgrade
-          --directory="$GITHUB_WORKSPACE/android"
-          --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json"
-
-      - name: Pin generated Android SDK levels
+      - name: Configure release signing
         run: |
           sed -i -E \
-            -e 's/compileSdkVersion [0-9]+/compileSdkVersion 36/' \
-            -e 's/targetSdkVersion [0-9]+/targetSdkVersion 36/' \
+            -e "s/versionCode [0-9]+/versionCode ${GITHUB_RUN_NUMBER}/" \
+            -e "s/versionName \"[^\"]+\"/versionName \"1.0.${GITHUB_RUN_NUMBER}\"/" \
             android/app/build.gradle
-          grep -q 'compileSdkVersion 36' android/app/build.gradle
-          grep -q 'targetSdkVersion 36' android/app/build.gradle
-          grep -q 'minSdkVersion 24' android/app/build.gradle
+          cat > android/app/release-signing.gradle <<'GRADLE'
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv("REELBAG_KEYSTORE_PATH"))
+                      storePassword System.getenv("REELBAG_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("REELBAG_KEY_ALIAS")
+                      keyPassword System.getenv("REELBAG_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          GRADLE
+          printf '\n%s\n' "apply from: 'release-signing.gradle'" >> android/app/build.gradle
 
-      - name: Verify deployed Digital Asset Links
-        env:
-          CERT_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
-        run: |
-          actual="$(printf '%s' "$CERT_FINGERPRINT" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          for attempt in $(seq 1 18); do
-            response="$(curl --fail --silent --show-error \
-              https://reelbag.vercel.app/.well-known/assetlinks.json || true)"
-            deployed="$(printf '%s' "$response" | jq -r \
-              'map(select(.target.package_name == "app.vercel.reelbag.twa")) | .[0].target.sha256_cert_fingerprints[0] // empty' \
-              2>/dev/null || true)"
-            expected="$(printf '%s' "$deployed" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-            if [ -n "$expected" ] && [ "$actual" = "$expected" ]; then
-              exit 0
-            fi
-            echo "Waiting for Vercel to deploy the signing certificate (attempt ${attempt}/18)..."
-            sleep 10
-          done
-          echo "Deployed Digital Asset Links fingerprint does not match the signing key." >&2
-          exit 1
-
-      - name: Build signed release APK
+      - name: Build signed native APK
         working-directory: android
         run: |
-          # Bubblewrap 1.27 validates a root-level bin directory, while the
-          # hosted runner keeps current command-line tools under cmdline-tools.
-          if [ ! -e /usr/local/lib/android/sdk/bin ]; then
-            ln -s /usr/local/lib/android/sdk/cmdline-tools/latest/bin \
-              /usr/local/lib/android/sdk/bin
-          fi
-          npx --yes @bubblewrap/cli@1.27.0 updateConfig \
-            --androidSdkPath="/usr/local/lib/android/sdk" \
-            --jdkPath="$JAVA_HOME"
-          npx --yes @bubblewrap/cli@1.27.0 doctor
-          npx --yes @bubblewrap/cli@1.27.0 build \
-            --skipPwaValidation \
-            --manifest="$GITHUB_WORKSPACE/android/twa-manifest.json" \
-            --signingKeyPath="$GITHUB_WORKSPACE/android/release.keystore" \
-            --signingKeyAlias="$ANDROID_KEY_ALIAS"
-          cp app-release-signed.apk "$GITHUB_WORKSPACE/Reelbag-Android.apk"
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+            --verbose app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Reelbag-Native-App.apk"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Reelbag-Android-APK
-          path: Reelbag-Android.apk
+          name: Reelbag-Native-App
+          path: Reelbag-Native-App.apk
           if-no-files-found: error
 
       - name: Attach APK to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: Reelbag Android ${{ env.RELEASE_TAG }}
+          name: Reelbag Native Android ${{ env.RELEASE_TAG }}
           generate_release_notes: ${{ github.event_name == 'workflow_dispatch' }}
-          files: Reelbag-Android.apk
+          files: Reelbag-Native-App.apk
           fail_on_unmatched_files: true

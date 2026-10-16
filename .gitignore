@@ -5,7 +5,7 @@ out/
 !.env.example
 .vercel/
 .android-signing/
-android/release.keystore
+/android/
 coverage/
 playwright-report/
 test-results/

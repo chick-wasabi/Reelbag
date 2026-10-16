@@ -112,13 +112,13 @@ API entry points are `/api/sharing/{folder|reel}/{id}` (owner settings), `/invit
 
 Next.js metadata serves the default SVG, 32 px PNG (`app/icon1.png`), six-size ICO at `public/favicon.ico` (16–256 px), and opaque 180 px Apple icon (`app/apple-icon.png`). `public/apple-touch-icon.png` supplies the conventional Apple path as well. The manifest provides 192/512 px home-screen icons and a separate 512 px maskable icon with safe-zone padding. Regenerate the checked-in PNG/ICO assets from `app/icon.svg` if the static artwork changes. Installed/bookmarked icons use the static default artwork. These assets and standalone metadata support home-screen shortcuts; cloud data and Instagram playback require a network connection.
 
-## Signed Android releases and Digital Asset Links
+## Native Android releases with Capacitor
 
-The Android release workflow generates its signing identity on the first run and restores it from a repository-scoped GitHub Actions cache on later runs. The private keystore and random password never enter the repository, logs, release assets, or Vercel settings. No manual Actions or Vercel secrets are required.
+The Android release workflow uses Capacitor to generate a native Android project around the live Vercel application. The package ID is `app.vercel.reelbag.native`; the app runs inside Android's embedded WebView without a Trusted Web Activity, Chrome toolbar, Digital Asset Links, or Bubblewrap. `public/index.html` is the required local launch fallback when the remote service is unavailable.
 
-The workflow extracts the public certificate fingerprint, commits only that value to `android/signing-certificate.json`, and waits for Vercel to serve the matching `/.well-known/assetlinks.json` response before signing or publishing. A mismatch stops the release, preventing an APK whose TWA would fall back to a Chrome Custom Tab.
+On every release or manual dispatch, CI installs the locked npm dependencies, initializes Capacitor, generates the Android project, and builds a signed release APK named `Reelbag-Native-App.apk`. The workflow generates its signing identity on the first run and restores it from a repository-scoped GitHub Actions cache on later runs. The private keystore and random password never enter the repository, logs, release assets, or Vercel settings. No manual Actions or Vercel secrets are required.
 
-GitHub Actions caches are not permanent signing-key custody: GitHub may evict a cache after inactivity or under repository cache limits. Back up `.android-signing/release.keystore` and its password from a controlled workflow before distributing the APK if update continuity matters. If the cache is lost, the workflow creates a new identity and updates Digital Asset Links automatically, but Android will require existing users to uninstall the old certificate's app before installing the newly signed APK.
+GitHub Actions caches are not permanent signing-key custody: GitHub may evict a cache after inactivity or under repository cache limits. Back up `.android-signing/release.keystore` and its password from a controlled workflow before distributing the APK if update continuity matters. If the cache is lost, the workflow creates a new identity, but Android will require existing users to uninstall the old certificate's app before installing the newly signed APK.
 
 ## Validation
 
@@ -140,6 +140,7 @@ Browser tests run the production frontend on port 3100 and route API requests to
 ```text
 app/page.js                    Minimal dashboard and cloud account flow
 app/api/[...path]/route.js      Dynamic Node.js API route adapter
+capacitor.config.ts             Native Android package and live server configuration
 components/                    Auth, folders, reels, dialogs, settings, legacy import
 lib/server/api.mjs             Authenticated, ownership-checked API operations
 lib/server/database.mjs        Neon adapter and idempotent initialization
