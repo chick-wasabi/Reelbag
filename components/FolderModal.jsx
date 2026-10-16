@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Folder, LockKeyhole } from "lucide-react";
 import Modal from "./Modal";
 
-export default function FolderModal({ folder, onSave, onClose, onDelete }) {
+export default function FolderModal({ folder, onSave, onClose }) {
   const [name, setName] = useState(folder?.name || "");
   const [protectedFolder, setProtected] = useState(Boolean(folder?.pin));
   const [pin, setPin] = useState("");
@@ -31,7 +31,7 @@ export default function FolderModal({ folder, onSave, onClose, onDelete }) {
   }
   return (
     <Modal
-      title={folder ? "Edit folder" : "New folder"}
+      title={folder ? "Rename folder" : "New folder"}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -90,16 +90,6 @@ export default function FolderModal({ folder, onSave, onClose, onDelete }) {
           <Folder size={16} />
           {busy ? "Saving…" : folder ? "Save folder" : "Create folder"}
         </button>
-        {folder && (
-          <button
-            type="button"
-            className="button-quiet danger w-full"
-            disabled={busy}
-            onClick={onDelete}
-          >
-            Delete folder
-          </button>
-        )}
       </form>
     </Modal>
   );

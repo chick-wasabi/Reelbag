@@ -1,28 +1,30 @@
 "use client";
 import {
-  Folder,
   Users,
   FolderPlus,
   Grid2X2,
   Pin,
   Star,
-  LockKeyhole,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import SidebarFolderItem from "./SidebarFolderItem";
 import Brand from "./Brand";
 
 export default function Sidebar({
   collapsed,
   onToggle,
   folders,
-  counts,
   reelCount,
   selected,
   onSelect,
   pinnedCount,
   favoriteCount,
   onCreate,
+  onRename,
+  onShare,
+  onDelete,
+  onLock,
 }) {
   return (
     <aside
@@ -107,33 +109,16 @@ export default function Sidebar({
             {folders
               .filter((folder) => folder.role === "owner")
               .map((folder) => (
-                <button
+                <SidebarFolderItem
                   key={folder.id}
-                  className={`sidebar-link folder-link ${selected === folder.id ? "active" : ""}`}
-                  aria-label={`Open folder ${folder.name}`}
-                  aria-current={selected === folder.id ? "page" : undefined}
-                  title={folder.name}
-                  onClick={() => onSelect(folder.id)}
-                >
-                  {folder.pin && !folder.unlocked ? (
-                    <LockKeyhole size={17} />
-                  ) : (
-                    <Folder size={17} />
-                  )}
-                  <span className="sidebar-label">{folder.name}</span>
-                  {folder.isShared && (
-                    <Users
-                      className="sidebar-share-badge"
-                      size={13}
-                      aria-label="Shared folder"
-                    />
-                  )}
-                  <span className="sidebar-count" aria-hidden="true">
-                    {folder.pin && !folder.unlocked
-                      ? "—"
-                      : counts[folder.id] || 0}
-                  </span>
-                </button>
+                  folder={folder}
+                  selected={selected}
+                  onSelect={onSelect}
+                  onRename={onRename}
+                  onShare={onShare}
+                  onDelete={onDelete}
+                  onLock={onLock}
+                />
               ))}
             {!folders.some((folder) => folder.role === "owner") && (
               <p className="sidebar-empty sidebar-label">
@@ -151,23 +136,16 @@ export default function Sidebar({
                 {folders
                   .filter((folder) => folder.role !== "owner")
                   .map((folder) => (
-                    <button
+                    <SidebarFolderItem
                       key={folder.id}
-                      className={`sidebar-link ${selected === folder.id ? "active" : ""}`}
-                      aria-label={`Open shared folder ${folder.name}`}
-                      title={`${folder.name} — ${folder.role}`}
-                      aria-current={selected === folder.id ? "page" : undefined}
-                      onClick={() => onSelect(folder.id)}
-                    >
-                      <Users size={17} />
-                      <span className="sidebar-label">
-                        {folder.name}
-                        <small className="shared-role">{folder.role}</small>
-                      </span>
-                      <span className="sidebar-count" aria-hidden="true">
-                        {counts[folder.id] || 0}
-                      </span>
-                    </button>
+                      folder={folder}
+                      selected={selected}
+                      onSelect={onSelect}
+                      onRename={onRename}
+                      onShare={onShare}
+                      onDelete={onDelete}
+                      onLock={onLock}
+                    />
                   ))}
               </div>
             </>

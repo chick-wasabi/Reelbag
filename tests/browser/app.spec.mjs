@@ -116,6 +116,12 @@ async function selectFilter(page, name) {
       .getByRole("button", { name: `Filter ${name}`, exact: true })
       .click();
 }
+async function folderAction(page, name, action) {
+  await page
+    .getByRole("button", { name: `Folder actions for ${name}`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
 async function folder(page, name, pin) {
   await page.getByRole("button", { name: "New folder", exact: true }).click();
   await page.getByLabel("Folder name", { exact: true }).fill(name);
@@ -158,7 +164,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
     .click();
   await page.getByLabel("Title / Name").fill("Evening ride");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await page.getByRole("button", { name: "Edit folder", exact: true }).click();
+  await folderAction(page, "Bike Riding", "Rename Folder");
   await page.getByLabel("Folder name", { exact: true }).fill("Bike Edits");
   await page.getByRole("button", { name: "Save folder", exact: true }).click();
   await selectFilter(page, "All reels");
@@ -203,10 +209,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
   await expect(
     page.getByRole("heading", { name: "Bike Edits", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Edit folder", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Delete folder", exact: true })
-    .click();
+  await folderAction(page, "Bike Edits", "Delete Folder");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Delete folder", exact: true })
@@ -324,9 +327,7 @@ test("folder PINs are verified by SQL-backed API and protected content is absent
       other.getByRole("heading", { name: "Secret prank" }),
     ).toBeVisible();
     await selectFilter(other, "Pranks");
-    await other
-      .getByRole("button", { name: "Lock folder", exact: true })
-      .click();
+    await folderAction(other, "Pranks", "Lock Folder");
     await expect(
       other.getByRole("heading", { name: "Secret prank" }),
     ).toHaveCount(0);
@@ -464,7 +465,8 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     sidebar
       .getByRole("button", { name: "Open folder Inspiration", exact: true })
       .locator(".sidebar-count"),
-  ).toHaveText("1");
+  ).toHaveCount(0);
+  await expect(sidebar.locator(".sidebar-count")).toHaveCount(3);
   const card = page.getByRole("article").filter({
     has: page.getByRole("heading", { name: "Video to remake", exact: true }),
   });
@@ -592,12 +594,12 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
     sidebar
       .getByRole("button", { name: "Open folder Inspiration", exact: true })
       .locator(".sidebar-count"),
-  ).toHaveText("0");
+  ).toHaveCount(0);
   await expect(
     sidebar
       .getByRole("button", { name: "Open folder Remakes", exact: true })
       .locator(".sidebar-count"),
-  ).toHaveText("1");
+  ).toHaveCount(0);
   const persisted = await page.evaluate(async () =>
     (await fetch("/api/library")).json(),
   );
@@ -984,6 +986,7 @@ test("accent previews recolor outlined logos, sidebar, favicon, buttons and focu
   await page.setViewportSize({ width: 1536, height: 1000 });
   await register(page);
   await folder(page, "Theme folder");
+  await selectFilter(page, "All reels");
   await openProfileItem(page, "Appearance & Settings");
   for (const [hex, rgb] of [
     ["#3b82f6", "rgb(59, 130, 246)"],
@@ -1105,9 +1108,7 @@ test("username invitations notify recipients, accepted folders respect roles, an
   const friend = await friendContext.newPage();
   try {
     const friendName = await register(friend);
-    await page
-      .getByRole("button", { name: "Share folder", exact: true })
-      .click();
+    await folderAction(page, "Crew edits", "Share Folder");
     await page.getByLabel("Reelbag username", { exact: true }).fill(friendName);
     await page
       .getByLabel("Access role", { exact: true })
@@ -1150,9 +1151,22 @@ test("username invitations notify recipients, accepted folders respect roles, an
     await expect(
       friend.getByLabel("Actions for Owner inspiration", { exact: true }),
     ).toHaveCount(0);
+    await friend
+      .getByRole("button", {
+        name: "Folder actions for Crew edits",
+        exact: true,
+      })
+      .click();
     await expect(
-      friend.getByRole("button", { name: "Share folder", exact: true }),
+      friend.getByRole("menuitem", { name: "Rename Folder", exact: true }),
     ).toHaveCount(0);
+    await expect(
+      friend.getByRole("menuitem", { name: "Share Folder", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      friend.getByRole("menuitem", { name: "Delete Folder", exact: true }),
+    ).toHaveCount(0);
+    await friend.keyboard.press("Escape");
     await addReel(friend, "Friend contribution", "SHARE_FRIEND");
     await expect(
       friend.getByRole("heading", { name: "Friend contribution", exact: true }),
@@ -1183,7 +1197,7 @@ test("secret links keep previews private, return through login, join read-only, 
   await register(page);
   await folder(page, "Link-only folder");
   await addReel(page, "Hidden until joined", "SECRET_REEL");
-  await page.getByRole("button", { name: "Share folder", exact: true }).click();
+  await folderAction(page, "Link-only folder", "Share Folder");
   await page
     .getByRole("button", { name: "Copy Secret Link", exact: true })
     .click();
@@ -1308,7 +1322,10 @@ test("owned and shared folders stay reachable in one sidebar scroll region with 
     expect(accepted).toBe(200);
     await page.reload();
     const folders = page.locator(".sidebar-folders");
-    await expect(folders.getByRole("button")).toHaveCount(26);
+    await expect(
+      folders.getByRole("button", { name: /^Open (shared )?folder / }),
+    ).toHaveCount(25);
+    await expect(folders.locator(".sidebar-count")).toHaveCount(0);
     expect(
       await folders.evaluate((el) => el.scrollHeight > el.clientHeight),
     ).toBe(true);
@@ -1356,4 +1373,93 @@ test("owned and shared folders stay reachable in one sidebar scroll region with 
   } finally {
     await ownerContext.close();
   }
+});
+
+test("folder context menus manage inactive folders without navigation and deletion keeps reels", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await folder(page, "Bike");
+  await addReel(page, "Keep this reel", "KEEP_FOLDER_REEL");
+  await folder(page, "Recipes");
+  await expect(page.locator(".current-folder-name")).toHaveCount(0);
+  await expect(page.locator(".stream-navigation")).toBeHidden();
+  const trigger = page.getByRole("button", {
+    name: "Folder actions for Bike",
+    exact: true,
+  });
+  await trigger.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("menuitem", { name: "Rename Folder", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("heading", { name: "Recipes", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await folderAction(page, "Bike", "Rename Folder");
+  await page.getByLabel("Folder name", { exact: true }).fill("Bike Remakes");
+  await page.getByRole("button", { name: "Save folder", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Recipes", exact: true }),
+  ).toBeVisible();
+  await folderAction(page, "Bike Remakes", "Delete Folder");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Open folder Bike Remakes", exact: true }),
+  ).toBeVisible();
+  await folderAction(page, "Bike Remakes", "Delete Folder");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete folder", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Recipes", exact: true }),
+  ).toBeVisible();
+  await selectFilter(page, "All reels");
+  await expect(
+    page.getByRole("heading", { name: "Keep this reel", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("complementary").locator(".sidebar-count"),
+  ).toHaveCount(3);
+  await page
+    .getByRole("button", { name: "Collapse sidebar", exact: true })
+    .click();
+  await folderAction(page, "Recipes", "Rename Folder");
+  await expect(page.getByLabel("Folder name", { exact: true })).toHaveValue(
+    "Recipes",
+  );
+});
+
+test("locked folder management resumes its action after PIN verification without switching views", async ({
+  page,
+}) => {
+  await register(page);
+  await folder(page, "Private edits", "4567");
+  await addReel(page, "Protected idea", "PROTECTED_CONTEXT");
+  await folderAction(page, "Private edits", "Lock Folder");
+  await expect(
+    page.getByRole("heading", { name: "All Reels", exact: true }),
+  ).toBeVisible();
+  await folderAction(page, "Private edits", "Rename Folder");
+  await page.getByLabel("Folder PIN", { exact: true }).fill("4567");
+  await page.getByRole("button", { name: "Open folder", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Rename folder", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Folder name", { exact: true }).fill("Private remakes");
+  await page.getByRole("button", { name: "Save folder", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "All Reels", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Open folder Private remakes",
+      exact: true,
+    }),
+  ).toBeVisible();
 });

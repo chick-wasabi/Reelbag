@@ -84,20 +84,20 @@ export default function Home() {
       delete root.dataset.theme;
     };
   }, [appearance]);
-  const folderCounts = useMemo(
-    () =>
-      (data?.reels || []).reduce((counts, reel) => {
-        if (reel.folderId)
-          counts[reel.folderId] = (counts[reel.folderId] || 0) + 1;
-        return counts;
-      }, {}),
-    [data],
-  );
-  function editFolder(folder) {
-    setModal({
-      type: folder.pin && !folder.unlocked ? "unlockFolder" : "folder",
-      folder,
-    });
+  function manageFolder(folder, action) {
+    if (folder.role !== "owner") return;
+    if (folder.pin && !folder.unlocked) {
+      setModal({ type: "unlockFolder", folder, afterUnlock: action });
+      return;
+    }
+    if (action === "share")
+      setModal({ type: "share", kind: "folder", item: folder });
+    else
+      setModal({
+        type: action === "delete" ? "deleteFolder" : "folder",
+        folder,
+        preserveSelection: true,
+      });
   }
 
   const unlocked = useMemo(
@@ -242,7 +242,7 @@ export default function Home() {
     if (lockId) {
       try {
         await mutate(`folders/${lockId}/lock`, "POST");
-        setSelected("all");
+        setSelected((previous) => (previous === lockId ? "all" : previous));
       } catch (err) {
         setError(err.message);
       }
@@ -268,6 +268,7 @@ export default function Home() {
         ...modal.returnTo,
         draft: { ...modal.returnTo.draft, folderId },
       });
+    else if (modal.preserveSelection) setModal(null);
     else {
       setSelected(folderId);
       setSearch("");
@@ -303,7 +304,7 @@ export default function Home() {
     try {
       if (modal.type === "deleteFolder") {
         await mutate(`folders/${modal.folder.id}`, "DELETE");
-        setSelected("all");
+        if (selected === modal.folder.id) setSelected("all");
       } else await mutate(`reels/${modal.reel.id}`, "DELETE");
       setModal(null);
       setNotice("Deleted from cloud.");
@@ -366,13 +367,16 @@ export default function Home() {
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}
             folders={data.folders}
-            counts={folderCounts}
             reelCount={data.reels.length}
             selected={selected}
             onSelect={selectFolder}
             pinnedCount={data.reels.filter((reel) => reel.isPinned).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite).length}
             onCreate={() => setModal({ type: "folder" })}
+            onRename={(folder) => manageFolder(folder, "rename")}
+            onShare={(folder) => manageFolder(folder, "share")}
+            onDelete={(folder) => manageFolder(folder, "delete")}
+            onLock={(folder) => selectFolder(selected, folder.id)}
           />
           <div className="workspace">
             <Header
@@ -386,17 +390,17 @@ export default function Home() {
               onLogout={logout}
               onLibraryChange={() => mutate("library", "GET")}
             />
-            <div className="stream-navigation">
+            <div className="stream-navigation md:hidden">
               <FolderBar
                 folders={data.folders}
                 selected={selected}
                 unlocked={unlocked}
                 onSelect={selectFolder}
                 onCreate={() => setModal({ type: "folder" })}
-                onEdit={editFolder}
-                onShare={(folder) =>
-                  setModal({ type: "share", kind: "folder", item: folder })
-                }
+                onRename={(folder) => manageFolder(folder, "rename")}
+                onShare={(folder) => manageFolder(folder, "share")}
+                onDelete={(folder) => manageFolder(folder, "delete")}
+                onLock={(folder) => selectFolder(selected, folder.id)}
               />
             </div>
             <main className="stream" id="main-content">
@@ -527,9 +531,6 @@ export default function Home() {
           folder={modal.folder}
           onSave={saveFolder}
           onClose={() => setModal(modal.returnTo || null)}
-          onDelete={() =>
-            setModal({ type: "deleteFolder", folder: modal.folder })
-          }
         />
       )}
       {data?.user && modal?.type === "unlockFolder" && (
@@ -540,12 +541,23 @@ export default function Home() {
         >
           <PinForm
             onVerify={async (pin) => {
-              await mutate(`folders/${modal.folder.id}/unlock`, "POST", {
-                pin,
-              });
-              setSelected(modal.folder.id);
-              setSearch("");
-              setModal(null);
+              const next = await mutate(
+                `folders/${modal.folder.id}/unlock`,
+                "POST",
+                {
+                  pin,
+                },
+              );
+              if (modal.afterUnlock) {
+                manageFolder(
+                  next.folders.find((folder) => folder.id === modal.folder.id),
+                  modal.afterUnlock,
+                );
+              } else {
+                setSelected(modal.folder.id);
+                setSearch("");
+                setModal(null);
+              }
             }}
           />
         </Modal>
