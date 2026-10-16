@@ -3,6 +3,11 @@ import signingCertificate from "../../../android/signing-certificate.json";
 export const dynamic = "force-dynamic";
 
 const PACKAGE_NAME = "app.vercel.reelbag.twa";
+const NO_CACHE_HEADERS = {
+  "Content-Type": "application/json",
+  "Cache-Control": "no-cache, no-store, must-revalidate",
+  Pragma: "no-cache",
+};
 
 function normalizeFingerprint(value) {
   if (typeof value !== "string") return null;
@@ -21,7 +26,7 @@ export function GET() {
       { error: "Android certificate fingerprint is not configured." },
       {
         status: 503,
-        headers: { "Cache-Control": "no-store" },
+        headers: NO_CACHE_HEADERS,
       },
     );
   }
@@ -38,9 +43,7 @@ export function GET() {
       },
     ],
     {
-      headers: {
-        "Cache-Control": "public, max-age=300, s-maxage=3600",
-      },
+      headers: NO_CACHE_HEADERS,
     },
   );
 }
