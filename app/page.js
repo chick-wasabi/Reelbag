@@ -29,6 +29,7 @@ import { parseReelUrl } from "../utils/reels.mjs";
 export default function Home() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [minLoadingPassed, setMinLoadingPassed] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selected, setSelected] = useState("all");
   const [search, setSearch] = useState("");
@@ -41,6 +42,10 @@ export default function Home() {
   const epoch = useRef(0);
   const pending = useRef(0);
   const userId = data?.user?.id;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMinLoadingPassed(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     const target = feed.current;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -371,7 +376,7 @@ export default function Home() {
 
   return (
     <>
-      {loading ? (
+      {loading || !minLoadingPassed ? (
         <LoadingScreen />
       ) : !data?.user ? (
         <main className="gate">

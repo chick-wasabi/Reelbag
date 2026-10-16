@@ -10,6 +10,36 @@ const LOADING_TIPS = [
   "Polishing the video playback engine...",
   "Unlocking your shared vault...",
   "Syncing with the mothership...",
+  "Rewinding that one perfect transition...",
+  "Sorting chaos into very tidy folders...",
+  "Checking every pocket for lost reels...",
+  "Teaching pixels a few new tricks...",
+  "Dusting off your favorite clips...",
+  "Making room for one more masterpiece...",
+  "Untangling links from the group chat...",
+  "Sharpening thumbnails for maximum drama...",
+  "Convincing the algorithm to take a break...",
+  "Filing memes under extremely important...",
+  "Warming up the replay button...",
+  "Counting likes we definitely do not track...",
+  "Rescuing inspiration from tab overload...",
+  "Arranging your next creative rabbit hole...",
+  "Making your folders look suspiciously organized...",
+  "Finding the clip you swore you saved...",
+  "Packing tiny videos into a roomy vault...",
+  "Giving your favorites the VIP treatment...",
+  "Preparing a scroll worth getting lost in...",
+  "Turning link clutter into visual order...",
+  "Pinning the good stuff where it belongs...",
+  "Asking the cloud to hurry politely...",
+  "Calibrating maximum replay satisfaction...",
+  "Gathering remakes, recipes, and ridiculousness...",
+  "Keeping your inspiration safely off the floor...",
+  "Opening the vault with cinematic timing...",
+  "Making sure every reel knows its place...",
+  "Loading fewer distractions and better ideas...",
+  "Cueing your personal highlight reel...",
+  "Almost ready for the good part...",
 ];
 
 const REEL_TILES = Array.from({ length: 7 }, (_, index) => index);
@@ -44,13 +74,23 @@ function MarqueeTrack({ row }) {
 
 export default function LoadingScreen() {
   const [tipIndex, setTipIndex] = useState(0);
+  const [tipVisible, setTipVisible] = useState(true);
 
   useEffect(() => {
-    const interval = window.setInterval(
-      () => setTipIndex((current) => (current + 1) % LOADING_TIPS.length),
-      1800,
-    );
-    return () => window.clearInterval(interval);
+    let fadeInterval;
+    const firstFade = window.setTimeout(() => {
+      setTipVisible(false);
+      fadeInterval = window.setInterval(() => setTipVisible(false), 2000);
+    }, 1700);
+    const rotateInterval = window.setInterval(() => {
+      setTipIndex((current) => (current + 1) % LOADING_TIPS.length);
+      setTipVisible(true);
+    }, 2000);
+    return () => {
+      window.clearInterval(rotateInterval);
+      window.clearTimeout(firstFade);
+      if (fadeInterval) window.clearInterval(fadeInterval);
+    };
   }, []);
 
   return (
@@ -72,7 +112,11 @@ export default function LoadingScreen() {
         <h1 className="loading-wordmark">
           Reelbag<span>.</span>
         </h1>
-        <p className="loading-tip" role="status" aria-live="polite">
+        <p
+          className={`loading-tip ${tipVisible ? "is-visible" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
           {LOADING_TIPS[tipIndex]}
         </p>
         <div className="loading-progress" aria-hidden="true">

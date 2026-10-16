@@ -2386,6 +2386,15 @@ select option {
   color: #aeb6c3;
   font-size: 13px;
   line-height: 1.6;
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+}
+.loading-tip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 .loading-progress {
   width: min(100%, 270px);
@@ -2402,7 +2411,7 @@ select option {
   background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.5), var(--accent));
   box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.45);
   transform-origin: left center;
-  animation: loading-progress-fill 1.8s linear both;
+  animation: loading-progress-fill 2s linear both;
 }
 @keyframes loading-marquee {
   from {
