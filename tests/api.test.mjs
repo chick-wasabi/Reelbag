@@ -914,6 +914,10 @@ test("avatar and optional hint persist across devices with validation, isolation
     normalizeAvatarUrl(LEGACY_AVATAR_REPLACEMENTS[0].from),
     AVATARS[0].url,
   );
+  assert.equal(
+    normalizeAvatarUrl(LEGACY_AVATAR_REPLACEMENTS[1].from),
+    AVATARS[0].url,
+  );
   const username = name();
   const password = "Secure-profile-9876";
   const user = await call("auth/signup", "POST", {

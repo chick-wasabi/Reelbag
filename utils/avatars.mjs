@@ -2,36 +2,36 @@ const LEGACY_DICEBEAR_PREFIX =
   "https://api.dicebear.com/7.x/pixel-art/svg?seed=";
 
 const DEFINITIONS = [
-  ["celestial-guardian", "Celestial Guardian", "pixel_hero"],
-  ["neon-oni", "Neon Oni", "pixel_cyber_bot"],
-  ["ice-wolf", "Ice Wolf", "pixel_wizard"],
-  ["arcane-owl", "Arcane Owl", "pixel_ninja"],
-  ["lava-golem", "Lava Golem", "pixel_cute_cat"],
-  ["mecha-dragon", "Mecha Dragon", "pixel_astronaut"],
-  ["spectral-fox", "Spectral Fox", "pixel_pirate"],
-  ["abyssal-leviathan", "Abyssal Leviathan", "pixel_forest_elf"],
-  ["solar-lion", "Solar Lion", "pixel_dragon"],
-  ["moon-moth", "Moon Moth", "pixel_skater"],
-  ["armored-raven", "Armored Raven", "pixel_fox"],
-  ["cosmic-jellyfish", "Cosmic Jellyfish", "pixel_knight"],
-  ["cyber-cobra", "Cyber Cobra", "pixel_mermaid"],
-  ["forest-titan", "Forest Titan", "pixel_robot"],
-  ["storm-phoenix", "Storm Phoenix", "pixel_panda"],
-  ["void-duelist", "Void Duelist", "pixel_cowgirl"],
-  ["mushroom-alchemist", "Mushroom Alchemist", "pixel_cowboy"],
-  ["clockwork-beetle", "Clockwork Beetle", "pixel_fairy"],
-  ["haunted-knight", "Haunted Knight", "pixel_racer"],
-  ["aurora-stag", "Aurora Stag", "pixel_gamer"],
-  ["plasma-sentinel", "Plasma Sentinel", "pixel_samurai"],
-  ["shadow-panther", "Shadow Panther", "pixel_space_princess"],
-  ["coral-siren", "Coral Siren", "pixel_biker"],
-  ["thunder-ram", "Thunder Ram", "pixel_owl"],
-  ["mimic-vault", "Mimic Vault", "pixel_dreamer"],
-  ["emerald-mantis", "Emerald Mantis", "pixel_punk"],
-  ["comet-shark", "Comet Shark", "pixel_mage"],
-  ["porcelain-spirit", "Porcelain Spirit", "pixel_explorer"],
-  ["cactus-ranger", "Cactus Ranger", "pixel_rainbow"],
-  ["prismatic-eye", "Prismatic Eye", "pixel_moon"],
+  ["night-owl", "Night Owl", "pixel_hero", "celestial-guardian"],
+  ["sun-fox", "Sun Fox", "pixel_cyber_bot", "neon-oni"],
+  ["moon-wolf", "Moon Wolf", "pixel_wizard", "ice-wolf"],
+  ["forest-cat", "Forest Cat", "pixel_ninja", "arcane-owl"],
+  ["ember-red-panda", "Ember Red Panda", "pixel_cute_cat", "lava-golem"],
+  ["violet-stargazer", "Violet Stargazer", "pixel_astronaut", "mecha-dragon"],
+  ["silver-drifter", "Silver Drifter", "pixel_pirate", "spectral-fox"],
+  ["neon-night-runner", "Neon Night Runner", "pixel_forest_elf", "abyssal-leviathan"],
+  ["sunset-explorer", "Sunset Explorer", "pixel_dragon", "solar-lion"],
+  ["hooded-dreamer", "Hooded Dreamer", "pixel_skater", "moon-moth"],
+  ["cloud-drake", "Cloud Drake", "pixel_fox", "armored-raven"],
+  ["ember-phoenix", "Ember Phoenix", "pixel_knight", "cosmic-jellyfish"],
+  ["mushroom-sprite", "Mushroom Sprite", "pixel_mermaid", "cyber-cobra"],
+  ["snow-leopard", "Snow Leopard", "pixel_robot", "forest-titan"],
+  ["cosmic-axolotl", "Cosmic Axolotl", "pixel_panda", "storm-phoenix"],
+  ["raven-rogue", "Raven Rogue", "pixel_cowgirl", "void-duelist"],
+  ["golden-lion", "Golden Lion", "pixel_cowboy", "mushroom-alchemist"],
+  ["tide-serpent", "Tide Serpent", "pixel_fairy", "clockwork-beetle"],
+  ["lavender-moth", "Lavender Moth", "pixel_racer", "haunted-knight"],
+  ["moss-golem", "Moss Golem", "pixel_gamer", "aurora-stag"],
+  ["sunny-capybara", "Sunny Capybara", "pixel_samurai", "plasma-sentinel"],
+  ["teal-hyena", "Teal Hyena", "pixel_space_princess", "shadow-panther"],
+  ["cozy-raccoon", "Cozy Raccoon", "pixel_biker", "coral-siren"],
+  ["galaxy-panther", "Galaxy Panther", "pixel_owl", "thunder-ram"],
+  ["storm-ram", "Storm Ram", "pixel_dreamer", "mimic-vault"],
+  ["rose-celestial", "Rose Celestial", "pixel_punk", "emerald-mantis"],
+  ["crimson-wanderer", "Crimson Wanderer", "pixel_mage", "comet-shark"],
+  ["meadow-mage", "Meadow Mage", "pixel_explorer", "porcelain-spirit"],
+  ["spirit-rider", "Spirit Rider", "pixel_rainbow", "cactus-ranger"],
+  ["prism-feather", "Prism Feather", "pixel_moon", "prismatic-eye"],
 ];
 
 export const AVATARS = DEFINITIONS.map(([id, name]) => ({
@@ -41,11 +41,17 @@ export const AVATARS = DEFINITIONS.map(([id, name]) => ({
   url: `/avatars/${id}.webp`,
 }));
 
-export const LEGACY_AVATAR_REPLACEMENTS = DEFINITIONS.map(
-  ([id, , legacySeed]) => ({
-    from: `${LEGACY_DICEBEAR_PREFIX}${legacySeed}`,
-    to: `/avatars/${id}.webp`,
-  }),
+export const LEGACY_AVATAR_REPLACEMENTS = DEFINITIONS.flatMap(
+  ([id, , legacySeed, previousId]) => [
+    {
+      from: `${LEGACY_DICEBEAR_PREFIX}${legacySeed}`,
+      to: `/avatars/${id}.webp`,
+    },
+    {
+      from: `/avatars/${previousId}.webp`,
+      to: `/avatars/${id}.webp`,
+    },
+  ],
 );
 
 const LEGACY_AVATAR_LOOKUP = new Map(
