@@ -16,6 +16,7 @@ import PinForm from "../components/PinForm";
 import ReelCard from "../components/ReelCard";
 import ReelModal from "../components/ReelModal";
 import Header from "../components/Header";
+import LoadingScreen from "../components/LoadingScreen";
 import ProfileModal from "../components/ProfileModal";
 import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
@@ -371,12 +372,7 @@ export default function Home() {
   return (
     <>
       {loading ? (
-        <main className="gate">
-          <Brand />
-          <p className="muted-copy mt-12" role="status">
-            Connecting to your library…
-          </p>
-        </main>
+        <LoadingScreen />
       ) : !data?.user ? (
         <main className="gate">
           <Brand />
