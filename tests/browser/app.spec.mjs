@@ -1041,7 +1041,7 @@ test("accent previews recolor outlined logos, sidebar, favicon, buttons and focu
     expect(
       await page
         .locator(".sidebar")
-        .evaluate((el) => getComputedStyle(el).backgroundImage),
+        .evaluate((el) => getComputedStyle(el, "::before").backgroundImage),
     ).toContain(rgb.slice(4, -1));
     const favicon = await page
       .locator('link[data-reelbag-theme="true"]')

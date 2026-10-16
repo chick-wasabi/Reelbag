@@ -662,13 +662,7 @@ select option {
   width: var(--sidebar-width);
   height: 100dvh;
   flex-direction: column;
-  background:
-    radial-gradient(
-      ellipse at 10% 0%,
-      rgb(var(--accent-rgb) / 0.09),
-      transparent 65%
-    ),
-    linear-gradient(165deg, #15171b, #101214 70%);
+  background: linear-gradient(165deg, #15171b, #101214 70%);
   border-right: 1px solid rgb(var(--accent-rgb) / 0.12);
   padding: 29px 18px 18px;
 }
@@ -1825,9 +1819,39 @@ select option {
     transform 300ms ease-out;
 }
 .sidebar {
+  isolation: isolate;
   transition:
     width 500ms var(--motion-ease),
     transform 500ms var(--motion-ease);
+}
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  width: 50%;
+  background: linear-gradient(
+    to top,
+    transparent 8%,
+    rgb(var(--accent-rgb) / 0.12) 48%,
+    transparent 76%
+  );
+  background-position: 0 160%;
+  background-size: 100% 220%;
+  pointer-events: none;
+  animation: sidebar-pulse-up 14s linear infinite;
+}
+.sidebar > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes sidebar-pulse-up {
+  from {
+    background-position: 0 160%;
+  }
+  to {
+    background-position: 0 -120%;
+  }
 }
 .sidebar[data-collapsed="true"] {
   animation: sidebar-fold 500ms var(--motion-ease);
@@ -2097,24 +2121,29 @@ select option {
 .sunlight-card,
 .sunlight-card:hover,
 .sunlight-card:focus-within {
-  border-top-color: rgb(var(--accent-rgb) / 0.5);
-  border-left-color: rgb(var(--accent-rgb) / 0.36);
+  border-top-color: rgb(var(--accent-rgb) / 0.22);
+  border-left-color: rgb(var(--accent-rgb) / 0.18);
   border-right-color: var(--line);
   border-bottom-color: var(--line);
-  box-shadow: inset 1px 1px 0 rgb(var(--accent-rgb) / 0.12);
+  box-shadow:
+    inset 1px 1px 0 rgb(var(--accent-rgb) / 0.07),
+    -4px -4px 18px rgb(var(--accent-rgb) / 0.025);
   transition:
     border-color 300ms ease-out,
     box-shadow 300ms ease-out;
 }
 .sunlight-card:hover,
 .sunlight-card:focus-within {
-  border-top-color: rgb(var(--accent-rgb) / 0.75);
-  border-left-color: rgb(var(--accent-rgb) / 0.55);
+  border-top-color: rgb(var(--accent-rgb) / 0.32);
+  border-left-color: rgb(var(--accent-rgb) / 0.25);
+  box-shadow:
+    inset 1px 1px 0 rgb(var(--accent-rgb) / 0.1),
+    -4px -4px 20px rgb(var(--accent-rgb) / 0.04);
 }
 .sunlight-card .reel-heading {
   background: radial-gradient(
     ellipse at top left,
-    rgb(var(--accent-rgb) / 0.08),
+    rgb(var(--accent-rgb) / 0.055),
     transparent 70%
   );
   border-radius: 12px 12px 0 0;
@@ -2140,5 +2169,18 @@ select option {
   /* Switching to the phone layout must not animate a stale desktop gutter. */
   .workspace {
     transition: none;
+  }
+  .topbar.safe-area-header {
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+  }
+  .mobile-feed-padding {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  .mobile-feed-padding {
+    padding-right: 1.5rem;
+    padding-left: 1.5rem;
   }
 }

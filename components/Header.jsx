@@ -17,7 +17,7 @@ export default function Header({
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star }[sectionKind] || Grid2X2;
   return (
-    <header className="topbar">
+    <header className="topbar safe-area-header">
       <div className="mobile-brand">
         <Brand slogan />
       </div>

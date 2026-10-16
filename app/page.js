@@ -429,7 +429,7 @@ export default function Home() {
             <main
               ref={feed}
               data-view={selected}
-              className="stream"
+              className="stream mobile-feed-padding"
               id="main-content"
             >
               {reels.length ? (
