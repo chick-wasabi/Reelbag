@@ -2420,6 +2420,37 @@ select option {
     padding-right: 1rem;
     padding-left: 1rem;
   }
+  .pull-refresh-indicator {
+    position: fixed;
+    top: max(8px, env(safe-area-inset-top, 0px));
+    left: 50%;
+    z-index: 85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 118px;
+    height: 34px;
+    border: 1px solid rgb(var(--accent-rgb) / 0.25);
+    border-radius: 999px;
+    background: rgb(11 15 23 / 0.94);
+    box-shadow: 0 8px 28px rgb(0 0 0 / 0.38);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 650;
+    opacity: 0;
+    transition: opacity 160ms ease-out, transform 180ms ease-out;
+    pointer-events: none;
+  }
+  .pull-refresh-indicator:not(.is-visible) { visibility: hidden; }
+  .pull-refresh-indicator.is-refreshing,
+  .pull-refresh-indicator.is-visible {
+    opacity: 1;
+  }
+}
+@media (min-width: 768px) {
+  .pull-refresh-indicator {
+    display: none;
+  }
 }
 @media (min-width: 640px) and (max-width: 767px) {
   .mobile-feed-padding {

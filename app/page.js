@@ -26,6 +26,8 @@ import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 
 export default function Home() {
   const [data, setData] = useState(null);
@@ -40,10 +42,47 @@ export default function Home() {
   const [error, setError] = useState("");
   const [sharedUrl, setSharedUrl] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
+  const modalRef = useRef(null);
+  const pullStart = useRef(null);
+  const pullDistanceRef = useRef(0);
   const userId = data?.user?.id;
+  useEffect(() => {
+    modalRef.current = modal;
+  }, [modal]);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let lastBackPress = 0;
+    let listener;
+    CapacitorApp.addListener("backButton", () => {
+      if (document.querySelector('[role="dialog"]')) {
+        window.history.back();
+        return;
+      }
+      if (document.querySelector('.profile-menu, .reel-menu[open]')) {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        return;
+      }
+      if (window.location.pathname !== "/") {
+        window.history.back();
+        return;
+      }
+      const now = Date.now();
+      if (now - lastBackPress < 2000) {
+        CapacitorApp.exitApp();
+        return;
+      }
+      lastBackPress = now;
+      setNotice("Press back again to exit Reelbag.");
+    }).then((handle) => {
+      listener = handle;
+    });
+    return () => listener?.remove();
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => setMinTimeElapsed(true), 3000);
     return () => window.clearTimeout(timer);
@@ -227,6 +266,57 @@ export default function Home() {
   }, [userId, apply, clearSession]);
 
   useEffect(() => {
+    if (!userId) return;
+    function startPull(event) {
+      if (window.innerWidth >= 768 || window.scrollY > 0 || modalRef.current)
+        return;
+      pullStart.current = event.touches[0]?.clientY ?? null;
+      pullDistanceRef.current = 0;
+    }
+    function movePull(event) {
+      if (pullStart.current == null || pullRefreshing) return;
+      const distance = Math.max(
+        0,
+        Math.min(110, (event.touches[0].clientY - pullStart.current) * 0.55),
+      );
+      pullDistanceRef.current = distance;
+      setPullDistance(distance);
+      if (distance > 4) event.preventDefault();
+    }
+    async function endPull() {
+      const shouldRefresh = pullDistanceRef.current >= 68;
+      pullStart.current = null;
+      pullDistanceRef.current = 0;
+      if (!shouldRefresh) {
+        setPullDistance(0);
+        return;
+      }
+      setPullRefreshing(true);
+      setPullDistance(52);
+      try {
+        const next = await api("library");
+        apply(next);
+        setNotice("Reelbag refreshed.");
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setPullRefreshing(false);
+        setPullDistance(0);
+      }
+    }
+    window.addEventListener("touchstart", startPull, { passive: true });
+    window.addEventListener("touchmove", movePull, { passive: false });
+    window.addEventListener("touchend", endPull, { passive: true });
+    window.addEventListener("touchcancel", endPull, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", startPull);
+      window.removeEventListener("touchmove", movePull);
+      window.removeEventListener("touchend", endPull);
+      window.removeEventListener("touchcancel", endPull);
+    };
+  }, [userId, pullRefreshing, apply]);
+
+  useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 4500);
     return () => clearTimeout(timer);
@@ -397,6 +487,14 @@ export default function Home() {
         <div
           className={`app-shell has-sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}
         >
+          <div
+            className={`pull-refresh-indicator ${pullDistance > 0 ? "is-visible" : ""} ${pullRefreshing ? "is-refreshing" : ""}`}
+            style={{ transform: `translate(-50%, ${pullDistance - 48}px)` }}
+            role="status"
+            aria-live="polite"
+          >
+            <span>{pullRefreshing ? "Refreshing…" : pullDistance >= 68 ? "Release to refresh" : "Pull to refresh"}</span>
+          </div>
           <Sidebar
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}

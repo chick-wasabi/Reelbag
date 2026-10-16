@@ -13,6 +13,7 @@ export default function Modal({
   const descriptionId = useId();
   const ref = useRef(null);
   const closeRef = useRef(onClose);
+  const historyActive = useRef(false);
   useEffect(() => {
     closeRef.current = onClose;
   }, [onClose]);
@@ -65,6 +66,23 @@ export default function Modal({
       document.body.style.overflow = overflow;
       document.removeEventListener("keydown", onKey);
       previous?.focus();
+    };
+  }, []);
+  useEffect(() => {
+    history.pushState({ reelbagOverlay: true }, "");
+    historyActive.current = true;
+    function onPopState() {
+      if (!historyActive.current) return;
+      historyActive.current = false;
+      closeRef.current();
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      if (historyActive.current) {
+        historyActive.current = false;
+        history.back();
+      }
     };
   }, []);
   return (
