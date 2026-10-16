@@ -53,6 +53,79 @@ export default function ShareModal({ type, item, onClose, onChange }) {
   const link = details?.shareToken
     ? `${window.location.origin}/share/${type}/${details.shareToken}`
     : "";
+  const secretLinkSection = (
+    <section className="sharing-section form-stack">
+      <h3>
+        <Link2 size={17} /> Secret link
+      </h3>
+      <p className="muted-copy">
+        Anyone with this link can join as a viewer after logging in. Treat it
+        as private. Disabling a link stops future joins; revoke existing
+        members separately.
+      </p>
+      {link && (
+        <label className="field-label">
+          Secret share URL
+          <input readOnly value={link} onFocus={(e) => e.target.select()} />
+        </label>
+      )}
+      <button
+        className={`button-primary secret-link-button ${copied ? "is-copied" : ""}`}
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          run(async () => {
+            const result = await api(`${base}/link`, {
+              method: "POST",
+              body: {},
+            });
+            setDetails((previous) => ({
+              ...previous,
+              shareToken: result.shareToken,
+            }));
+            const url = `${window.location.origin}/share/${type}/${result.shareToken}`;
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              copiedTimer.current = setTimeout(() => setCopied(false), 2200);
+            } catch {
+              throw new Error(
+                "Link created. Select and copy the Secret share URL above.",
+              );
+            }
+          }, "Secret link copied.")
+        }
+      >
+        <span
+          className="secret-link-label"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {copied ? (
+            "✓ Link Copied!"
+          ) : (
+            <>
+              <Copy size={16} aria-hidden="true" /> Copy Secret Link
+            </>
+          )}
+        </span>
+      </button>
+      {link && (
+        <button
+          className="button-quiet"
+          disabled={busy}
+          onClick={() =>
+            run(
+              () => api(`${base}/link`, { method: "DELETE", body: {} }),
+              "Secret link disabled.",
+            )
+          }
+        >
+          Disable secret link
+        </button>
+      )}
+    </section>
+  );
   return (
     <Modal
       title={`Share ${type}`}
@@ -65,6 +138,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
         <p role="status">Loading sharing settings…</p>
       ) : (
         <div className="form-stack">
+          {type === "reel" && secretLinkSection}
           <form
             className="sharing-section form-stack"
             onSubmit={(e) => {
@@ -79,7 +153,8 @@ export default function ShareModal({ type, item, onClose, onChange }) {
             }}
           >
             <h3>
-              <UserRound size={17} /> Invite by username
+              <UserRound size={17} />
+              {type === "reel" ? "Send to Reelbag user" : "Invite by username"}
             </h3>
             <label className="field-label">
               Reelbag username
@@ -95,22 +170,22 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 disabled={busy}
               />
             </label>
-            <label className="field-label">
-              Access role
-              <select
-                aria-label="Access role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={busy}
-              >
-                <option value="viewer">Viewer — watch only</option>
-                {type === "folder" && (
+            {type === "folder" && (
+              <label className="field-label">
+                Access role
+                <select
+                  aria-label="Access role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  disabled={busy}
+                >
+                  <option value="viewer">Viewer — watch only</option>
                   <option value="collaborator">
                     Collaborator — watch and add reels
                   </option>
-                )}
-              </select>
-            </label>
+                </select>
+              </label>
+            )}
             <button
               className={`invite-button ${hasUsername ? "is-ready" : ""}`}
               disabled={busy}
@@ -120,116 +195,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
               </span>
             </button>
           </form>
-          {type === "reel" && (
-            <section className="sharing-section form-stack">
-              <h3>
-                <Instagram size={17} /> Original Instagram Reel
-              </h3>
-              <p className="muted-copy">
-                Copy the original Instagram link without granting Reelbag access.
-              </p>
-              <button
-                className="button-secondary"
-                type="button"
-                disabled={busy}
-                onClick={async () => {
-                  try {
-                    setCopied(false);
-                    await navigator.clipboard.writeText(item.url);
-                    setInstagramCopied(true);
-                    clearTimeout(copiedTimer.current);
-                    copiedTimer.current = setTimeout(
-                      () => setInstagramCopied(false),
-                      2200,
-                    );
-                  } catch {
-                    setError("Could not access your clipboard. Copy the Reel link from Instagram instead.");
-                  }
-                }}
-              >
-                {instagramCopied ? <Check size={16} /> : <Copy size={16} />}
-                {instagramCopied ? "Instagram Link Copied!" : "Copy Instagram Link"}
-              </button>
-            </section>
-          )}
-          <section className="sharing-section form-stack">
-            <h3>
-              <Link2 size={17} /> Secret link
-            </h3>
-            <p className="muted-copy">
-              Anyone with this link can join as a viewer after logging in. Treat
-              it as private. Disabling a link stops future joins; revoke
-              existing members separately.
-            </p>
-            {link && (
-              <label className="field-label">
-                Secret share URL
-                <input
-                  readOnly
-                  value={link}
-                  onFocus={(e) => e.target.select()}
-                />
-              </label>
-            )}
-            <button
-              className={`button-primary secret-link-button ${copied ? "is-copied" : ""}`}
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                run(async () => {
-                  const result = await api(`${base}/link`, {
-                    method: "POST",
-                    body: {},
-                  });
-                  setDetails((previous) => ({
-                    ...previous,
-                    shareToken: result.shareToken,
-                  }));
-                  const url = `${window.location.origin}/share/${type}/${result.shareToken}`;
-                  try {
-                    await navigator.clipboard.writeText(url);
-                    setCopied(true);
-                    copiedTimer.current = setTimeout(
-                      () => setCopied(false),
-                      2200,
-                    );
-                  } catch {
-                    throw new Error(
-                      "Link created. Select and copy the Secret share URL above.",
-                    );
-                  }
-                }, "Secret link copied.")
-              }
-            >
-              <span
-                className="secret-link-label"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                {copied ? (
-                  "✓ Link Copied!"
-                ) : (
-                  <>
-                    <Copy size={16} aria-hidden="true" /> Copy Secret Link
-                  </>
-                )}
-              </span>
-            </button>
-            {link && (
-              <button
-                className="button-quiet"
-                disabled={busy}
-                onClick={() =>
-                  run(
-                    () => api(`${base}/link`, { method: "DELETE", body: {} }),
-                    "Secret link disabled.",
-                  )
-                }
-              >
-                Disable secret link
-              </button>
-            )}
-          </section>
+          {type === "folder" && secretLinkSection}
           <section className="sharing-section">
             <h3>People with access</h3>
             {!details.members.filter((member) => member.status !== "declined")
@@ -266,6 +232,42 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 </div>
               ))}
           </section>
+          {type === "reel" && (
+            <section className="sharing-section form-stack">
+              <h3>
+                <Instagram size={17} /> Original Instagram Reel
+              </h3>
+              <p className="muted-copy">
+                Copy the original Instagram link without granting Reelbag access.
+              </p>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  try {
+                    setCopied(false);
+                    await navigator.clipboard.writeText(item.url);
+                    setInstagramCopied(true);
+                    clearTimeout(copiedTimer.current);
+                    copiedTimer.current = setTimeout(
+                      () => setInstagramCopied(false),
+                      2200,
+                    );
+                  } catch {
+                    setError(
+                      "Could not access your clipboard. Copy the Reel link from Instagram instead.",
+                    );
+                  }
+                }}
+              >
+                {instagramCopied ? <Check size={16} /> : <Copy size={16} />}
+                {instagramCopied
+                  ? "Instagram Link Copied!"
+                  : "Copy Instagram Link"}
+              </button>
+            </section>
+          )}
         </div>
       )}
       {error && (
