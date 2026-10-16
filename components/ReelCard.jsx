@@ -23,6 +23,8 @@ export default function ReelCard({
   onDelete,
   onToggle,
   onShare,
+  onDragStart,
+  onDragEnd,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
   const ref = useRef(null);
@@ -86,9 +88,18 @@ export default function ReelCard({
   }, []);
   return (
     <article
-      className="reel-card ambient-glass-card justify-self-center"
+      className={`reel-card ambient-glass-card justify-self-center ${canManage ? "reel-card-draggable" : ""}`}
       style={{ width: "270px", maxWidth: "100%" }}
       ref={ref}
+      draggable={canManage}
+      onDragStart={(event) => {
+        if (!canManage) return;
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("application/x-reelbag-reel", reel.id);
+        event.dataTransfer.setData("text/plain", reel.id);
+        onDragStart?.(reel);
+      }}
+      onDragEnd={() => onDragEnd?.()}
     >
       <div className="reel-heading">
         <div className="min-w-0">

@@ -21,6 +21,7 @@ import ProfileModal from "../components/ProfileModal";
 import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
+import FriendsModal from "../components/FriendsModal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
@@ -344,6 +345,14 @@ export default function Home() {
       setDeleting(false);
     }
   }
+  async function shareWithFriend(friend, reelId) {
+    try {
+      await mutate(`friends/${friend.id}/share/${reelId}`, "POST");
+      setNotice(`Shared with @${friend.username}. Your Reel stayed in its original folder.`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
   const reels = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (data?.reels || []).filter(
@@ -402,6 +411,10 @@ export default function Home() {
             onShare={(folder) => manageFolder(folder, "share")}
             onDelete={(folder) => manageFolder(folder, "delete")}
             onLock={(folder) => selectFolder(selected, folder.id)}
+            friends={data.friends || []}
+            friendRequestCount={data.friendRequests?.length || 0}
+            onOpenFriends={() => setModal({ type: "friends" })}
+            onDropReel={shareWithFriend}
           />
           <div className="workspace">
             <Header
@@ -460,6 +473,8 @@ export default function Home() {
                       }}
                       onMove={() => setModal({ type: "moveReel", reel })}
                       onDelete={() => setModal({ type: "deleteReel", reel })}
+                      onDragStart={() => setNotice(`Drop “${reel.title}” onto a friend in the sidebar.`)}
+                      onDragEnd={() => setNotice("")}
                     />
                   ))}
                 </div>
@@ -514,6 +529,14 @@ export default function Home() {
             setModal(null);
             setNotice(message);
           }}
+        />
+      )}
+      {data?.user && modal?.type === "friends" && (
+        <FriendsModal
+          data={data}
+          onClose={() => setModal(null)}
+          onMutate={mutate}
+          onNotice={setNotice}
         />
       )}
       {data?.user && modal?.type === "share" && (

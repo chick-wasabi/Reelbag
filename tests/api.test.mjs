@@ -88,6 +88,71 @@ test("automatic initialization is repeatable and accounts use bcrypt with opaque
   assert.equal((await call("auth/session")).data.user, null);
 });
 
+test("friends can accept requests and receive dropped reels without moving the owner's copy", async () => {
+  const sender = await account();
+  const recipient = await account();
+  const created = await call(
+    "reels",
+    "POST",
+    {
+      title: "Shared inspiration",
+      url: "https://www.instagram.com/reel/DFriendShare1/",
+      folderId: null,
+    },
+    sender.cookie,
+  );
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  const reelId = created.data.reels[0].id;
+
+  const requested = await call(
+    "friends/request",
+    "POST",
+    { username: recipient.username },
+    sender.cookie,
+  );
+  assert.equal(requested.status, 201, JSON.stringify(requested.data));
+  assert.equal(requested.data.outgoingFriendRequests.length, 1);
+  const friendshipId = requested.data.outgoingFriendRequests[0].id;
+
+  const denied = await call(
+    `friends/${friendshipId}/share/${reelId}`,
+    "POST",
+    {},
+    sender.cookie,
+  );
+  assert.equal(denied.status, 404);
+
+  const accepted = await call(
+    `friends/${friendshipId}/respond`,
+    "POST",
+    { status: "accepted" },
+    recipient.cookie,
+  );
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.data));
+  assert.equal(accepted.data.friends[0].username, sender.username);
+
+  const shared = await call(
+    `friends/${friendshipId}/share/${reelId}`,
+    "POST",
+    {},
+    sender.cookie,
+  );
+  assert.equal(shared.status, 200, JSON.stringify(shared.data));
+  assert.equal(shared.data.reels.some((reel) => reel.id === reelId), true);
+  const received = await call("library", "GET", null, recipient.cookie);
+  assert.equal(received.data.reels.find((reel) => reel.id === reelId).canManage, false);
+
+  const removed = await call(
+    `friends/${friendshipId}`,
+    "DELETE",
+    {},
+    recipient.cookie,
+  );
+  assert.equal(removed.status, 200);
+  const revoked = await call("library", "GET", null, recipient.cookie);
+  assert.equal(revoked.data.reels.some((reel) => reel.id === reelId), false);
+});
+
 test("admin analytics require the named account and a constant-time PIN check", async () => {
   const password = "Strong-admin-test-8842";
   const admin = await call("auth/signup", "POST", {

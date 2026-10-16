@@ -7,9 +7,12 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
+  UserPlus,
 } from "lucide-react";
 import SidebarFolderItem from "./SidebarFolderItem";
 import Brand from "./Brand";
+import Avatar from "./Avatar";
+import { useState } from "react";
 
 export default function Sidebar({
   collapsed,
@@ -25,7 +28,12 @@ export default function Sidebar({
   onShare,
   onDelete,
   onLock,
+  friends = [],
+  friendRequestCount = 0,
+  onOpenFriends,
+  onDropReel,
 }) {
+  const [dropTarget, setDropTarget] = useState(null);
   return (
     <aside
       className={`sidebar sidebar-ambient hidden md:flex ${collapsed ? "sidebar-collapsed" : ""}`}
@@ -151,6 +159,62 @@ export default function Sidebar({
               </div>
             </>
           )}
+          <div className="sidebar-folder-heading sidebar-friends-heading">
+            <span className="sidebar-label">FRIENDS</span>
+            {friendRequestCount > 0 && (
+              <span className="friend-request-count" title={`${friendRequestCount} pending request${friendRequestCount === 1 ? "" : "s"}`}>
+                {friendRequestCount}
+              </span>
+            )}
+            <button
+              className="icon-button"
+              aria-label="Add or manage friends"
+              title="Add or manage friends"
+              onClick={onOpenFriends}
+            >
+              <UserPlus size={17} />
+            </button>
+          </div>
+          <div className="sidebar-friend-list">
+            {friends.map((friend) => (
+              <button
+                key={friend.id}
+                className={`sidebar-friend ${dropTarget === friend.id ? "is-drop-target" : ""}`}
+                onClick={onOpenFriends}
+                onDragEnter={(event) => {
+                  if (event.dataTransfer.types.includes("application/x-reelbag-reel")) {
+                    event.preventDefault();
+                    setDropTarget(friend.id);
+                  }
+                }}
+                onDragOver={(event) => {
+                  if (event.dataTransfer.types.includes("application/x-reelbag-reel")) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "copy";
+                  }
+                }}
+                onDragLeave={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(null);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const reelId = event.dataTransfer.getData("application/x-reelbag-reel");
+                  setDropTarget(null);
+                  if (reelId) onDropReel(friend, reelId);
+                }}
+                title={`Drop a Reel to share with @${friend.username}`}
+              >
+                <Avatar url={friend.avatarUrl} frame={friend.avatarFrame} name={friend.displayName} size={28} />
+                <span className="sidebar-label">{friend.displayName}</span>
+                <span className="friend-drop-hint">Drop</span>
+              </button>
+            ))}
+            {!friends.length && (
+              <button className="sidebar-empty friend-empty-button sidebar-label" onClick={onOpenFriends}>
+                Add a friend, then drop Reels here.
+              </button>
+            )}
+          </div>
         </div>
       </nav>
     </aside>

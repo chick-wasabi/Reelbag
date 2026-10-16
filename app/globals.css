@@ -620,6 +620,172 @@ select option {
   }
 }
 
+/* Friends are compact share targets: dropping adds access and never moves a Reel. */
+.sidebar-friends-heading {
+  margin-top: 24px;
+}
+.friend-request-count {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 750;
+}
+.sidebar-friend-list {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 18px;
+}
+.sidebar-friend {
+  display: flex;
+  min-height: 43px;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 9px;
+  color: var(--text-secondary);
+  text-align: left;
+}
+.sidebar-friend:hover {
+  border-color: rgb(var(--accent-rgb) / 0.13);
+  background: rgb(var(--accent-rgb) / 0.045);
+}
+.sidebar-friend.is-drop-target {
+  border-color: var(--accent);
+  background: rgb(var(--accent-rgb) / 0.14);
+  box-shadow: 0 0 24px rgb(var(--accent-rgb) / 0.16);
+  color: var(--accent);
+  transform: translateX(3px);
+}
+.sidebar-friend .profile-avatar {
+  flex: 0 0 auto;
+}
+.friend-drop-hint {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sidebar-friend.is-drop-target .friend-drop-hint {
+  opacity: 1;
+}
+.friend-empty-button {
+  display: block;
+  width: calc(100% - 26px);
+  text-align: left;
+}
+.sidebar-collapsed .sidebar-friend {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sidebar-collapsed .friend-drop-hint,
+.sidebar-collapsed .friend-request-count {
+  display: none;
+}
+.reel-card-draggable {
+  cursor: grab;
+}
+.reel-card-draggable:active {
+  cursor: grabbing;
+}
+.friend-add-form {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+.friend-add-button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+.friend-modal-section {
+  margin-top: 24px;
+}
+.friend-modal-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.friend-modal-list {
+  display: grid;
+  gap: 8px;
+}
+.friend-modal-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 0.018);
+}
+.friend-modal-identity {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+.friend-modal-identity strong,
+.friend-modal-identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friend-modal-identity strong {
+  font-size: 14px;
+}
+.friend-modal-identity span,
+.friend-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.friend-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.compact-button {
+  min-height: 34px;
+  padding: 7px 11px;
+}
+.friend-pending-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.friend-pending-list span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+@media (max-width: 560px) {
+  .friend-add-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .friend-request-actions .button-primary {
+    font-size: 0;
+  }
+  .friend-request-actions .button-primary svg {
+    margin: 0;
+  }
+}
+
 .auth-tabs {
   display: flex;
   gap: 4px;
