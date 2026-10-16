@@ -73,7 +73,7 @@ export default function ReelModal({
             maxLength={200}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Reelbag"
+            placeholder="Something to remember this by"
           />
         </label>
         <label className="field-label">
