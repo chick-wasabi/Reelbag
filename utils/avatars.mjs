@@ -37,3 +37,6 @@ export const AVATARS = [
 export const DEFAULT_AVATAR = AVATARS[0].url;
 export const isAvatarUrl = (value) =>
   AVATARS.some((avatar) => avatar.url === value);
+
+// Every motion transforms the whole artwork, so all 30 seeds share the same rig.
+export const AVATAR_MOTIONS = ["tilt", "look", "nod", "rise"];

@@ -482,6 +482,15 @@ test("sidebar collapses, folder counts follow moves, and full-width cropped embe
   await expect(
     page.locator('script[src="https://www.instagram.com/embed.js"]'),
   ).toHaveCount(0);
+  await page
+    .locator("#main-content")
+    .evaluate((el) =>
+      Promise.all(
+        el
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
   const clip = card.locator(".embed-shell");
   const clipped = await clip.boundingBox();
   const frame = await iframe.boundingBox();
@@ -1531,4 +1540,65 @@ test("secret-link action follows the accent and reports clipboard success withou
   );
   await expect(button).toHaveText("Copy Secret Link");
   await expect(button).not.toHaveClass(/is-copied/);
+});
+
+test("motion preserves players across filters, cycles the avatar, and honors reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1000 });
+  await register(page);
+  await addReel(page, "Motion inspiration", "MOTION_REEL", "");
+  await page
+    .getByRole("button", { name: "Favorite Motion inspiration", exact: true })
+    .click();
+  const frame = page.locator("iframe.reel-iframe");
+  await frame.evaluate((element) => {
+    window.__motionPlayer = element;
+  });
+  const avatar = page.locator(".avatar-button .profile-avatar-live");
+  await expect(avatar).toHaveAttribute("data-animating", "true");
+  const initialMotion = await avatar.getAttribute("data-motion");
+  await page.getByRole("button", { name: "Favorites", exact: true }).click();
+  expect(
+    await frame.evaluate((element) => element === window.__motionPlayer),
+  ).toBe(true);
+  await expect(
+    page.getByRole("heading", { name: "Favorites", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() => avatar.getAttribute("data-motion"), { timeout: 10000 })
+    .not.toBe(initialMotion);
+  expect(
+    await page
+      .locator(".reel-fab")
+      .evaluate((el) => getComputedStyle(el, "::before").animationDuration),
+  ).toBe("12s");
+  const edges = await page.locator(".reel-card").evaluate((el) => {
+    const style = getComputedStyle(el);
+    return [
+      style.borderTopColor,
+      style.borderLeftColor,
+      style.borderRightColor,
+      style.borderBottomColor,
+    ];
+  });
+  expect(edges[0]).not.toBe(edges[2]);
+  expect(edges[1]).not.toBe(edges[3]);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(avatar).toHaveAttribute("data-animating", "false");
+  expect(
+    await page
+      .locator(".reel-fab")
+      .evaluate((el) => getComputedStyle(el, "::before").animationName),
+  ).toBe("none");
+  await expect(page.locator(".sidebar")).toHaveCSS("transition-duration", "0s");
+  await page.getByRole("button", { name: "All Reels", exact: true }).click();
+  expect(
+    await page
+      .locator("#main-content")
+      .evaluate((el) => el.getAnimations().length),
+  ).toBe(0);
+  expect(
+    await frame.evaluate((element) => element === window.__motionPlayer),
+  ).toBe(true);
 });

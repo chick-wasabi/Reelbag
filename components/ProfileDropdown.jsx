@@ -70,6 +70,8 @@ export default function ProfileDropdown({ user, onOpen, onLogout }) {
         }}
       >
         <Avatar
+          key={user.avatarUrl}
+          animated
           url={user.avatarUrl}
           name={`${user.displayName || user.username}'s avatar`}
           size={36}

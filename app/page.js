@@ -36,9 +36,32 @@ export default function Home() {
   const [error, setError] = useState("");
   const [sharedUrl, setSharedUrl] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
   const userId = data?.user?.id;
+  useEffect(() => {
+    const target = feed.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let animation;
+    if (target?.animate && !reduced.matches) {
+      animation = target.animate(
+        [
+          { opacity: 0.35, transform: "translateY(8px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        { duration: 300, easing: "cubic-bezier(0.2,0.7,0.2,1)" },
+      );
+    }
+    const stop = () => {
+      if (reduced.matches) animation?.cancel();
+    };
+    reduced.addEventListener("change", stop);
+    return () => {
+      animation?.cancel();
+      reduced.removeEventListener("change", stop);
+    };
+  }, [selected, userId]);
   const [appearancePreview, setAppearancePreview] = useState(null);
   const appearance =
     appearancePreview || data?.user?.appearance || DEFAULT_APPEARANCE;
@@ -403,7 +426,12 @@ export default function Home() {
                 onLock={(folder) => selectFolder(selected, folder.id)}
               />
             </div>
-            <main className="stream" id="main-content">
+            <main
+              ref={feed}
+              data-view={selected}
+              className="stream"
+              id="main-content"
+            >
               {reels.length ? (
                 <div
                   className="reel-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"

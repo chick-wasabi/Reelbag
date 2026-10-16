@@ -86,7 +86,7 @@ export default function ReelCard({
   }, []);
   return (
     <article
-      className="reel-card w-full max-w-[380px] justify-self-center"
+      className="reel-card sunlight-card w-full max-w-[380px] justify-self-center"
       ref={ref}
     >
       <div className="reel-heading">
