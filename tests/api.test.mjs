@@ -289,6 +289,18 @@ test("private or removed Instagram embeds are rejected before they enter the lib
   assert.equal(library.data.reels.length, 0);
 });
 
+test("reels without a custom title use the Reelbag fallback", async () => {
+  const user = await account();
+  const created = await call(
+    "reels",
+    "POST",
+    { title: "", url: "https://www.instagram.com/reel/DNoCaption1/", folderId: null },
+    user.cookie,
+  );
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  assert.equal(created.data.reels[0].title, "Reelbag");
+});
+
 test("admin analytics require the named account and a constant-time PIN check", async () => {
   const password = "Strong-admin-test-8842";
   const admin = await call("auth/signup", "POST", {

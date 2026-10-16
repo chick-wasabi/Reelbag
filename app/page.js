@@ -29,6 +29,7 @@ import { api } from "../utils/api.mjs";
 import { parseReelUrl } from "../utils/reels.mjs";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 
 export default function Home() {
   const [data, setData] = useState(null);
@@ -45,6 +46,7 @@ export default function Home() {
   const [deleting, setDeleting] = useState(false);
   const [deletedReels, setDeletedReels] = useState([]);
   const [trashUnlocked, setTrashUnlocked] = useState(false);
+  const [appUpdate, setAppUpdate] = useState(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const feed = useRef(null);
@@ -58,6 +60,35 @@ export default function Home() {
   useEffect(() => {
     modalRef.current = modal;
   }, [modal]);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let active = true;
+    async function check() {
+      try {
+        const [info, response] = await Promise.all([
+          CapacitorApp.getInfo(),
+          fetch("/api/app-update", { cache: "no-store" }),
+        ]);
+        if (!response.ok) return;
+        const latest = await response.json();
+        const currentBuild = Number(info.build || info.version.split(".").at(-1));
+        if (active && Number.isInteger(latest.build) && latest.build > currentBuild) {
+          setAppUpdate({
+            ...latest,
+            install: () => Browser.open({ url: latest.downloadUrl }),
+          });
+        }
+      } catch {
+        // Update checks must never interrupt the vault.
+      }
+    }
+    check();
+    const timer = setInterval(check, 15 * 60 * 1000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     document.documentElement.dataset.nativeApp = "true";
@@ -584,6 +615,7 @@ export default function Home() {
               onOpen={(type) => setModal({ type })}
               onLogout={logout}
               onLibraryChange={() => mutate("library", "GET")}
+              appUpdate={appUpdate}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -773,9 +805,14 @@ export default function Home() {
           }
           onSave={saveReel}
           onClose={() => setModal(null)}
-          onCreateFolder={(draft) =>
-            setModal({ type: "folder", returnTo: { ...modal, draft } })
-          }
+          onCreateFolder={async (name) => {
+            const next = await mutate("folders", "POST", {
+              name,
+              protected: false,
+              pin: "",
+            });
+            return next.folderId;
+          }}
         />
       )}
       {data?.user && modal?.type === "folder" && (

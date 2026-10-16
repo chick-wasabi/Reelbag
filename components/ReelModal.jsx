@@ -22,6 +22,9 @@ export default function ReelModal({
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [folderBusy, setFolderBusy] = useState(false);
   async function submit(event) {
     event.preventDefault();
     const parsed = parseReelUrl(url);
@@ -34,7 +37,7 @@ export default function ReelModal({
       await onSave({
         id: reel?.id || uid(),
         ...parsed,
-        title: title.trim(),
+        title: title.trim() || "Reelbag",
         folderId: folder || null,
         createdAt: reel?.createdAt || new Date().toISOString(),
       });
@@ -55,7 +58,7 @@ export default function ReelModal({
         <label className="field-label">
           Instagram Reel Link
           <input
-            data-autofocus
+            data-autofocus={!draft}
             required
             type="url"
             maxLength={2048}
@@ -65,18 +68,17 @@ export default function ReelModal({
           />
         </label>
         <label className="field-label">
-          Title / Name
+          Title / Name <span className="font-normal text-zinc-500">(optional)</span>
           <input
-            required
             maxLength={200}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="A name to remember it by"
+            placeholder="Reelbag"
           />
         </label>
         <label className="field-label">
           Folder <span className="font-normal text-zinc-500">(optional)</span>
-          <select value={folder} onChange={(e) => setFolder(e.target.value)}>
+          <select data-autofocus={Boolean(draft)} value={folder} onChange={(e) => setFolder(e.target.value)}>
             <option value="">No folder</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
@@ -90,11 +92,44 @@ export default function ReelModal({
           className="inline-action"
           type="button"
           disabled={busy}
-          onClick={() => onCreateFolder({ url, title, folderId: folder })}
+          onClick={() => setCreatingFolder((value) => !value)}
         >
           <Plus size={14} />
           Create New Folder
         </button>
+        {creatingFolder && (
+          <div className="inline-folder-create">
+            <input
+              autoFocus
+              value={folderName}
+              maxLength={60}
+              placeholder="New folder name"
+              aria-label="New folder name"
+              onChange={(event) => setFolderName(event.target.value)}
+            />
+            <button
+              type="button"
+              className="button-secondary"
+              disabled={folderBusy || !folderName.trim()}
+              onClick={async () => {
+                setFolderBusy(true);
+                setError("");
+                try {
+                  const id = await onCreateFolder(folderName.trim());
+                  setFolder(id);
+                  setFolderName("");
+                  setCreatingFolder(false);
+                } catch (err) {
+                  setError(err.message);
+                } finally {
+                  setFolderBusy(false);
+                }
+              }}
+            >
+              {folderBusy ? "Creating…" : "Create"}
+            </button>
+          </div>
+        )}
         {error && (
           <p className="error-text" role="alert">
             {error}
@@ -102,7 +137,7 @@ export default function ReelModal({
         )}
         <button
           className="button-primary w-full"
-          disabled={busy || !title.trim()}
+          disabled={busy || !parseReelUrl(url)}
         >
           {busy ? "Checking Reel…" : reel ? "Save changes" : "Save reel"}
         </button>

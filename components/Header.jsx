@@ -13,6 +13,7 @@ export default function Header({
   sectionTitle,
   sectionCount,
   sectionKind,
+  appUpdate,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -44,7 +45,7 @@ export default function Header({
       </label>
       <div className="header-actions">
         <NotificationCenter key={user.id} onChange={onLibraryChange} />
-        <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} />
+        <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} appUpdate={appUpdate} />
       </div>
     </header>
   );

@@ -59,7 +59,9 @@ jobs:
           if [ ! -f capacitor.config.ts ]; then
             npx cap init Reelbag app.vercel.reelbag.mobile --web-dir public
           fi
-          npx cap add android
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: Set Android package and SDK levels

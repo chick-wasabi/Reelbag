@@ -17,7 +17,7 @@ const ITEMS = [
   { id: "appearance", label: "Appearance & Settings", icon: Palette },
   { id: "data", label: "Data & Backups", icon: Database },
 ];
-export default function ProfileDropdown({ user, onOpen, onLogout }) {
+export default function ProfileDropdown({ user, onOpen, onLogout, appUpdate }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const trigger = useRef(null);
@@ -111,6 +111,19 @@ export default function ProfileDropdown({ user, onOpen, onLogout }) {
             <strong>{user.displayName || user.username}</strong>
             <span>@{user.username}</span>
           </div>
+          {appUpdate && (
+            <button
+              role="menuitem"
+              className="profile-update-action"
+              onClick={() => {
+                close(true);
+                appUpdate.install();
+              }}
+            >
+              <Download size={17} aria-hidden="true" />
+              <span>Update Reelbag <small>{appUpdate.tag}</small></span>
+            </button>
+          )}
           {ITEMS.map((item) => (
             <button
               role="menuitem"
