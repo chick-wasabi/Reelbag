@@ -1,5 +1,5 @@
 import Logo from "./Logo";
-export const SLOGAN = "Your personal vault for video remakes & inspiration";
+export const SLOGAN = "Catch the clip, don't let it slip.";
 export default function Brand({ slogan = false, compact = false }) {
   return (
     <div className={`brand-block ${compact ? "brand-compact" : ""}`}>

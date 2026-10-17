@@ -13,12 +13,14 @@ export default function SidebarFolderItem({
   onDelete,
   onLock,
   onChangeRole,
+  onRevoke,
   onLeave,
+  onProtect,
 }) {
   const owner = folder.role === "owner";
   const active = selected === folder.id;
   return (
-    <div className={`sidebar-folder-row ${active ? "is-active" : ""} ${owner && folder.isShared ? "has-members" : ""}`}>
+    <div className={`sidebar-folder-row ${active ? "is-active" : ""} ${active && owner && folder.isShared ? "has-members" : ""}`}>
       <button
         className={`sidebar-link folder-link ${active ? "active" : ""}`}
         aria-label={`Open ${owner ? "" : "shared "}folder ${folder.name}`}
@@ -33,8 +35,8 @@ export default function SidebarFolderItem({
         )}
         <span className="sidebar-label">{folder.name}</span>
       </button>
-      {owner && folder.isShared && (
-        <FolderMembersPopover folder={folder} onChangeRole={onChangeRole} />
+      {active && owner && folder.isShared && (
+        <FolderMembersPopover folder={folder} onChangeRole={onChangeRole} onRevoke={onRevoke} />
       )}
       <FolderMenu
         folder={folder}
@@ -44,6 +46,7 @@ export default function SidebarFolderItem({
         onLock={onLock}
         onSelect={onSelect}
         onLeave={onLeave}
+        onProtect={onProtect}
       />
     </div>
   );

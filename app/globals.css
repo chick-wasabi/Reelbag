@@ -1050,6 +1050,8 @@ select option {
 .friend-picker-field {
   position: relative;
 }
+.folder-share-form { gap: 12px; }
+.folder-share-form .share-dynamic-slot:not(.is-visible) { margin-block: -6px; }
 .friend-picker-dropdown {
   position: absolute;
   z-index: 12;
@@ -2303,6 +2305,11 @@ select option {
   transform: none;
   flex-shrink: 0;
 }
+.sidebar-share-badge.is-inline {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
+}
 .sidebar-folder-row.has-members .sidebar-link {
   padding-right: 82px;
 }
@@ -2369,6 +2376,16 @@ select option {
   font-size: 12px;
 }
 .folder-owner-line { margin: 10px 0 0; }
+.folder-members-invite {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
+  border-radius: 9px;
+  background: rgb(var(--accent-rgb) / 0.08);
+  color: var(--accent);
+  font-size: 12px;
+}
 .folder-members-error { margin: 10px 0 0; color: #fb7185; font-size: 12px; }
 .folder-member-group { padding-top: 12px; }
 .folder-member-group h4 {
@@ -2393,6 +2410,24 @@ select option {
 .folder-member-person small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .folder-member-person strong { font-size: 13px; }
 .folder-member-person small { color: var(--text-muted); font-size: 11px; }
+.folder-member-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.folder-member-revoke {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgb(251 113 133 / .22);
+  border-radius: 8px;
+  background: transparent;
+  color: #fb7185;
+  cursor: pointer;
+}
+.folder-member-revoke:hover { background: rgb(251 113 133 / .1); }
+.folder-member-revoke:disabled { cursor: wait; opacity: .55; }
 .folder-members-empty { margin: 0; padding: 5px 0; }
 .sidebar-collapsed .sidebar-trash-row .sidebar-link {
   padding: 11px;
@@ -2778,12 +2813,12 @@ select option {
 .sidebar-ambient::before {
   content: "";
   position: absolute;
-  top: -70%;
+  top: -42%;
   bottom: auto;
   left: 0;
   z-index: 0;
-  width: 86%;
-  height: 70%;
+  width: 48%;
+  height: 42%;
   border-radius: 0 52% 52% 0 / 0 48% 48% 0;
   background: radial-gradient(
     ellipse at 0% 50%,
@@ -2814,7 +2849,7 @@ select option {
   }
   100% {
     opacity: 0;
-    transform: translateY(245%);
+    transform: translateY(338%);
   }
 }
 .sidebar[data-collapsed="true"] {
@@ -2851,6 +2886,7 @@ select option {
   align-items: stretch;
   gap: 12px;
   padding: 0 0 22px;
+  min-height: 118px;
 }
 .sidebar .brand-block {
   padding: 8px 10px 0;

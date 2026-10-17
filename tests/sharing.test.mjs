@@ -470,6 +470,56 @@ test("collaborators can pin shared reels, keep personal copies, and hide without
   assert.equal(restored.data.reels.some((item) => item.id === reelId), true);
 });
 
+test("recipients can protect a shared folder with their own PIN", async () => {
+  const owner = await user(), recipient = await user();
+  const folderId = await folder(owner);
+  const reelId = await reel(owner, folderId, "Recipient protected Reel");
+  await call(
+    `sharing/folder/${folderId}/invite`,
+    "POST",
+    { username: recipient.username, role: "viewer" },
+    owner.cookie,
+  );
+  const invite = (await call("notifications", "GET", null, recipient.cookie)).data.items[0];
+  await call(
+    `notifications/${invite.id}/respond`,
+    "POST",
+    { status: "accepted" },
+    recipient.cookie,
+  );
+
+  const enabled = await call(
+    `folders/${folderId}/recipient-pin`,
+    "POST",
+    { enabled: true, pin: "2468" },
+    recipient.cookie,
+  );
+  assert.equal(enabled.status, 200, JSON.stringify(enabled.data));
+  assert.equal(enabled.data.folders[0].pin, true);
+  assert.equal(enabled.data.folders[0].unlocked, true);
+
+  await call(`folders/${folderId}/shared-lock`, "POST", {}, recipient.cookie);
+  let library = (await call("library", "GET", null, recipient.cookie)).data;
+  assert.equal(library.folders[0].unlocked, false);
+  assert.equal(library.reels.some((item) => item.id === reelId), false);
+  assert.equal(
+    (await call(`folders/${folderId}/shared-unlock`, "POST", { pin: "1357" }, recipient.cookie)).status,
+    403,
+  );
+  const unlocked = await call(
+    `folders/${folderId}/shared-unlock`,
+    "POST",
+    { pin: "2468" },
+    recipient.cookie,
+  );
+  assert.equal(unlocked.status, 200, JSON.stringify(unlocked.data));
+  assert.equal(unlocked.data.reels.some((item) => item.id === reelId), true);
+  assert.equal(
+    (await call("library", "GET", null, owner.cookie)).data.reels.some((item) => item.id === reelId),
+    true,
+  );
+});
+
 test("collaborator additions recheck revoked grants between authorization and INSERT", async () => {
   const owner = await user(),
     recipient = await user();

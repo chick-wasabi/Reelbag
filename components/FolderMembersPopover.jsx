@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Users } from "lucide-react";
+import { UserMinus, Users } from "lucide-react";
 import Avatar from "./Avatar";
 
-export default function FolderMembersPopover({ folder, onChangeRole, mobile = false }) {
+export default function FolderMembersPopover({ folder, onChangeRole, onRevoke, onInvite, mobile = false, inline = false }) {
   const [position, setPosition] = useState(null);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
@@ -65,7 +65,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
       <button
         ref={trigger}
         type="button"
-        className={`sidebar-share-badge ${mobile ? "is-mobile" : ""}`}
+        className={`sidebar-share-badge ${mobile ? "is-mobile" : ""} ${inline ? "is-inline" : ""}`}
         aria-label={`View people sharing ${folder.name}`}
         aria-haspopup="dialog"
         aria-expanded={Boolean(position)}
@@ -88,7 +88,10 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
           onPointerEnter={() => { cancelOpen(); cancelClose(); }}
           onPointerLeave={!mobile ? scheduleClose : undefined}
         >
-          <header><strong>{folder.name}</strong><span>{folder.memberCount} people</span></header>
+          <header><strong>{folder.name}</strong><span>{folder.memberCount} {folder.memberCount === 1 ? "person" : "people"}</span></header>
+          {onInvite && <button className="folder-members-invite" type="button" onClick={() => { close(); onInvite(folder); }}>
+            Add friends to folder
+          </button>}
           {error && <p className="folder-members-error" role="alert">{error}</p>}
           {groups.map(([role, label]) => {
             const members = role === "owner"
@@ -101,22 +104,36 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
                   <div className="folder-member-person" key={member.recipientId}>
                     <Avatar url={member.avatarUrl} frame={member.avatarFrame} name={member.displayName} size={28} />
                     <span><strong>{member.displayName}</strong><small>@{member.username}</small></span>
-                    {role !== "owner" && owner && onChangeRole && (
-                      <select
-                        aria-label={`Role for ${member.username}`}
-                        value={member.role}
-                        disabled={busy === member.recipientId}
-                        onChange={async (event) => {
-                          setBusy(member.recipientId);
-                          setError("");
-                          try { await onChangeRole(folder, member, event.target.value); }
-                          catch (reason) { setError(reason.message || "Could not update that role."); }
-                          finally { setBusy(null); }
-                        }}
-                      >
-                        <option value="viewer">Viewer</option>
-                        <option value="collaborator">Collaborator</option>
-                      </select>
+                    {role !== "owner" && owner && (
+                      <div className="folder-member-actions">
+                        {onChangeRole && <select
+                          aria-label={`Role for ${member.username}`}
+                          value={member.role}
+                          disabled={busy === member.recipientId}
+                          onChange={async (event) => {
+                            setBusy(member.recipientId);
+                            setError("");
+                            try { await onChangeRole(folder, member, event.target.value); }
+                            catch (reason) { setError(reason.message || "Could not update that role."); }
+                            finally { setBusy(null); }
+                          }}
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="collaborator">Collaborator</option>
+                        </select>}
+                        {onRevoke && <button type="button" className="folder-member-revoke"
+                          aria-label={`Revoke access for ${member.username}`} title="Revoke access"
+                          disabled={busy === member.recipientId}
+                          onClick={async () => {
+                            setBusy(member.recipientId);
+                            setError("");
+                            try { await onRevoke(folder, member); }
+                            catch (reason) { setError(reason.message || "Could not revoke access."); }
+                            finally { setBusy(null); }
+                          }}>
+                          <UserMinus size={14} />
+                        </button>}
+                      </div>
                     )}
                   </div>
                 )) : <p className="folder-members-empty">No {label.toLowerCase()}</p>}

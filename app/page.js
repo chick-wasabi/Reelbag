@@ -15,6 +15,7 @@ import Modal from "../components/Modal";
 import PinForm from "../components/PinForm";
 import ReelCard from "../components/ReelCard";
 import ReelModal from "../components/ReelModal";
+import SharedFolderPinModal from "../components/SharedFolderPinModal";
 import Header from "../components/Header";
 import LoadingScreen from "../components/LoadingScreen";
 import ProfileModal from "../components/ProfileModal";
@@ -455,7 +456,8 @@ export default function Home() {
   async function selectFolder(id, lockId) {
     if (lockId) {
       try {
-        await mutate(`folders/${lockId}/lock`, "POST");
+        const target = data.folders.find((folder) => folder.id === lockId);
+        await mutate(`folders/${lockId}/${target?.role === "owner" ? "lock" : "shared-lock"}`, "POST");
         setSelected((previous) => (previous === lockId ? "all" : previous));
       } catch (err) {
         setError(err.message);
@@ -574,6 +576,11 @@ export default function Home() {
     await mutate("library", "GET");
     setNotice(`@${member.username} is now a ${role}.`);
   }
+  async function revokeFolderMember(folder, member) {
+    await api(`sharing/folder/${folder.id}/members/${member.recipientId}`, { method: "DELETE" });
+    await mutate("library", "GET");
+    setNotice(`Access revoked for @${member.username}.`);
+  }
   async function leaveSharedFolder(folder) {
     if (!window.confirm(`Leave “${folder.name}”? You will lose access to its shared Reels.`)) return;
     try {
@@ -688,8 +695,10 @@ export default function Home() {
             onDelete={(folder) => manageFolder(folder, "delete")}
             onLock={(folder) => selectFolder(selected, folder.id)}
             onChangeRole={changeFolderMemberRole}
+            onRevokeMember={revokeFolderMember}
             onLeaveFolder={leaveSharedFolder}
             onTrashSettings={() => setModal({ type: "trashSettings" })}
+            onProtectSharedFolder={(folder) => setModal({ type: "sharedFolderPin", folder })}
           />
           <div className="workspace">
             <Header
@@ -711,6 +720,10 @@ export default function Home() {
               friendRequestCount={data.friendRequests?.length || 0}
               folderSort={folderSort}
               onFolderSort={setFolderSort}
+              activeFolder={activeFolder}
+              onChangeFolderRole={changeFolderMemberRole}
+              onRevokeFolderMember={revokeFolderMember}
+              onOpenFolderShare={(folder) => manageFolder(folder, "share")}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -726,6 +739,7 @@ export default function Home() {
                 onTrashSettings={() => setModal({ type: "trashSettings" })}
                 onChangeRole={changeFolderMemberRole}
                 onLeaveFolder={leaveSharedFolder}
+                onProtectSharedFolder={(folder) => setModal({ type: "sharedFolderPin", folder })}
               />
             </div>
             <main
@@ -994,6 +1008,13 @@ export default function Home() {
           onClose={() => setModal(modal.returnTo || null)}
         />
       )}
+      {data?.user && modal?.type === "sharedFolderPin" && (
+        <SharedFolderPinModal folder={modal.folder} onClose={() => setModal(null)} onSave={async (settings) => {
+          await mutate(`folders/${modal.folder.id}/recipient-pin`, "POST", settings);
+          setModal(null);
+          setNotice(settings.enabled ? "Shared folder PIN saved." : "Shared folder PIN removed.");
+        }} />
+      )}
       {data?.user && modal?.type === "unlockFolder" && (
         <Modal
           title={modal.folder.name}
@@ -1003,7 +1024,7 @@ export default function Home() {
           <PinForm
             onVerify={async (pin) => {
               const next = await mutate(
-                `folders/${modal.folder.id}/unlock`,
+                `folders/${modal.folder.id}/${modal.folder.role === "owner" ? "unlock" : "shared-unlock"}`,
                 "POST",
                 {
                   pin,

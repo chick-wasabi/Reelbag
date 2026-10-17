@@ -148,7 +148,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
         <div className="form-stack">
           {type === "reel" && secretLinkSection}
           <form
-            className="sharing-section form-stack"
+            className={`sharing-section form-stack ${type === "folder" ? "folder-share-form" : ""}`}
             onSubmit={(e) => {
               e.preventDefault();
               const invitees = recipients;
@@ -311,7 +311,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
             </button>
           </form>
           {type === "folder" && secretLinkSection}
-          <section className="sharing-section">
+          {type === "reel" && <section className="sharing-section">
             <h3>People with access</h3>
             {!details.members.filter((member) => member.status !== "declined")
               .length && (
@@ -355,7 +355,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                   </span>
                 </div>
               ))}
-          </section>
+          </section>}
           {type === "reel" && (
             <section className="sharing-section form-stack">
               <h3>

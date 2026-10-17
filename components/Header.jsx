@@ -4,6 +4,7 @@ import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
 import FolderGlyph from "./FolderGlyph";
+import FolderMembersPopover from "./FolderMembersPopover";
 export default function Header({
   user,
   search,
@@ -23,6 +24,10 @@ export default function Header({
   friendRequestCount = 0,
   folderSort = "latest",
   onFolderSort,
+  activeFolder,
+  onChangeFolderRole,
+  onRevokeFolderMember,
+  onOpenFolderShare,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -53,6 +58,15 @@ export default function Header({
             onChange={(e) => onSearch(e.target.value)}
           />
         </label>
+        {sectionKind === "folder" && (
+          <select className="folder-sort-select" value={folderSort} onChange={(event) => onFolderSort(event.target.value)}
+            aria-label="Sort folder Reels" title="Sort folder Reels">
+            <option value="latest">Latest</option>
+            <option value="reactions">Most reactions</option>
+          </select>
+        )}
+        {activeFolder && <FolderMembersPopover folder={activeFolder} onChangeRole={onChangeFolderRole} onRevoke={onRevokeFolderMember}
+          onInvite={activeFolder.role === "owner" ? onOpenFolderShare : undefined} inline />}
         {hiddenAvailable && (
           <button className={`hidden-reels-toggle ${showingHidden ? "is-active" : ""}`} onClick={onToggleHidden}
             aria-pressed={showingHidden} title={showingHidden ? "Show folder Reels" : "Show Reels hidden by me"}>
@@ -60,13 +74,6 @@ export default function Header({
             <span>{showingHidden ? "Folder Reels" : "Hidden"}</span>
             {hiddenCount > 0 && <small>{hiddenCount}</small>}
           </button>
-        )}
-        {sectionKind === "folder" && (
-          <select className="folder-sort-select" value={folderSort} onChange={(event) => onFolderSort(event.target.value)}
-            aria-label="Sort folder Reels" title="Sort folder Reels">
-            <option value="latest">Latest</option>
-            <option value="reactions">Most reactions</option>
-          </select>
         )}
       </div>
       <div className="header-actions">

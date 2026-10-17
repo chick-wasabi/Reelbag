@@ -29,8 +29,10 @@ export default function Sidebar({
   onDelete,
   onLock,
   onChangeRole,
+  onRevokeMember,
   onLeaveFolder,
   onTrashSettings,
+  onProtectSharedFolder,
 }) {
   const ownedFolders = folders.filter((folder) => folder.role === "owner");
   const sharedFolders = folders.filter((folder) => folder.role !== "owner");
@@ -142,7 +144,9 @@ export default function Sidebar({
                   onDelete={onDelete}
                   onLock={onLock}
                   onChangeRole={onChangeRole}
+                  onRevoke={onRevokeMember}
                   onLeave={onLeaveFolder}
+                  onProtect={onProtectSharedFolder}
                 />
               ))}
             {!ownedFolders.length && (
@@ -153,12 +157,12 @@ export default function Sidebar({
           </div>
           {sharedFolders.length > 0 && <>
             <div className="sidebar-folder-heading">
-              <span className="sidebar-label">SHARED FOLDERS</span>
+              <span className="sidebar-label">SHARED BY OTHERS</span>
             </div>
             <div className="sidebar-folder-list">
               {sharedFolders.map((folder) => <SidebarFolderItem key={folder.id} folder={folder} selected={selected}
                 onSelect={onSelect} onRename={onRename} onShare={onShare} onDelete={onDelete} onLock={onLock}
-                onChangeRole={onChangeRole} onLeave={onLeaveFolder} />)}
+                onChangeRole={onChangeRole} onRevoke={onRevokeMember} onLeave={onLeaveFolder} onProtect={onProtectSharedFolder} />)}
             </div>
           </>}
         </div>

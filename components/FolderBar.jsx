@@ -2,7 +2,6 @@
 
 import FolderMenu from "./FolderMenu";
 import { FolderPlus, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
-import FolderMembersPopover from "./FolderMembersPopover";
 import FolderGlyph from "./FolderGlyph";
 
 export default function FolderBar({
@@ -16,8 +15,8 @@ export default function FolderBar({
   onLock,
   onShare,
   onTrashSettings,
-  onChangeRole,
   onLeaveFolder,
+  onProtectSharedFolder,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -50,7 +49,6 @@ export default function FolderBar({
       </nav>
       {current && (
         <>
-          {current.isShared && <FolderMembersPopover folder={current} onChangeRole={onChangeRole} mobile />}
           <FolderMenu
             folder={current}
             onRename={onRename}
@@ -59,6 +57,7 @@ export default function FolderBar({
             onLock={onLock}
             onSelect={onSelect}
             onLeave={onLeaveFolder}
+            onProtect={onProtectSharedFolder}
           />
         </>
       )}
