@@ -175,6 +175,10 @@ test("friends can accept requests and receive dropped reels without moving the o
   assert.equal(shared.data.sent, true);
   const senderLibrary = await call("library", "GET", null, sender.cookie);
   assert.equal(senderLibrary.data.reels.some((reel) => reel.id === reelId), true);
+  assert.deepEqual(
+    senderLibrary.data.reels.find((reel) => reel.id === reelId).sharedWith.map(({ recipientId, username }) => ({ recipientId, username })),
+    [{ recipientId: recipient.data.user.id, username: recipient.username }],
+  );
   const received = await call("library", "GET", null, recipient.cookie);
   const receivedReel = received.data.reels.find((reel) => reel.id === reelId);
   assert.equal(receivedReel.canManage, false);
@@ -200,6 +204,13 @@ test("friends can accept requests and receive dropped reels without moving the o
   const reactedReel = friendReaction.data.reels.find((reel) => reel.id === reelId);
   assert.equal(reactedReel.reaction, "😂");
   assert.deepEqual(reactedReel.reactionCounts, { "🔥": 1, "😂": 1 });
+  assert.deepEqual(
+    reactedReel.reactionPeople.map(({ emoji, username }) => ({ emoji, username })),
+    [
+      { emoji: "🔥", username: sender.username },
+      { emoji: "😂", username: recipient.username },
+    ],
+  );
   assert.equal(
     (await call(`reels/${reelId}/reaction`, "POST", { emoji: null }, recipient.cookie)).status,
     200,

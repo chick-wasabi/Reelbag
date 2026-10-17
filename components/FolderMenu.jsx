@@ -17,6 +17,7 @@ export default function FolderMenu({
   onDelete,
   onLock,
   onSelect,
+  onLeave,
 }) {
   const [position, setPosition] = useState(null);
   const trigger = useRef(null);
@@ -41,7 +42,7 @@ export default function FolderMenu({
       return;
     }
     const width = Math.min(224, window.innerWidth - 16);
-    const height = owner ? (folder.pin && folder.unlocked ? 190 : 150) : 120;
+    const height = owner ? (folder.pin && folder.unlocked ? 190 : 150) : 160;
     const top = Math.max(
       8,
       rect.bottom + height + 8 <= window.innerHeight
@@ -196,6 +197,9 @@ export default function FolderMenu({
                   onClick={() => act((folder) => onSelect(folder.id))}
                 >
                   <FolderOpen size={16} /> Open Folder
+                </button>
+                <button role="menuitem" className="danger" onClick={() => act(onLeave)}>
+                  <Trash2 size={16} /> Leave Folder
                 </button>
               </>
             )}

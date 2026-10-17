@@ -530,16 +530,28 @@ export default function Home() {
     await mutate("library", "GET");
     setNotice(`@${member.username} is now a ${role}.`);
   }
+  async function leaveSharedFolder(folder) {
+    if (!window.confirm(`Leave “${folder.name}”? You will lose access to its shared Reels.`)) return;
+    try {
+      await api(`sharing/folder/${folder.id}/leave`, { method: "DELETE", body: {} });
+      setSelected("all");
+      await mutate("library", "GET");
+      setNotice(`You left “${folder.name}”.`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
   const reels = useMemo(() => {
     const query = search.trim().toLowerCase();
     const source = selected === "trash" ? deletedReels : (data?.reels || []);
+    const folderById = new Map((data?.folders || []).map((folder) => [folder.id, folder]));
     return source.filter(
       (r) =>
-        (selected === "trash" || (selected === "all" && !r.isDirectShared) ||
+        (selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && (!r.folderId || !folderById.get(r.folderId)?.pin)) ||
           (selected === "pinned"
-            ? r.isPinned && !r.isDirectShared
+            ? r.isPinned && r.canManage && !r.isDirectShared
             : selected === "favorites"
-              ? r.isFavorite && !r.isDirectShared
+              ? r.isFavorite && r.canManage && !r.isDirectShared
               : selected === "shared"
                 ? r.isDirectShared
                 : r.folderId === selected && !r.isDirectShared)) &&
@@ -560,11 +572,11 @@ export default function Home() {
         : activeFolder?.name || "All Reels";
   const sectionCount = selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
     (reel) =>
-      (selected === "all" && !reel.isDirectShared) ||
+      (selected === "all" && reel.canManage && !reel.isDirectShared && (!reel.folderId || !data.folders.find((folder) => folder.id === reel.folderId)?.pin)) ||
       (selected === "pinned"
-        ? reel.isPinned && !reel.isDirectShared
+        ? reel.isPinned && reel.canManage && !reel.isDirectShared
         : selected === "favorites"
-          ? reel.isFavorite && !reel.isDirectShared
+          ? reel.isFavorite && reel.canManage && !reel.isDirectShared
           : selected === "shared"
             ? reel.isDirectShared
             : reel.folderId === selected && !reel.isDirectShared),
@@ -595,11 +607,11 @@ export default function Home() {
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}
             folders={data.folders}
-            reelCount={data.reels.filter((reel) => !reel.isDirectShared).length}
+            reelCount={data.reels.filter((reel) => reel.canManage && !reel.isDirectShared && (!reel.folderId || !data.folders.find((folder) => folder.id === reel.folderId)?.pin)).length}
             selected={selected}
             onSelect={selectFolder}
-            pinnedCount={data.reels.filter((reel) => reel.isPinned && !reel.isDirectShared).length}
-            favoriteCount={data.reels.filter((reel) => reel.isFavorite && !reel.isDirectShared).length}
+            pinnedCount={data.reels.filter((reel) => reel.isPinned && reel.canManage && !reel.isDirectShared).length}
+            favoriteCount={data.reels.filter((reel) => reel.isFavorite && reel.canManage && !reel.isDirectShared).length}
             sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
             onCreate={() => setModal({ type: "folder" })}
             onRename={(folder) => manageFolder(folder, "rename")}
@@ -607,6 +619,7 @@ export default function Home() {
             onDelete={(folder) => manageFolder(folder, "delete")}
             onLock={(folder) => selectFolder(selected, folder.id)}
             onChangeRole={changeFolderMemberRole}
+            onLeaveFolder={leaveSharedFolder}
             friends={data.friends || []}
             friendRequestCount={data.friendRequests?.length || 0}
             onOpenFriends={() => setModal({ type: "friends" })}
@@ -639,6 +652,7 @@ export default function Home() {
                 onLock={(folder) => selectFolder(selected, folder.id)}
                 onTrashSettings={() => setModal({ type: "trashSettings" })}
                 onChangeRole={changeFolderMemberRole}
+                onLeaveFolder={leaveSharedFolder}
               />
             </div>
             <main

@@ -16,6 +16,7 @@ export default function FolderBar({
   onShare,
   onTrashSettings,
   onChangeRole,
+  onLeaveFolder,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -55,6 +56,7 @@ export default function FolderBar({
             onDelete={onDelete}
             onLock={onLock}
             onSelect={onSelect}
+            onLeave={onLeaveFolder}
           />
         </>
       )}

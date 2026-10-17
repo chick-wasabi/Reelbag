@@ -219,6 +219,27 @@ test("folder invites require recipient acceptance, enforce roles at SQL writes, 
   const backup = await call("library/export", "GET", null, recipient.cookie);
   assert.equal(backup.data.reels.length, 0);
   assert.equal(backup.data.folders.length, 0);
+  assert.equal(
+    (await call(`${route}/leave`, "DELETE", {}, recipient.cookie)).status,
+    200,
+  );
+  assert.equal(
+    (await call("library", "GET", null, recipient.cookie)).data.folders.length,
+    0,
+  );
+  await call(
+    `${route}/invite`,
+    "POST",
+    { username: recipient.username, role: "viewer" },
+    owner.cookie,
+  );
+  notices = (await call("notifications", "GET", null, recipient.cookie)).data;
+  await call(
+    `notifications/${notices.items[0].id}/respond`,
+    "POST",
+    { status: "accepted" },
+    recipient.cookie,
+  );
   await call(`${route}/members/${recipient.id}`, "DELETE", {}, owner.cookie);
   assert.equal(
     (await call("library", "GET", null, recipient.cookie)).data.reels.length,

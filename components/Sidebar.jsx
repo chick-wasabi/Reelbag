@@ -32,6 +32,7 @@ export default function Sidebar({
   onDelete,
   onLock,
   onChangeRole,
+  onLeaveFolder,
   friends = [],
   friendRequestCount = 0,
   onOpenFriends,
@@ -151,6 +152,7 @@ export default function Sidebar({
                   onDelete={onDelete}
                   onLock={onLock}
                   onChangeRole={onChangeRole}
+                  onLeave={onLeaveFolder}
                 />
               ))}
             {!folders.length && (

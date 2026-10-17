@@ -12,6 +12,7 @@ export default function SidebarFolderItem({
   onDelete,
   onLock,
   onChangeRole,
+  onLeave,
 }) {
   const owner = folder.role === "owner";
   const active = selected === folder.id;
@@ -43,6 +44,7 @@ export default function SidebarFolderItem({
         onDelete={onDelete}
         onLock={onLock}
         onSelect={onSelect}
+        onLeave={onLeave}
       />
     </div>
   );
