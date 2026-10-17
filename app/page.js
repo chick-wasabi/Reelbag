@@ -59,6 +59,7 @@ export default function Home() {
   const pullDistanceRef = useRef(0);
   const trashPinRef = useRef("");
   const accountGateRef = useRef(false);
+  const suppressAccountGatePop = useRef(false);
   const userId = data?.user?.id;
   useEffect(() => {
     modalRef.current = modal;
@@ -131,7 +132,13 @@ export default function Home() {
     };
   }, []);
   useEffect(() => {
-    const back = () => setAccountGate(false);
+    const back = () => {
+      if (suppressAccountGatePop.current) {
+        suppressAccountGatePop.current = false;
+        return;
+      }
+      setAccountGate(false);
+    };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
   }, []);
@@ -420,6 +427,10 @@ export default function Home() {
     }
   }
   function addAccount() {
+    // Closing the account switcher removes its own history entry. Ignore that
+    // one popstate so the new account gate remains open; the next Back still
+    // returns to the currently authenticated account as expected.
+    suppressAccountGatePop.current = true;
     setModal(null);
     setAccountGate(true);
     window.history.pushState({ reelbagAccountGate: true }, "");
@@ -707,7 +718,7 @@ export default function Home() {
             >
               {reels.length ? (
                 <div
-                  className="reel-grid grid grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-x-0 gap-y-6"
+                  className="reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-x-0 gap-y-6"
                   role="region"
                   aria-label="Saved Reels"
                 >

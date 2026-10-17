@@ -261,24 +261,30 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                 </div>
               )}
             </label>
-            {selectedFriends.length > 0 && (
-              <div className="selected-friend-chips" aria-label="Selected friends">
-                {selectedFriends.map((name) => (
-                  <button
-                    type="button"
-                    key={name}
-                    onClick={() =>
-                      setSelectedFriends((current) =>
-                        current.filter((selected) => selected !== name),
-                      )
-                    }
-                    aria-label={`Remove @${name}`}
-                  >
-                    @{name} <X size={12} />
-                  </button>
-                ))}
+            <div
+              className={`share-dynamic-slot ${selectedFriends.length ? "is-visible" : ""}`}
+            >
+              <div>
+                {selectedFriends.length > 0 && (
+                  <div className="selected-friend-chips" aria-label="Selected friends">
+                    {selectedFriends.map((name) => (
+                      <button
+                        type="button"
+                        key={name}
+                        onClick={() =>
+                          setSelectedFriends((current) =>
+                            current.filter((selected) => selected !== name),
+                          )
+                        }
+                        aria-label={`Remove @${name}`}
+                      >
+                        @{name} <X size={12} />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
             {type === "folder" && (
               <label className="field-label">
                 Access role
@@ -393,11 +399,15 @@ export default function ShareModal({ type, item, onClose, onChange }) {
           {error}
         </p>
       )}
-      {message && (
-        <p role="status" className="success-text mt-4">
-          {message}
-        </p>
-      )}
+      <div className={`share-message-slot ${message ? "is-visible" : ""}`}>
+        <div>
+          {message && (
+            <p role="status" className="success-text">
+              {message}
+            </p>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 }

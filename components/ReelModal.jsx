@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Pin, Plus } from "lucide-react";
 import Modal from "./Modal";
 import { parseReelUrl, uid } from "../utils/reels.mjs";
 
@@ -25,6 +25,7 @@ export default function ReelModal({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [folderBusy, setFolderBusy] = useState(false);
+  const [pinned, setPinned] = useState(Boolean(draft?.isPinned));
   async function submit(event) {
     event.preventDefault();
     const parsed = parseReelUrl(url);
@@ -39,6 +40,7 @@ export default function ReelModal({
         ...parsed,
         title: title.trim() || "Reelbag",
         folderId: folder || null,
+        ...(!reel ? { isPinned: pinned } : {}),
         createdAt: reel?.createdAt || new Date().toISOString(),
       });
     } catch (err) {
@@ -129,6 +131,18 @@ export default function ReelModal({
               {folderBusy ? "Creating…" : "Create"}
             </button>
           </div>
+        )}
+        {!reel && (
+          <button
+            className={`reel-pin-on-add ${pinned ? "is-active" : ""}`}
+            type="button"
+            aria-pressed={pinned}
+            disabled={busy}
+            onClick={() => setPinned((value) => !value)}
+          >
+            <Pin size={15} fill={pinned ? "currentColor" : "none"} />
+            <span>{pinned ? "Pinned when saved" : "Pin this Reel"}</span>
+          </button>
         )}
         {error && (
           <p className="error-text" role="alert">
