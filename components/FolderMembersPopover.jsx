@@ -12,6 +12,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
   const trigger = useRef(null);
   const panel = useRef(null);
   const closeTimer = useRef(null);
+  const openTimer = useRef(null);
   const id = useId();
   const owner = folder.role === "owner";
   const close = useCallback(() => setPosition(null), []);
@@ -25,7 +26,13 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
     setPosition({ left, top: Math.max(8, Math.min(rect.top, window.innerHeight - 390)), width });
   }, [mobile]);
   const cancelClose = () => clearTimeout(closeTimer.current);
+  const cancelOpen = () => clearTimeout(openTimer.current);
+  const scheduleOpen = () => {
+    cancelOpen();
+    openTimer.current = setTimeout(open, 350);
+  };
   const scheduleClose = () => {
+    cancelOpen();
     cancelClose();
     closeTimer.current = setTimeout(close, 140);
   };
@@ -44,7 +51,10 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
       window.removeEventListener("resize", close);
     };
   }, [position, close]);
-  useEffect(() => () => clearTimeout(closeTimer.current), []);
+  useEffect(() => () => {
+    clearTimeout(closeTimer.current);
+    clearTimeout(openTimer.current);
+  }, []);
   const groups = [
     ["collaborator", "Collaborators"],
     ["viewer", "Viewers"],
@@ -59,9 +69,9 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
         aria-haspopup="dialog"
         aria-expanded={Boolean(position)}
         aria-controls={position ? id : undefined}
-        onPointerEnter={!mobile ? open : undefined}
+        onPointerEnter={!mobile ? scheduleOpen : undefined}
         onPointerLeave={!mobile ? scheduleClose : undefined}
-        onClick={(event) => { event.stopPropagation(); position ? close() : open(); }}
+        onClick={(event) => { event.stopPropagation(); cancelOpen(); position ? close() : open(); }}
       >
         <Users size={14} />
         {folder.memberCount > 1 && <small>{folder.memberCount}</small>}
@@ -74,7 +84,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
           aria-label={`People sharing ${folder.name}`}
           className="folder-members-popover"
           style={position}
-          onPointerEnter={cancelClose}
+          onPointerEnter={() => { cancelOpen(); cancelClose(); }}
           onPointerLeave={!mobile ? scheduleClose : undefined}
         >
           <header><strong>{folder.name}</strong><span>{folder.memberCount} people</span></header>

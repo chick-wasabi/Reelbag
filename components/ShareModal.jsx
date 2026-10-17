@@ -200,7 +200,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                   setUsername(e.target.value);
                   setFriendPickerOpen(true);
                 }}
-                placeholder="friend_username"
+                placeholder={type === "folder" ? "invite user" : "enter username"}
                 disabled={busy}
                 role="combobox"
                 aria-autocomplete="list"
