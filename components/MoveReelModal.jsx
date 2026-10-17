@@ -1,16 +1,16 @@
 "use client";
 import { useState } from "react";
-import { FolderInput } from "lucide-react";
+import { FolderInput, FolderPlus } from "lucide-react";
 import Modal from "./Modal";
 
-export default function MoveReelModal({ reel, folders, onSave, onClose, copy = false }) {
-  const [folderId, setFolderId] = useState(copy ? "" : (reel.folderId || ""));
+export default function MoveReelModal({ reel, folders, onSave, onClose, onCreateFolder, initialFolderId, copy = false, title }) {
+  const [folderId, setFolderId] = useState(initialFolderId || (copy ? "" : (reel?.folderId || "")));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <Modal
-      title={copy ? "Add to folder" : "Move reel"}
-      description={reel.title}
+      title={title || (copy ? "Add to folder" : "Move reel")}
+      description={reel?.title}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -48,6 +48,9 @@ export default function MoveReelModal({ reel, folders, onSave, onClose, copy = f
             ))}
           </select>
         </label>
+        {onCreateFolder && <button type="button" className="button-secondary" disabled={busy} onClick={onCreateFolder}>
+          <FolderPlus size={17} /> Create new folder
+        </button>}
         {error && (
           <p className="error-text" role="alert">
             {error}

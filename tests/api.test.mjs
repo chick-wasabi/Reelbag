@@ -703,8 +703,21 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   assert.match(stored.pin_code, /^\$2[aby]\$12\$/);
   const removed = await call(`folders/${id}`, "DELETE", {}, user.cookie);
   assert.equal(removed.status, 200, JSON.stringify(removed.data));
-  assert.equal(removed.data.reels[0].folderId, null);
+  assert.equal(removed.data.reels.length, 0);
   assert.equal(removed.data.folders.length, 0);
+  const trash = await call("trash/open", "POST", {}, user.cookie);
+  assert.equal(trash.status, 200, JSON.stringify(trash.data));
+  assert.equal(trash.data.folders[0].id, id);
+  assert.equal(trash.data.folders[0].reelCount, 1);
+  assert.equal((await call(`trash/folder/${id}/restore`, "POST", {}, user.cookie)).status, 200);
+  const restored = await call("library", "GET", null, user.cookie);
+  assert.equal(restored.data.folders[0].id, id);
+  assert.equal(restored.data.reels[0].folderId, id);
+  await call(`folders/${id}`, "DELETE", {}, user.cookie);
+  assert.equal((await call(`trash/folder/${id}/permanent`, "POST", {}, user.cookie)).status, 200);
+  const emptied = await call("library", "GET", null, user.cookie);
+  assert.equal(emptied.data.folders.length, 0);
+  assert.equal(emptied.data.reels.length, 0);
 });
 
 test("expired and forged sessions, CSRF, malformed inputs, and oversized bodies are rejected", async () => {

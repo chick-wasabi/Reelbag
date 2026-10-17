@@ -22,6 +22,7 @@ import ProfileModal from "../components/ProfileModal";
 import SecurityModal from "../components/SecurityModal";
 import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
+import DeletedFolderCard from "../components/DeletedFolderCard";
 import FriendsModal from "../components/FriendsModal";
 import TrashSettingsModal from "../components/TrashSettingsModal";
 import AccountSwitcherModal from "../components/AccountSwitcherModal";
@@ -47,6 +48,7 @@ export default function Home() {
   const [sharedUrl, setSharedUrl] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deletedReels, setDeletedReels] = useState([]);
+  const [deletedFolders, setDeletedFolders] = useState([]);
   const [trashUnlocked, setTrashUnlocked] = useState(false);
   const [appUpdate, setAppUpdate] = useState(null);
   const [pullDistance, setPullDistance] = useState(0);
@@ -54,6 +56,8 @@ export default function Home() {
   const [accountGate, setAccountGate] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [folderSort, setFolderSort] = useState("latest");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedReels, setSelectedReels] = useState(() => new Set());
   const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
@@ -255,6 +259,9 @@ export default function Home() {
     setSearch("");
     setModal(null);
     setDeletedReels([]);
+    setDeletedFolders([]);
+    setSelectionMode(false);
+    setSelectedReels(new Set());
     setTrashUnlocked(false);
     trashPinRef.current = "";
   }, []);
@@ -454,6 +461,7 @@ export default function Home() {
     setNotice(`Switched to @${account.username}.`);
   }
   async function selectFolder(id, lockId) {
+    if (!lockId && id !== selected) cancelSelection();
     if (lockId) {
       try {
         const target = data.folders.find((folder) => folder.id === lockId);
@@ -475,6 +483,7 @@ export default function Home() {
           body: data.user.trashProtected ? { pin: trashPinRef.current } : {},
         });
         setDeletedReels(result.items);
+        setDeletedFolders(result.folders || []);
         setTrashUnlocked(true);
         setSelected("trash");
         setSearch("");
@@ -503,7 +512,8 @@ export default function Home() {
     if (modal.returnTo)
       setModal({
         ...modal.returnTo,
-        draft: { ...modal.returnTo.draft, folderId },
+        createdFolderId: folderId,
+        ...(modal.returnTo.draft ? { draft: { ...modal.returnTo.draft, folderId } } : {}),
       });
     else if (modal.preserveSelection) setModal(null);
     else {
@@ -542,7 +552,7 @@ export default function Home() {
       await mutate(`folders/${modal.folder.id}`, "DELETE");
       if (selected === modal.folder.id) setSelected("all");
       setModal(null);
-      setNotice("Folder deleted. Its Reels remain in All Reels.");
+      setNotice("Folder moved to Recently Deleted.");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -567,6 +577,45 @@ export default function Home() {
     } catch (err) {
       setError(err.message);
     }
+  }
+  async function updateDeletedFolder(folder, action) {
+    if (action === "permanent" && !window.confirm(`Permanently delete “${folder.name}” and all ${folder.reelCount} Reels inside it? This cannot be undone.`)) return;
+    try {
+      await api(`trash/folder/${folder.id}/${action}`, { method: "POST", body: {} });
+      setDeletedFolders((items) => items.filter((item) => item.id !== folder.id));
+      await mutate("library", "GET");
+      setNotice(action === "restore" ? "Folder restored." : "Folder permanently deleted.");
+    } catch (err) { setError(err.message); }
+  }
+  function toggleReelSelection(id) {
+    setSelectedReels((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function startSelection() {
+    setSelectionMode(true);
+    setSelectedReels(new Set());
+  }
+  function cancelSelection() {
+    setSelectionMode(false);
+    setSelectedReels(new Set());
+  }
+  async function runBulkAction(action, folderId) {
+    const items = (data?.reels || []).filter((reel) => selectedReels.has(reel.id));
+    if (!items.length) return;
+    if (action === "delete") {
+      await Promise.all(items.map((reel) => api(`reels/${reel.id}/trash`, { method: "POST", body: {} })));
+    } else if (action === "add") {
+      await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
+    } else {
+      await Promise.all(items.map((reel) => api(`reels/${reel.id}`, { method: "PATCH", body: { title: reel.title, url: reel.url, folderId } })));
+    }
+    await mutate("library", "GET");
+    cancelSelection();
+    setModal(null);
+    setNotice(`${items.length} ${items.length === 1 ? "Reel" : "Reels"} updated.`);
   }
   async function changeFolderMemberRole(folder, member, role) {
     await api(`sharing/folder/${folder.id}/members/${member.recipientId}`, {
@@ -641,7 +690,7 @@ export default function Home() {
           : "All Reels";
   const sectionCount = showHidden
     ? (data?.hiddenReels || []).filter((reel) => reel.folderId === selected).length
-    : selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
+    : selected === "trash" ? deletedReels.length + deletedFolders.length : (data?.reels || []).filter(
     (reel) =>
       (selected === "all" && reel.canManage && !reel.isDirectShared && !reel.folderId) ||
       (selected === "pinned"
@@ -689,7 +738,6 @@ export default function Home() {
             pinnedCount={data.reels.filter((reel) => reel.isPinned && reel.canManage && !reel.isDirectShared).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite && reel.canManage && !reel.isDirectShared).length}
             sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
-            onCreate={() => setModal({ type: "folder" })}
             onRename={(folder) => manageFolder(folder, "rename")}
             onShare={(folder) => manageFolder(folder, "share")}
             onDelete={(folder) => manageFolder(folder, "delete")}
@@ -724,6 +772,16 @@ export default function Home() {
               onChangeFolderRole={changeFolderMemberRole}
               onRevokeFolderMember={revokeFolderMember}
               onOpenFolderShare={(folder) => manageFolder(folder, "share")}
+              onFolderSettings={(folder) => manageFolder(folder, "rename")}
+              onFolderDelete={(folder) => manageFolder(folder, "delete")}
+              onFolderLock={(folder) => selectFolder(selected, folder.id)}
+              onLeaveFolder={leaveSharedFolder}
+              onProtectSharedFolder={(folder) => setModal({ type: "sharedFolderPin", folder })}
+              selectionMode={selectionMode}
+              selectionCount={selectedReels.size}
+              onStartSelection={startSelection}
+              onCancelSelection={cancelSelection}
+              onBulkAction={(action) => action === "delete" ? runBulkAction("delete") : setModal({ type: "bulkFolder", action })}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -748,12 +806,15 @@ export default function Home() {
               className="stream mobile-feed-padding"
               id="main-content"
             >
-              {reels.length ? (
+              {reels.length || (selected === "trash" && deletedFolders.length) ? (
                 <div
                   className="reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-x-0 gap-y-6"
                   role="region"
                   aria-label="Saved Reels"
                 >
+                  {selected === "trash" && deletedFolders.map((folder) => <DeletedFolderCard key={`folder-${folder.id}`} folder={folder}
+                    onRestore={() => updateDeletedFolder(folder, "restore")}
+                    onPermanentDelete={() => updateDeletedFolder(folder, "permanent")} />)}
                   {reels.map((reel) => (
                     <ReelCard
                       key={reel.id}
@@ -830,6 +891,9 @@ export default function Home() {
                       }}
                       onDragStart={() => setNotice(`Drop “${reel.title}” onto a friend in the sidebar.`)}
                       onDragEnd={() => setNotice("")}
+                      selectionMode={selectionMode}
+                      selected={selectedReels.has(reel.id)}
+                      onSelect={() => toggleReelSelection(reel.id)}
                     />
                   ))}
                 </div>
@@ -916,6 +980,7 @@ export default function Home() {
               const result = await api("trash/open", { method: "POST", body: { pin } });
               trashPinRef.current = pin;
               setDeletedReels(result.items);
+              setDeletedFolders(result.folders || []);
               setTrashUnlocked(true);
               setSelected("trash");
               setSearch("");
@@ -955,6 +1020,8 @@ export default function Home() {
           reel={modal.reel}
           folders={data.folders.filter((folder) => folder.role === "owner")}
           onClose={() => setModal(null)}
+          initialFolderId={modal.createdFolderId}
+          onCreateFolder={() => setModal({ type: "folder", returnTo: modal })}
           onSave={(folderId) => saveReel({ ...modal.reel, folderId })}
         />
       )}
@@ -964,12 +1031,26 @@ export default function Home() {
           reel={modal.reel}
           folders={data.folders.filter((folder) => folder.role === "owner" || folder.role === "collaborator")}
           onClose={() => setModal(null)}
+          initialFolderId={modal.createdFolderId}
+          onCreateFolder={() => setModal({ type: "folder", returnTo: modal })}
           onSave={async (folderId) => {
             await mutate(`reels/${modal.reel.id}/copy`, "POST", { folderId, favorite: false });
             setModal(null);
             setSelected(folderId);
             setNotice("A separate copy was added to the folder.");
           }}
+        />
+      )}
+      {data?.user && modal?.type === "bulkFolder" && (
+        <MoveReelModal
+          copy={modal.action === "add"}
+          reel={{ title: `${selectedReels.size} selected ${selectedReels.size === 1 ? "Reel" : "Reels"}`, folderId: selected }}
+          title={modal.action === "add" ? "Add selected to folder" : "Move selected Reels"}
+          folders={data.folders.filter((folder) => folder.role === "owner" || (modal.action === "add" && folder.role === "collaborator"))}
+          initialFolderId={modal.createdFolderId}
+          onClose={() => setModal(null)}
+          onCreateFolder={() => setModal({ type: "folder", returnTo: modal })}
+          onSave={(folderId) => runBulkAction(modal.action, folderId)}
         />
       )}
       {data?.user && modal?.type === "reel" && (
@@ -1120,7 +1201,7 @@ export default function Home() {
       {data?.user && modal?.type === "deleteFolder" && (
         <Modal
           title="Delete folder?"
-          description="The folder will be removed. Its reels will stay in your main stream without a folder or folder PIN. This affects every device."
+          description="The complete folder and its Reels will move to Recently Deleted. You can restore it later or delete it permanently."
           onClose={() => {
             if (!deleting) setModal(null);
           }}

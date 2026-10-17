@@ -249,6 +249,57 @@ select option {
   background: rgb(var(--accent-rgb) / 0.12);
   text-align: center;
 }
+.bulk-reel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 39px;
+  padding: 3px 5px 3px 10px;
+  border: 1px solid rgb(var(--accent-rgb) / .25);
+  border-radius: 10px;
+  background: rgb(var(--accent-rgb) / .07);
+  color: var(--accent);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.folder-menu-trigger.is-inline { position: static; flex-shrink: 0; transform: none; }
+.reel-card.is-selectable { cursor: pointer; }
+.reel-card.is-selected {
+  border-color: rgb(var(--accent-rgb) / .85);
+  box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .2), 0 0 26px rgb(var(--accent-rgb) / .24);
+}
+.reel-select-toggle {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border: 1px solid rgb(var(--accent-rgb) / .45);
+  border-radius: 7px;
+  background: rgb(0 0 0 / .18);
+  color: var(--on-accent);
+  font-weight: 800;
+}
+.reel-select-toggle.is-selected { background: var(--accent); box-shadow: 0 0 14px rgb(var(--accent-rgb) / .35); }
+.deleted-folder-card {
+  display: grid;
+  width: 270px;
+  min-height: 260px;
+  justify-self: center;
+  overflow: hidden;
+  border: 1px solid rgb(var(--accent-rgb) / .22);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 14px 34px rgb(0 0 0 / .22);
+}
+.deleted-folder-art { display: grid; min-height: 130px; place-items: center; background: radial-gradient(circle, rgb(var(--accent-rgb) / .16), transparent 65%); color: var(--accent); }
+.deleted-folder-art span { display: grid; width: 78px; height: 78px; place-items: center; border: 1px solid rgb(var(--accent-rgb) / .28); border-radius: 22px; background: rgb(var(--accent-rgb) / .08); }
+.deleted-folder-copy { display: grid; gap: 14px; padding: 15px; }
+.deleted-folder-copy small { color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.deleted-folder-copy h2 { margin: 3px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.deleted-folder-copy p { display: flex; align-items: center; gap: 6px; margin: 7px 0 0; color: var(--text-muted); font-size: 12px; }
+.deleted-folder-actions { display: flex; gap: 7px; }
+.deleted-folder-actions button { min-height: 34px; padding: 7px 9px; font-size: 11px; }
 @media (max-width: 767px) {
   .hidden-reels-toggle span { display: none; }
   .hidden-reels-toggle { padding-inline: 10px; }

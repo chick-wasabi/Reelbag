@@ -19,6 +19,8 @@ export default function FolderMenu({
   onSelect,
   onLeave,
   onProtect,
+  onSelectReels,
+  inline = false,
 }) {
   const [position, setPosition] = useState(null);
   const trigger = useRef(null);
@@ -43,7 +45,7 @@ export default function FolderMenu({
       return;
     }
     const width = Math.min(224, window.innerWidth - 16);
-    const height = owner ? (folder.pin && folder.unlocked ? 190 : 150) : 205;
+    const height = owner ? (folder.pin && folder.unlocked ? 232 : 192) : 247;
     const top = Math.max(
       8,
       rect.bottom + height + 8 <= window.innerHeight
@@ -106,7 +108,7 @@ export default function FolderMenu({
       <button
         ref={trigger}
         type="button"
-        className="icon-button folder-menu-trigger"
+        className={`icon-button folder-menu-trigger ${inline ? "is-inline" : ""}`}
         aria-label={`Folder actions for ${folder.name}`}
         title={`Folder actions for ${folder.name}`}
         aria-haspopup="menu"
@@ -164,6 +166,9 @@ export default function FolderMenu({
               } else if (event.key === "Tab") close();
             }}
           >
+            {onSelectReels && <button role="menuitem" onClick={() => act(onSelectReels)}>
+              <FolderOpen size={16} /> Select Reels
+            </button>}
             {owner ? (
               <>
                 <button role="menuitem" onClick={() => act(onRename)}>

@@ -1,10 +1,11 @@
 "use client";
-import { Search, Folder, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus } from "lucide-react";
+import { Search, Folder, FolderInput, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
 import FolderGlyph from "./FolderGlyph";
 import FolderMembersPopover from "./FolderMembersPopover";
+import FolderMenu from "./FolderMenu";
 export default function Header({
   user,
   search,
@@ -28,6 +29,16 @@ export default function Header({
   onChangeFolderRole,
   onRevokeFolderMember,
   onOpenFolderShare,
+  onFolderSettings,
+  onFolderDelete,
+  onFolderLock,
+  onLeaveFolder,
+  onProtectSharedFolder,
+  selectionMode = false,
+  selectionCount = 0,
+  onStartSelection,
+  onCancelSelection,
+  onBulkAction,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -75,6 +86,16 @@ export default function Header({
             {hiddenCount > 0 && <small>{hiddenCount}</small>}
           </button>
         )}
+        {selectionMode && <div className="bulk-reel-actions" aria-label={`${selectionCount} selected`}>
+          <span>{selectionCount} selected</span>
+          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("add")} title="Add selected to folder"><FolderPlus size={17} /></button>
+          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("move")} title="Move selected to folder"><FolderInput size={17} /></button>
+          <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>
+          <button className="icon-button" onClick={onCancelSelection} title="Cancel selection"><X size={17} /></button>
+        </div>}
+        {activeFolder && !selectionMode && <FolderMenu folder={activeFolder} inline onSelectReels={activeFolder.role === "owner" ? onStartSelection : undefined}
+          onRename={onFolderSettings} onShare={onOpenFolderShare} onDelete={onFolderDelete} onLock={onFolderLock}
+          onSelect={() => {}} onLeave={onLeaveFolder} onProtect={onProtectSharedFolder} />}
       </div>
       <div className="header-actions">
         <NotificationCenter key={user.id} onChange={onLibraryChange} />

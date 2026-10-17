@@ -1,7 +1,6 @@
 "use client";
 import {
   Users,
-  FolderPlus,
   Grid2X2,
   Pin,
   Star,
@@ -23,7 +22,6 @@ export default function Sidebar({
   pinnedCount,
   favoriteCount,
   sharedCount,
-  onCreate,
   onRename,
   onShare,
   onDelete,
@@ -123,14 +121,6 @@ export default function Sidebar({
         >
           <div className="sidebar-folder-heading">
             <span className="sidebar-label">YOUR FOLDERS</span>
-            <button
-              className="icon-button sidebar-add-button"
-              aria-label="New folder"
-              title="New folder"
-              onClick={onCreate}
-            >
-              <FolderPlus size={20} strokeWidth={2.5} />
-            </button>
           </div>
           <div className="sidebar-folder-list">
             {ownedFolders.map((folder) => (

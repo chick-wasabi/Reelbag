@@ -41,6 +41,9 @@ export default function ReelCard({
   onExternalShare,
   onAddToFolder,
   hiddenMode = false,
+  selectionMode = false,
+  selected = false,
+  onSelect,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
   const isFolderGuest = !canManage && Boolean(folder?.role && folder.role !== "owner");
@@ -113,10 +116,10 @@ export default function ReelCard({
   }, []);
   return (
     <article
-      className={`reel-card ambient-glass-card justify-self-center ${canManage ? "reel-card-draggable" : ""}`}
+      className={`reel-card ambient-glass-card justify-self-center ${canManage ? "reel-card-draggable" : ""} ${selectionMode ? "is-selectable" : ""} ${selected ? "is-selected" : ""}`}
       style={{ width: "270px", maxWidth: "100%" }}
       ref={ref}
-      draggable={canManage}
+      draggable={canManage && !selectionMode}
       onDragStart={(event) => {
         if (!canManage) return;
         event.dataTransfer.effectAllowed = "copy";
@@ -125,8 +128,15 @@ export default function ReelCard({
         onDragStart?.(reel);
       }}
       onDragEnd={() => onDragEnd?.()}
+      onClick={(event) => {
+        if (!selectionMode || event.target.closest("button,summary,details,a,input,select,iframe")) return;
+        onSelect?.();
+      }}
     >
       <div className="reel-heading">
+        {selectionMode && <button type="button" className={`reel-select-toggle ${selected ? "is-selected" : ""}`}
+          aria-label={`${selected ? "Deselect" : "Select"} ${reel.title}`} aria-pressed={selected}
+          onClick={onSelect}>{selected ? "✓" : ""}</button>}
         <div className="min-w-0">
           <h2 title={reel.title}>{reel.title}</h2>
           <span className="reel-folder">
