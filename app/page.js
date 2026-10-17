@@ -23,6 +23,7 @@ import AppearanceModal from "../components/AppearanceModal";
 import DataPanel from "../components/DataPanel";
 import FriendsModal from "../components/FriendsModal";
 import TrashSettingsModal from "../components/TrashSettingsModal";
+import AccountSwitcherModal from "../components/AccountSwitcherModal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
 import { createLogoSvg, LOGO_DARK } from "../utils/logo.mjs";
 import { api } from "../utils/api.mjs";
@@ -49,6 +50,7 @@ export default function Home() {
   const [appUpdate, setAppUpdate] = useState(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
+  const [accountGate, setAccountGate] = useState(false);
   const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
@@ -56,10 +58,12 @@ export default function Home() {
   const pullStart = useRef(null);
   const pullDistanceRef = useRef(0);
   const trashPinRef = useRef("");
+  const accountGateRef = useRef(false);
   const userId = data?.user?.id;
   useEffect(() => {
     modalRef.current = modal;
   }, [modal]);
+  useEffect(() => { accountGateRef.current = accountGate; }, [accountGate]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let active = true;
@@ -95,6 +99,10 @@ export default function Home() {
     let lastBackPress = 0;
     let listener;
     CapacitorApp.addListener("backButton", () => {
+      if (accountGateRef.current) {
+        window.history.back();
+        return;
+      }
       if (document.querySelector('[role="dialog"]')) {
         window.history.back();
         return;
@@ -121,6 +129,11 @@ export default function Home() {
       delete document.documentElement.dataset.nativeApp;
       listener?.remove();
     };
+  }, []);
+  useEffect(() => {
+    const back = () => setAccountGate(false);
+    window.addEventListener("popstate", back);
+    return () => window.removeEventListener("popstate", back);
   }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => setMinTimeElapsed(true), 3000);
@@ -218,7 +231,7 @@ export default function Home() {
   const apply = useCallback((next) => {
     setData(next);
     setSelected((previous) =>
-      ["all", "pinned", "favorites", "shared"].includes(previous) ||
+      ["all", "pinned", "favorites", "shared", "trash"].includes(previous) ||
       next.folders.some((f) => f.id === previous && (!f.pin || f.unlocked))
         ? previous
         : "all",
@@ -384,6 +397,11 @@ export default function Home() {
   async function login() {
     const next = await api("library");
     apply(next);
+    setSelected("all");
+    setDeletedReels([]);
+    setTrashUnlocked(false);
+    trashPinRef.current = "";
+    setAccountGate(false);
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get("returnTo");
     if (/^\/share\/(folder|reel)\/[a-f0-9-]{36}$/i.test(returnTo || "")) {
@@ -400,6 +418,26 @@ export default function Home() {
     } catch (err) {
       setError(err.message);
     }
+  }
+  function addAccount() {
+    setModal(null);
+    setAccountGate(true);
+    window.history.pushState({ reelbagAccountGate: true }, "");
+  }
+  function cancelAddAccount() {
+    if (window.history.state?.reelbagAccountGate) window.history.back();
+    else setAccountGate(false);
+  }
+  async function switchAccount(account) {
+    await api("auth/switch", { method: "POST", body: { userId: account.id } });
+    const next = await api("library");
+    apply(next);
+    setSelected("all");
+    setDeletedReels([]);
+    setTrashUnlocked(false);
+    trashPinRef.current = "";
+    setModal(null);
+    setNotice(`Switched to @${account.username}.`);
   }
   async function selectFolder(id, lockId) {
     if (lockId) {
@@ -586,6 +624,11 @@ export default function Home() {
     <>
       {showLoading ? (
         <LoadingScreen />
+      ) : accountGate ? (
+        <main className="gate">
+          <Brand />
+          <AuthScreen onSuccess={login} onCancel={cancelAddAccount} />
+        </main>
       ) : !data?.user ? (
         <main className="gate">
           <Brand />
@@ -632,6 +675,7 @@ export default function Home() {
               sectionTitle={sectionTitle}
               sectionCount={sectionCount}
               sectionKind={activeFolder ? "folder" : selected}
+              sectionIcon={activeFolder?.icon}
               search={search}
               onSearch={setSearch}
               onOpen={(type) => setModal({ type })}
@@ -801,6 +845,9 @@ export default function Home() {
             setNotice(protectedTrash ? "Recently Deleted PIN saved." : "Recently Deleted PIN removed.");
           }}
         />
+      )}
+      {data?.user && modal?.type === "accounts" && (
+        <AccountSwitcherModal currentUser={data.user} onSwitch={switchAccount} onAdd={addAccount} onClose={() => setModal(null)} />
       )}
       {data?.user && modal?.type === "share" && (
         <ShareModal

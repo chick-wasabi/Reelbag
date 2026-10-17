@@ -2171,7 +2171,7 @@ select option {
   padding-right: 42px;
 }
 .sidebar-collapsed .sidebar-trash-row .sidebar-link {
-  padding-right: 0;
+  padding: 11px;
 }
 .sidebar-trash-settings {
   position: absolute;
@@ -2243,7 +2243,7 @@ select option {
 .folder-member-person small { color: var(--text-muted); font-size: 11px; }
 .folder-members-empty { margin: 0; padding: 5px 0; }
 .sidebar-collapsed .sidebar-trash-row .sidebar-link {
-  padding-right: 0;
+  padding: 11px;
 }
 .sidebar-collapsed .sidebar-trash-settings {
   display: none;
@@ -2362,9 +2362,26 @@ select option {
   padding: 11px;
 }
 .sidebar-collapsed .sidebar-folder-row .folder-menu-trigger {
-  right: -5px;
-  width: 22px;
+  display: none;
 }
+.folder-icon-picker { min-width: 0; border: 0; padding: 0; margin: 0; }
+.folder-icon-picker legend { margin-bottom: 9px; color: var(--text-secondary); font-size: 13px; }
+.folder-icon-picker > div { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
+.folder-icon-picker button { display: grid; width: 100%; aspect-ratio: 1; place-items: center; border: 1px solid var(--line); border-radius: 9px; color: var(--text-muted); background: rgb(255 255 255 / .025); }
+.folder-icon-picker button:hover,
+.folder-icon-picker button.active { color: var(--accent); border-color: rgb(var(--accent-rgb) / .45); background: rgb(var(--accent-rgb) / .1); box-shadow: 0 0 14px rgb(var(--accent-rgb) / .08); }
+@media (max-width: 480px) { .folder-icon-picker > div { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.account-switch-list { display: grid; gap: 9px; }
+.account-switch-list > button { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--text-primary); background: rgb(255 255 255 / .025); text-align: left; }
+.account-switch-list > button:not(:disabled):hover { border-color: rgb(var(--accent-rgb) / .35); background: rgb(var(--accent-rgb) / .07); }
+.account-switch-list > button > span { min-width: 0; }
+.account-switch-list strong,
+.account-switch-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-switch-list small { margin-top: 2px; color: var(--text-muted); font-size: 11px; }
+.account-switch-list em { color: var(--accent); font-size: 11px; font-style: normal; }
+.account-add-icon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px dashed rgb(var(--accent-rgb) / .45); border-radius: 11px; color: var(--accent); }
+.account-switch-list .account-add-button { color: var(--accent); }
+.auth-back-button { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 18px; color: var(--accent); font-size: 13px; }
 .folder-context-menu {
   position: fixed;
   z-index: 70;

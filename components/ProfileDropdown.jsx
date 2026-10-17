@@ -177,7 +177,7 @@ export default function ProfileDropdown({ user, onOpen, onLogout, appUpdate }) {
             role="menuitem"
             onClick={() => {
               close(true);
-              onLogout();
+              onOpen("accounts");
             }}
           >
             <UsersRound size={17} aria-hidden="true" />

@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { Folder, LockKeyhole } from "lucide-react";
 import Modal from "./Modal";
+import FolderGlyph from "./FolderGlyph";
+import { FOLDER_ICONS } from "../utils/folder-icons.mjs";
 
 export default function FolderModal({ folder, onSave, onClose }) {
   const [name, setName] = useState(folder?.name || "");
+  const [icon, setIcon] = useState(folder?.icon || "folder");
   const [protectedFolder, setProtected] = useState(Boolean(folder?.pin));
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -20,6 +23,7 @@ export default function FolderModal({ folder, onSave, onClose }) {
       await onSave({
         id: folder?.id,
         name: name.trim(),
+        icon,
         protected: protectedFolder,
         pin,
       });
@@ -49,6 +53,18 @@ export default function FolderModal({ folder, onSave, onClose }) {
             disabled={busy}
           />
         </label>
+        <fieldset className="folder-icon-picker">
+          <legend>Folder icon</legend>
+          <div>
+            {FOLDER_ICONS.map((option) => (
+              <button key={option} type="button" className={icon === option ? "active" : ""}
+                aria-label={`Use ${option} folder icon`} aria-pressed={icon === option}
+                onClick={() => setIcon(option)} disabled={busy}>
+                <FolderGlyph icon={option} size={18} />
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <label className="checkbox-label">
           <input
             type="checkbox"

@@ -983,6 +983,7 @@ test("keyboard profile menu, cloud appearance controls, password change and swit
   await expect(page.getByRole("status")).toContainText("Password updated");
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await openProfileItem(page, "Switch Account");
+  await page.getByRole("button", { name: /Add another account/i }).click();
   await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByLabel("Username", { exact: true }).fill(name);

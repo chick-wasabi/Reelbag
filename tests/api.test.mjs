@@ -49,6 +49,31 @@ async function account() {
   assert.equal(result.status, 200, JSON.stringify(result.data));
   return { ...result, username, password };
 }
+function mergeCookies(response, current = "") {
+  const jar = new Map(current.split(";").map((part) => part.trim()).filter(Boolean).map((part) => [part.split("=")[0], part]));
+  const values = response.headers.getSetCookie?.() || [response.headers.get("set-cookie")].filter(Boolean);
+  for (const value of values) {
+    for (const match of value.matchAll(/(?:^|,\s*)([^=;,\s]+=[^;,\s]*)/g)) jar.set(match[1].split("=")[0], match[1]);
+  }
+  return [...jar.values()].join("; ");
+}
+
+test("a trusted device can keep multiple accounts and switch without another password", async () => {
+  const firstName = name(), secondName = name();
+  const first = await call("auth/signup", "POST", { username: firstName, password: "Strong-test-9876" });
+  let jar = mergeCookies(first.response);
+  assert.match(jar, /reelbag_session=/);
+  assert.match(jar, /reelbag_device=/);
+  const second = await call("auth/signup", "POST", { username: secondName, password: "Strong-test-9876" }, jar);
+  jar = mergeCookies(second.response, jar);
+  const accounts = await call("auth/accounts", "GET", null, jar);
+  assert.deepEqual(accounts.data.accounts.map((entry) => entry.username).sort(), [firstName, secondName].sort());
+  const firstAccount = accounts.data.accounts.find((entry) => entry.username === firstName);
+  const switched = await call("auth/switch", "POST", { userId: firstAccount.id }, jar);
+  assert.equal(switched.status, 200, JSON.stringify(switched.data));
+  jar = mergeCookies(switched.response, jar);
+  assert.equal((await call("auth/session", "GET", null, jar)).data.user.username, firstName);
+});
 
 test("automatic initialization is repeatable and accounts use bcrypt with opaque HttpOnly sessions", async () => {
   const user = await account();
@@ -556,7 +581,7 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   const folder = await call(
     "folders",
     "POST",
-    { name: "Magic", protected: true, pin: "4567" },
+    { name: "Magic", icon: "crown", protected: true, pin: "4567" },
     user.cookie,
   );
   assert.equal(folder.status, 201, JSON.stringify(folder.data));
@@ -579,6 +604,7 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   const hidden = await call("library", "GET", null, device.cookie);
   assert.equal(hidden.data.reels.length, 0);
   assert.equal(hidden.data.folders[0].pin, true);
+  assert.equal(hidden.data.folders[0].icon, "crown");
   assert.equal(hidden.data.folders[0].unlocked, false);
   assert.doesNotMatch(
     JSON.stringify(hidden.data),

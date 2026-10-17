@@ -1,4 +1,5 @@
 import { parseReelUrl } from "./reels.mjs";
+import { normalizeFolderIcon } from "./folder-icons.mjs";
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 export function validateBackup(raw) {
   const fail = () => {
@@ -21,6 +22,7 @@ export function validateBackup(raw) {
   const folders = raw.folders.map((f) => ({
     id: text(f?.id, 100),
     name: text(f?.name, 60),
+    icon: normalizeFolderIcon(f?.icon),
   }));
   if (
     new Set(folders.map((f) => f.id)).size !== folders.length ||

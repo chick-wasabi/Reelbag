@@ -3,6 +3,7 @@
 import FolderMenu from "./FolderMenu";
 import { FolderPlus, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
 import FolderMembersPopover from "./FolderMembersPopover";
+import FolderGlyph from "./FolderGlyph";
 
 export default function FolderBar({
   folders,
@@ -42,6 +43,7 @@ export default function FolderBar({
             {folder.pin && !unlocked.has(folder.id) && (
               <LockKeyhole size={13} />
             )}
+            {!folder.virtual && !folder.trash && !(folder.pin && !unlocked.has(folder.id)) && <FolderGlyph icon={folder.icon} size={13} />}
             {folder.name}
           </button>
         ))}

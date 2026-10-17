@@ -3,6 +3,7 @@ import { Search, Folder, Grid2X2, Pin, Star, Trash2, Users } from "lucide-react"
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
+import FolderGlyph from "./FolderGlyph";
 export default function Header({
   user,
   search,
@@ -14,6 +15,7 @@ export default function Header({
   sectionCount,
   sectionKind,
   appUpdate,
+  sectionIcon,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -23,7 +25,7 @@ export default function Header({
         <Brand slogan />
       </div>
       <div className="section-heading" role="region" aria-label="Current view">
-        <SectionIcon size={22} aria-hidden="true" />
+        {sectionKind === "folder" ? <FolderGlyph icon={sectionIcon} size={22} aria-hidden="true" /> : <SectionIcon size={22} aria-hidden="true" />}
         <h1>{sectionTitle}</h1>
         <span
           className="section-count"

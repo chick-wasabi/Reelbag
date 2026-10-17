@@ -1,7 +1,8 @@
 "use client";
-import { Folder, LockKeyhole, Users } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import FolderMenu from "./FolderMenu";
 import FolderMembersPopover from "./FolderMembersPopover";
+import FolderGlyph from "./FolderGlyph";
 
 export default function SidebarFolderItem({
   folder,
@@ -25,12 +26,10 @@ export default function SidebarFolderItem({
         title={owner ? folder.name : `${folder.name} — ${folder.role}`}
         onClick={() => onSelect(folder.id)}
       >
-        {!owner ? (
-          <Users size={17} />
-        ) : folder.pin && !folder.unlocked ? (
+        {folder.pin && !folder.unlocked ? (
           <LockKeyhole size={17} />
         ) : (
-          <Folder size={17} />
+          <FolderGlyph icon={folder.icon} size={17} />
         )}
         <span className="sidebar-label">{folder.name}</span>
       </button>

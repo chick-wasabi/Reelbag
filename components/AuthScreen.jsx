@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { api } from "../utils/api.mjs";
 import AvatarPicker from "./AvatarPicker";
 import {
@@ -16,7 +16,7 @@ function countdown(seconds) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export default function AuthScreen({ onSuccess }) {
+export default function AuthScreen({ onSuccess, onCancel }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
@@ -129,6 +129,7 @@ export default function AuthScreen({ onSuccess }) {
   }
   return (
     <section className="gate-panel">
+      {onCancel && <button type="button" className="auth-back-button" onClick={onCancel}><ArrowLeft size={16} /> Back to current account</button>}
       <h1>
         {recovering
           ? "Find your way back."
