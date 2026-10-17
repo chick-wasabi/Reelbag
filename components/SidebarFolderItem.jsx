@@ -1,6 +1,7 @@
 "use client";
 import { Folder, LockKeyhole, Users } from "lucide-react";
 import FolderMenu from "./FolderMenu";
+import FolderMembersPopover from "./FolderMembersPopover";
 
 export default function SidebarFolderItem({
   folder,
@@ -10,11 +11,12 @@ export default function SidebarFolderItem({
   onShare,
   onDelete,
   onLock,
+  onChangeRole,
 }) {
   const owner = folder.role === "owner";
   const active = selected === folder.id;
   return (
-    <div className={`sidebar-folder-row ${active ? "is-active" : ""}`}>
+    <div className={`sidebar-folder-row ${active ? "is-active" : ""} ${folder.isShared ? "has-members" : ""}`}>
       <button
         className={`sidebar-link folder-link ${active ? "active" : ""}`}
         aria-label={`Open ${owner ? "" : "shared "}folder ${folder.name}`}
@@ -29,17 +31,11 @@ export default function SidebarFolderItem({
         ) : (
           <Folder size={17} />
         )}
-        <span className="sidebar-label">
-          {folder.name}
-          {!owner && <small className="shared-role">{folder.role}</small>}
-        </span>
-        {folder.isShared && (
-          <span className="sidebar-share-badge" aria-label={`${folder.memberCount} members`}>
-            <Users size={13} />
-            {folder.memberCount > 1 && <small>{folder.memberCount}</small>}
-          </span>
-        )}
+        <span className="sidebar-label">{folder.name}</span>
       </button>
+      {folder.isShared && (
+        <FolderMembersPopover folder={folder} onChangeRole={onChangeRole} />
+      )}
       <FolderMenu
         folder={folder}
         onRename={onRename}

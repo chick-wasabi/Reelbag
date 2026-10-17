@@ -26,12 +26,12 @@ export default function Sidebar({
   pinnedCount,
   favoriteCount,
   sharedCount,
-  trashCount,
   onCreate,
   onRename,
   onShare,
   onDelete,
   onLock,
+  onChangeRole,
   friends = [],
   friendRequestCount = 0,
   onOpenFriends,
@@ -114,7 +114,6 @@ export default function Sidebar({
           >
             <Trash2 size={18} />
             <span className="sidebar-label">Recently Deleted</span>
-            <span className="sidebar-count" aria-hidden="true">{trashCount}</span>
           </button>
           <button
             className="icon-button sidebar-trash-settings"
@@ -151,6 +150,7 @@ export default function Sidebar({
                   onShare={onShare}
                   onDelete={onDelete}
                   onLock={onLock}
+                  onChangeRole={onChangeRole}
                 />
               ))}
             {!folders.length && (

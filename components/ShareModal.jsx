@@ -321,6 +321,14 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                       {member.role} · {member.status}
                     </small>
                   </span>
+                  <span className="share-member-actions">
+                  {type === "folder" && (
+                    <select aria-label={`Role for ${member.username}`} value={member.role} disabled={busy}
+                      onChange={(event) => run(() => api(`${base}/members/${member.recipientId}`, { method: "PATCH", body: { role: event.target.value } }), "Role updated.")}>
+                      <option value="viewer">Viewer</option>
+                      <option value="collaborator">Collaborator</option>
+                    </select>
+                  )}
                   <button
                     className="icon-button danger"
                     aria-label={`Revoke ${member.username}`}
@@ -338,6 +346,7 @@ export default function ShareModal({ type, item, onClose, onChange }) {
                   >
                     <X size={17} />
                   </button>
+                  </span>
                 </div>
               ))}
           </section>

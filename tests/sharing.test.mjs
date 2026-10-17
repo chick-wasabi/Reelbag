@@ -128,6 +128,10 @@ test("folder invites require recipient acceptance, enforce roles at SQL writes, 
   );
   const library = (await call("library", "GET", null, recipient.cookie)).data;
   assert.equal(library.folders[0].role, "viewer");
+  assert.deepEqual(
+    library.folders[0].members.map(({ recipientId, username, role }) => ({ recipientId, username, role })),
+    [{ recipientId: recipient.id, username: recipient.username, role: "viewer" }],
+  );
   assert.equal(library.reels[0].canManage, false);
   assert.equal(
     (
@@ -163,11 +167,17 @@ test("folder invites require recipient acceptance, enforce roles at SQL writes, 
     ).status,
     404,
   );
-  await call(
-    `${route}/invite`,
-    "POST",
-    { username: recipient.username, role: "collaborator" },
-    owner.cookie,
+  assert.equal(
+    (await call(`${route}/members/${recipient.id}`, "PATCH", { role: "admin" }, owner.cookie)).status,
+    400,
+  );
+  assert.equal(
+    (await call(`${route}/members/${recipient.id}`, "PATCH", { role: "collaborator" }, owner.cookie)).status,
+    200,
+  );
+  assert.equal(
+    (await call("library", "GET", null, recipient.cookie)).data.folders[0].role,
+    "collaborator",
   );
   const added = await call(
     "reels",

@@ -521,6 +521,15 @@ export default function Home() {
       setError(err.message);
     }
   }
+
+  async function changeFolderMemberRole(folder, member, role) {
+    await api(`sharing/folder/${folder.id}/members/${member.recipientId}`, {
+      method: "PATCH",
+      body: { role },
+    });
+    await mutate("library", "GET");
+    setNotice(`@${member.username} is now a ${role}.`);
+  }
   const reels = useMemo(() => {
     const query = search.trim().toLowerCase();
     const source = selected === "trash" ? deletedReels : (data?.reels || []);
@@ -592,12 +601,12 @@ export default function Home() {
             pinnedCount={data.reels.filter((reel) => reel.isPinned && !reel.isDirectShared).length}
             favoriteCount={data.reels.filter((reel) => reel.isFavorite && !reel.isDirectShared).length}
             sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
-            trashCount={data.trashCount || 0}
             onCreate={() => setModal({ type: "folder" })}
             onRename={(folder) => manageFolder(folder, "rename")}
             onShare={(folder) => manageFolder(folder, "share")}
             onDelete={(folder) => manageFolder(folder, "delete")}
             onLock={(folder) => selectFolder(selected, folder.id)}
+            onChangeRole={changeFolderMemberRole}
             friends={data.friends || []}
             friendRequestCount={data.friendRequests?.length || 0}
             onOpenFriends={() => setModal({ type: "friends" })}
@@ -629,6 +638,7 @@ export default function Home() {
                 onDelete={(folder) => manageFolder(folder, "delete")}
                 onLock={(folder) => selectFolder(selected, folder.id)}
                 onTrashSettings={() => setModal({ type: "trashSettings" })}
+                onChangeRole={changeFolderMemberRole}
               />
             </div>
             <main

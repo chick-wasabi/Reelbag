@@ -2,6 +2,7 @@
 
 import FolderMenu from "./FolderMenu";
 import { FolderPlus, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
+import FolderMembersPopover from "./FolderMembersPopover";
 
 export default function FolderBar({
   folders,
@@ -14,6 +15,7 @@ export default function FolderBar({
   onLock,
   onShare,
   onTrashSettings,
+  onChangeRole,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -44,14 +46,17 @@ export default function FolderBar({
         ))}
       </nav>
       {current && (
-        <FolderMenu
-          folder={current}
-          onRename={onRename}
-          onShare={onShare}
-          onDelete={onDelete}
-          onLock={onLock}
-          onSelect={onSelect}
-        />
+        <>
+          {current.isShared && <FolderMembersPopover folder={current} onChangeRole={onChangeRole} mobile />}
+          <FolderMenu
+            folder={current}
+            onRename={onRename}
+            onShare={onShare}
+            onDelete={onDelete}
+            onLock={onLock}
+            onSelect={onSelect}
+          />
+        </>
       )}
       {selected === "trash" && (
         <button className="icon-button" onClick={onTrashSettings} aria-label="Recently Deleted settings" title="Recently Deleted settings">
