@@ -11,6 +11,9 @@ import {
   RefreshCw,
   Share2,
   UserRound,
+  EyeOff,
+  Library,
+  Send,
 } from "lucide-react";
 
 import { parseReelUrl } from "../utils/reels.mjs";
@@ -31,8 +34,15 @@ export default function ReelCard({
   onRestore,
   onPermanentDelete,
   onReact,
+  onRevokeShare,
+  onCopyToLibrary,
+  onHide,
+  onUnhide,
+  hiddenMode = false,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
+  const isFolderGuest = !canManage && Boolean(folder?.role && folder.role !== "owner");
+  const isCollaborator = folder?.role === "collaborator" && !canManage;
   const ref = useRef(null);
   const menu = useRef(null);
   const parsed = parseReelUrl(reel.url);
@@ -126,8 +136,8 @@ export default function ReelCard({
           </span>
         </div>
         <div className="reel-actions">
-          {canManage && reel.sharedWith?.length > 0 && <ReelSharedPopover reel={reel} />}
-          {canManage && reel.isPinned && (
+          {canManage && reel.sharedWith?.length > 0 && <ReelSharedPopover reel={reel} onRevoke={onRevokeShare} />}
+          {(canManage || isCollaborator) && reel.isPinned && (
               <button
                 className="icon-button flag-toggle is-pinned active-flag"
                 aria-label={`Unpin ${reel.title}`}
@@ -170,7 +180,7 @@ export default function ReelCard({
                       </button>
                     </>
                   ) : <>
-                  {canManage && <button
+                  {(canManage || isCollaborator) && <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -189,6 +199,27 @@ export default function ReelCard({
                   >
                     <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
                     {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
+                  </button>}
+                  {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(true); }}>
+                    <Star size={15} /> Add to Favorites
+                  </button>}
+                  {isCollaborator && <button disabled={toggling} onClick={async () => { closeMenu(); await toggle("isPinned"); }}>
+                    <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
+                    {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
+                  </button>}
+                  {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(false); }}>
+                    <Library size={15} /> Add to My Reels
+                  </button>}
+                  {isCollaborator && <button onClick={async () => {
+                    closeMenu();
+                    try {
+                      if (navigator.share) await navigator.share({ title: reel.title, url: reel.url });
+                      else await navigator.clipboard.writeText(reel.url);
+                    } catch (error) {
+                      if (error?.name !== "AbortError") console.error("Could not share Reel", error);
+                    }
+                  }}>
+                    <Send size={15} /> Share Reel
                   </button>}
                   {canManage && onShare && (
                     <button
@@ -221,7 +252,11 @@ export default function ReelCard({
                     <FolderInput size={15} />
                     Move Folder
                   </button>}
-                  <button
+                  {hiddenMode ? <button onClick={() => { closeMenu(); onUnhide?.(); }}>
+                    <EyeOff size={15} /> Unhide Reel
+                  </button> : isFolderGuest ? <button onClick={() => { closeMenu(); onHide?.(); }}>
+                    <EyeOff size={15} /> Hide Reel
+                  </button> : <button
                     className="danger"
                     onClick={() => {
                       closeMenu();
@@ -231,7 +266,7 @@ export default function ReelCard({
                   >
                     <Trash2 size={15} />
                     Delete
-                  </button>
+                  </button>}
                   </>}
                 </div>
             </details>

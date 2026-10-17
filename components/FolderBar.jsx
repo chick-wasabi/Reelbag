@@ -73,7 +73,7 @@ export default function FolderBar({
         aria-label="New folder"
         title="New folder"
       >
-        <FolderPlus size={17} />
+        <FolderPlus size={20} strokeWidth={2.5} />
       </button>
     </div>
   );

@@ -7,7 +7,7 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
-  UserPlus,
+  UserRoundPlus,
   Trash2,
   MoreHorizontal,
 } from "lucide-react";
@@ -132,12 +132,12 @@ export default function Sidebar({
           <div className="sidebar-folder-heading">
             <span className="sidebar-label">YOUR FOLDERS</span>
             <button
-              className="icon-button"
+              className="icon-button sidebar-add-button"
               aria-label="New folder"
               title="New folder"
               onClick={onCreate}
             >
-              <FolderPlus size={17} />
+              <FolderPlus size={20} strokeWidth={2.5} />
             </button>
           </div>
           <div className="sidebar-folder-list">
@@ -169,12 +169,12 @@ export default function Sidebar({
               </span>
             )}
             <button
-              className="icon-button"
+              className="icon-button sidebar-add-button"
               aria-label="Add or manage friends"
               title="Add or manage friends"
               onClick={onOpenFriends}
             >
-              <UserPlus size={17} />
+              <UserRoundPlus size={20} strokeWidth={2.5} />
             </button>
           </div>
           <div className="sidebar-friend-list">

@@ -214,7 +214,7 @@ test("folder invites require recipient acceptance, enforce roles at SQL writes, 
         recipient.cookie,
       )
     ).status,
-    404,
+    200,
   );
   const backup = await call("library/export", "GET", null, recipient.cookie);
   assert.equal(backup.data.reels.length, 0);
@@ -408,6 +408,55 @@ test("single reel sharing is isolated, invitations can be declined, and deletion
   );
   library = (await call("library", "GET", null, recipient.cookie)).data;
   assert.equal(library.reels.length, 0);
+});
+
+test("collaborators can pin shared reels, keep personal copies, and hide without changing the owner", async () => {
+  const owner = await user(), collaborator = await user();
+  const folderId = await folder(owner);
+  const reelId = await reel(owner, folderId, "Shared keeper");
+  await call(
+    `sharing/folder/${folderId}/invite`,
+    "POST",
+    { username: collaborator.username, role: "collaborator" },
+    owner.cookie,
+  );
+  const invite = (await call("notifications", "GET", null, collaborator.cookie)).data.items[0];
+  await call(
+    `notifications/${invite.id}/respond`,
+    "POST",
+    { status: "accepted" },
+    collaborator.cookie,
+  );
+
+  const pinned = await call(
+    `reels/${reelId}/flags`,
+    "PATCH",
+    { isPinned: true },
+    collaborator.cookie,
+  );
+  assert.equal(pinned.status, 200, JSON.stringify(pinned.data));
+  assert.equal(
+    (await call("library", "GET", null, owner.cookie)).data.reels[0].isPinned,
+    true,
+  );
+
+  const copied = await call(
+    `reels/${reelId}/copy`,
+    "POST",
+    { favorite: true },
+    collaborator.cookie,
+  );
+  assert.equal(copied.status, 201, JSON.stringify(copied.data));
+  assert.ok(copied.data.reels.some((item) => item.canManage && item.isFavorite));
+
+  const hidden = await call(`reels/${reelId}/hide`, "POST", {}, collaborator.cookie);
+  assert.equal(hidden.status, 200, JSON.stringify(hidden.data));
+  assert.equal(hidden.data.reels.some((item) => item.id === reelId), false);
+  assert.equal(hidden.data.hiddenReels.some((item) => item.id === reelId), true);
+  const restored = await call(`reels/${reelId}/unhide`, "POST", {}, collaborator.cookie);
+  assert.equal(restored.status, 200, JSON.stringify(restored.data));
+  assert.equal(restored.data.hiddenReels.length, 0);
+  assert.equal(restored.data.reels.some((item) => item.id === reelId), true);
 });
 
 test("collaborator additions recheck revoked grants between authorization and INSERT", async () => {

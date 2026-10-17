@@ -29,7 +29,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
   const cancelOpen = () => clearTimeout(openTimer.current);
   const scheduleOpen = () => {
     cancelOpen();
-    openTimer.current = setTimeout(open, 350);
+    openTimer.current = setTimeout(open, 500);
   };
   const scheduleClose = () => {
     cancelOpen();

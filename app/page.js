@@ -51,6 +51,7 @@ export default function Home() {
   const [pullDistance, setPullDistance] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [accountGate, setAccountGate] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
@@ -485,6 +486,7 @@ export default function Home() {
       return;
     }
     setSelected(id);
+    setShowHidden(false);
     setSearch("");
   }
   async function saveFolder(folder) {
@@ -592,11 +594,17 @@ export default function Home() {
   }
   const reels = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const source = selected === "trash" ? deletedReels : (data?.reels || []);
+    const source = selected === "trash"
+      ? deletedReels
+      : showHidden
+        ? (data?.hiddenReels || [])
+        : (data?.reels || []);
     const folderById = new Map((data?.folders || []).map((folder) => [folder.id, folder]));
     return source.filter(
       (r) =>
-        (selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && (!r.folderId || !folderById.get(r.folderId)?.pin)) ||
+        (showHidden
+          ? r.folderId === selected
+          : selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && (!r.folderId || !folderById.get(r.folderId)?.pin)) ||
           (selected === "pinned"
             ? r.isPinned && r.canManage && !r.isDirectShared
             : selected === "favorites"
@@ -606,7 +614,7 @@ export default function Home() {
                 : r.folderId === selected && !r.isDirectShared)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
-  }, [data, deletedReels, selected, search]);
+  }, [data, deletedReels, selected, search, showHidden]);
 
   const activeFolder = data?.folders.find((folder) => folder.id === selected);
   const sectionTitle =
@@ -618,8 +626,12 @@ export default function Home() {
           ? "Shared with Me"
         : selected === "trash"
           ? "Recently Deleted"
-        : activeFolder?.name || "All Reels";
-  const sectionCount = selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
+        : activeFolder?.name
+          ? `${activeFolder.name}${showHidden ? " · Hidden" : ""}`
+          : "All Reels";
+  const sectionCount = showHidden
+    ? (data?.hiddenReels || []).filter((reel) => reel.folderId === selected).length
+    : selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
     (reel) =>
       (selected === "all" && reel.canManage && !reel.isDirectShared && (!reel.folderId || !data.folders.find((folder) => folder.id === reel.folderId)?.pin)) ||
       (selected === "pinned"
@@ -693,6 +705,10 @@ export default function Home() {
               onLogout={logout}
               onLibraryChange={() => mutate("library", "GET")}
               appUpdate={appUpdate}
+              hiddenAvailable={activeFolder?.role === "collaborator"}
+              showingHidden={showHidden}
+              hiddenCount={(data.hiddenReels || []).filter((reel) => reel.folderId === selected).length}
+              onToggleHidden={() => setShowHidden((value) => !value)}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -742,6 +758,32 @@ export default function Home() {
                       }}
                       onMove={() => setModal({ type: "moveReel", reel })}
                       onDelete={() => deleteReel(reel)}
+                      hiddenMode={showHidden}
+                      onHide={async () => {
+                        try {
+                          await mutate(`reels/${reel.id}/hide`, "POST");
+                          setNotice("Reel hidden from your view.");
+                        } catch (err) { setError(err.message); }
+                      }}
+                      onUnhide={async () => {
+                        try {
+                          await mutate(`reels/${reel.id}/unhide`, "POST");
+                          setNotice("Reel is visible again.");
+                        } catch (err) { setError(err.message); }
+                      }}
+                      onCopyToLibrary={async (favorite) => {
+                        try {
+                          await mutate(`reels/${reel.id}/copy`, "POST", { favorite });
+                          setNotice(favorite ? "Saved a personal copy to Favorites." : "Saved a personal copy to All Reels.");
+                        } catch (err) { setError(err.message); }
+                      }}
+                      onRevokeShare={async (person) => {
+                        try {
+                          await api(`sharing/reel/${reel.id}/members/${person.recipientId}`, { method: "DELETE", body: {} });
+                          await mutate("library", "GET");
+                          setNotice(`Sharing with @${person.username} revoked.`);
+                        } catch (err) { setError(err.message); }
+                      }}
                       trashMode={selected === "trash"}
                       onRestore={() => updateDeletedReel(reel, "restore")}
                       onPermanentDelete={() => updateDeletedReel(reel, "permanent")}
@@ -764,11 +806,15 @@ export default function Home() {
                   <h2>
                     {search
                       ? "No matching reels."
+                      : showHidden
+                        ? "Nothing hidden here."
                       : "A place for the good ones."}
                   </h2>
                   <p>
                     {search
                       ? "Try another title."
+                      : showHidden
+                        ? "Reels you hide from this shared folder will appear here."
                       : selected === "pinned"
                         ? "Pin a reel to find it here."
                         : selected === "favorites"
@@ -783,12 +829,15 @@ export default function Home() {
                     className="button-secondary"
                     onClick={() => {
                       if (search) setSearch("");
+                      else if (showHidden) setShowHidden(false);
                       else if (["pinned", "favorites", "shared", "trash"].includes(selected)) setSelected("all");
                       else setModal({ type: "reel" });
                     }}
                   >
                     {search
                       ? "Clear search"
+                      : showHidden
+                        ? "Back to folder"
                       : ["pinned", "favorites", "shared", "trash"].includes(selected)
                         ? "Browse all reels"
                         : "Add your first reel"}
