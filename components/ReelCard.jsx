@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Share2,
   UserRound,
+  SmilePlus,
 } from "lucide-react";
 
 import { parseReelUrl } from "../utils/reels.mjs";
@@ -28,10 +29,12 @@ export default function ReelCard({
   trashMode = false,
   onRestore,
   onPermanentDelete,
+  onReact,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
   const ref = useRef(null);
   const menu = useRef(null);
+  const reactionMenu = useRef(null);
   const parsed = parseReelUrl(reel.url);
   const embedUrl = parsed
     ? `https://www.instagram.com/reel/${parsed.shortcode}/embed/`
@@ -51,15 +54,24 @@ export default function ReelCard({
       menu.current.querySelector("summary")?.focus();
     }
   }
+  function closeReactionMenu() {
+    if (reactionMenu.current) reactionMenu.current.open = false;
+  }
   useEffect(() => {
     function outside(event) {
       if (menu.current && !menu.current.contains(event.target))
         menu.current.open = false;
+      if (reactionMenu.current && !reactionMenu.current.contains(event.target))
+        reactionMenu.current.open = false;
     }
     function escape(event) {
       if (event.key === "Escape" && menu.current?.open) {
         event.preventDefault();
         closeMenu();
+      }
+      if (event.key === "Escape" && reactionMenu.current?.open) {
+        event.preventDefault();
+        closeReactionMenu();
       }
     }
     document.addEventListener("pointerdown", outside);
@@ -73,6 +85,7 @@ export default function ReelCard({
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
+  const [reacting, setReacting] = useState(false);
   function replay() {
     if (!playerReady) return;
     setFailed(false);
@@ -147,7 +160,6 @@ export default function ReelCard({
                 <Star size={16} fill="currentColor" />
               </button>
           )}
-          <div className="reel-menu-stack">
           <details ref={menu} className="reel-menu">
                 <summary
                   className="icon-button"
@@ -232,16 +244,6 @@ export default function ReelCard({
                   </>}
                 </div>
             </details>
-            <button
-              className={`replay-icon-button ${playerReady ? "is-ready" : ""}`}
-              aria-label={`Replay ${reel.title}`}
-              title={playerReady ? "Replay" : "Player loading"}
-              disabled={!playerReady}
-              onClick={replay}
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
         </div>
       </div>
       <div
@@ -282,7 +284,54 @@ export default function ReelCard({
           )}
         </div>
       </div>
-      <div className="reel-card-tail" aria-hidden="true" />
+      <footer className="reel-card-footer">
+        {!trashMode && (
+          <details ref={reactionMenu} className="reaction-picker">
+            <summary
+              className={`reaction-trigger ${reel.reaction ? "has-reaction" : ""}`}
+              aria-label="React to this Reel"
+              title="Add reaction"
+            >
+              {reel.reaction || <SmilePlus size={16} />}
+              {Object.values(reel.reactionCounts || {}).reduce((sum, count) => sum + Number(count), 0) > 0 && (
+                <span>{Object.values(reel.reactionCounts || {}).reduce((sum, count) => sum + Number(count), 0)}</span>
+              )}
+            </summary>
+            <div className="reaction-palette">
+              {["❤️", "😂", "🔥", "😮", "👏"].map((emoji) => (
+                <button
+                  type="button"
+                  key={emoji}
+                  className={reel.reaction === emoji ? "active" : ""}
+                  disabled={reacting}
+                  aria-label={`React ${emoji}`}
+                  onClick={async () => {
+                    setReacting(true);
+                    try {
+                      await onReact(reel.reaction === emoji ? null : emoji);
+                      closeReactionMenu();
+                    } finally {
+                      setReacting(false);
+                    }
+                  }}
+                >
+                  {emoji}
+                  {Number(reel.reactionCounts?.[emoji] || 0) > 0 && <small>{reel.reactionCounts[emoji]}</small>}
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
+        <button
+          className={`replay-icon-button ${playerReady ? "is-ready" : ""}`}
+          aria-label={`Replay ${reel.title}`}
+          title={playerReady ? "Replay" : "Player loading"}
+          disabled={!playerReady}
+          onClick={replay}
+        >
+          <RefreshCw size={14} />
+        </button>
+      </footer>
       {failed && (
         <div className="embed-error">
           <span>

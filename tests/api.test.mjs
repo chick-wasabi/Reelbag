@@ -184,6 +184,26 @@ test("friends can accept requests and receive dropped reels without moving the o
     (await call("notifications", "GET", null, recipient.cookie)).data.items.length,
     0,
   );
+  const ownerReaction = await call(
+    `reels/${reelId}/reaction`,
+    "POST",
+    { emoji: "🔥" },
+    sender.cookie,
+  );
+  assert.equal(ownerReaction.status, 200, JSON.stringify(ownerReaction.data));
+  const friendReaction = await call(
+    `reels/${reelId}/reaction`,
+    "POST",
+    { emoji: "😂" },
+    recipient.cookie,
+  );
+  const reactedReel = friendReaction.data.reels.find((reel) => reel.id === reelId);
+  assert.equal(reactedReel.reaction, "😂");
+  assert.deepEqual(reactedReel.reactionCounts, { "🔥": 1, "😂": 1 });
+  assert.equal(
+    (await call(`reels/${reelId}/reaction`, "POST", { emoji: null }, recipient.cookie)).status,
+    200,
+  );
   const folder = await call(
     "folders",
     "POST",

@@ -666,6 +666,14 @@ export default function Home() {
                       trashMode={selected === "trash"}
                       onRestore={() => updateDeletedReel(reel, "restore")}
                       onPermanentDelete={() => updateDeletedReel(reel, "permanent")}
+                      onReact={async (emoji) => {
+                        try {
+                          await mutate(`reels/${reel.id}/reaction`, "POST", { emoji });
+                        } catch (err) {
+                          setError(err.message);
+                          throw err;
+                        }
+                      }}
                       onDragStart={() => setNotice(`Drop “${reel.title}” onto a friend in the sidebar.`)}
                       onDragEnd={() => setNotice("")}
                     />
