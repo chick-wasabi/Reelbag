@@ -86,6 +86,7 @@ select option {
   font-size: 22px;
   letter-spacing: -0.9px;
   white-space: nowrap;
+  font-family: Arial, Helvetica, sans-serif;
 }
 .brand-mark {
   display: flex;
@@ -1430,10 +1431,12 @@ select option {
     min-height: 78px;
     padding: 12px 13px;
   }
-  .embed-viewport,
-  .embed-shell,
+  .reel-heading h2 {
+    font-size: 15px;
+    font-weight: 700;
+  }
   .reel-iframe {
-    overscroll-behavior: none;
+    touch-action: pan-y pinch-zoom;
   }
 }
 .reel-actions .is-favorite {
