@@ -12,7 +12,7 @@ export function validateBackup(raw) {
   };
   if (
     !raw ||
-    raw.version !== 3 ||
+    ![3, 4].includes(raw.version) ||
     !Array.isArray(raw.folders) ||
     !Array.isArray(raw.reels) ||
     raw.folders.length > 500 ||
@@ -31,9 +31,14 @@ export function validateBackup(raw) {
     fail();
   const reels = raw.reels.map((r) => {
     const parsed = parseReelUrl(r?.url);
+    const folderIds = r?.folderIds === undefined
+      ? (r?.folderId ? [r.folderId] : [])
+      : r.folderIds;
     if (
       !parsed ||
-      (r.folderId !== null && !folders.some((f) => f.id === r.folderId))
+      !Array.isArray(folderIds) || folderIds.length > 500 ||
+      new Set(folderIds).size !== folderIds.length ||
+      folderIds.some((id) => !folders.some((f) => f.id === id))
     )
       fail();
     if (
@@ -44,12 +49,12 @@ export function validateBackup(raw) {
     return {
       title: text(r.title, 200),
       url: parsed.url,
-      folderId: r.folderId,
+      folderIds,
       isPinned: r.isPinned ?? false,
       isFavorite: r.isFavorite ?? false,
     };
   });
-  return { version: 3, folders, reels };
+  return { version: 4, folders, reels };
 }
 export function downloadBackup(data) {
   const url = URL.createObjectURL(

@@ -2,8 +2,6 @@
 import {
   Users,
   Grid2X2,
-  Pin,
-  Star,
   PanelLeftClose,
   PanelLeftOpen,
   Trash2,
@@ -19,8 +17,6 @@ export default function Sidebar({
   reelCount,
   selected,
   onSelect,
-  pinnedCount,
-  favoriteCount,
   sharedCount,
   onRename,
   onShare,
@@ -74,13 +70,6 @@ export default function Sidebar({
           {selected === "all" && <span className="sidebar-count" aria-hidden="true">{reelCount}</span>}
         </button>
         {[
-          { id: "pinned", label: "Pinned", icon: Pin, count: pinnedCount },
-          {
-            id: "favorites",
-            label: "Favorites",
-            icon: Star,
-            count: favoriteCount,
-          },
           { id: "shared", label: "Shared with Me", icon: Users, count: sharedCount },
         ].map((item) => (
           <button

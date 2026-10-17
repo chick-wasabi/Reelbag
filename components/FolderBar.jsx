@@ -24,8 +24,6 @@ export default function FolderBar({
       <nav className="folder-tabs" aria-label="Reel filters">
         {[
           { id: "all", name: "All reels" },
-          { id: "pinned", name: "Pinned" },
-          { id: "favorites", name: "Favorites" },
           { id: "shared", name: "Shared with me", virtual: true },
           { id: "trash", name: "Recently deleted", trash: true },
           ...folders,

@@ -4,7 +4,6 @@ import {
   Pin,
   Star,
   MoreHorizontal,
-  FolderInput,
   Pencil,
   Trash2,
   Instagram,
@@ -24,7 +23,6 @@ export default function ReelCard({
   reel,
   folder,
   onEdit,
-  onMove,
   onDelete,
   onToggle,
   onShare,
@@ -144,7 +142,7 @@ export default function ReelCard({
               <span className="reel-shared-by">
                 <UserRound size={11} /> Shared by {reel.sharedByDisplayName || `@${reel.sharedBy}`}
               </span>
-            ) : folder?.name || "\u00a0"}
+            ) : folder?.name || reel.folderNames?.join(" · ") || "\u00a0"}
           </span>
         </div>
         <div className="reel-actions">
@@ -245,16 +243,6 @@ export default function ReelCard({
                   >
                     <Pencil size={15} />
                     Edit Title
-                  </button>}
-                  {canManage && <button
-                    onClick={() => {
-                      closeMenu();
-                      onMove();
-                    }}
-                    aria-label={`Move ${reel.title}`}
-                  >
-                    <FolderInput size={15} />
-                    Move Folder
                   </button>}
                   {canManage && <button onClick={() => { closeMenu(); onAddToFolder?.(); }}>
                     <Library size={15} /> Add to Folder

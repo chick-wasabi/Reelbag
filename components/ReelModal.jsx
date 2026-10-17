@@ -78,7 +78,7 @@ export default function ReelModal({
             placeholder="Something to remember this by"
           />
         </label>
-        <label className="field-label">
+        {!reel && <label className="field-label">
           Folder <span className="font-normal text-zinc-500">(optional)</span>
           <select data-autofocus={Boolean(draft)} value={folder} onChange={(e) => setFolder(e.target.value)}>
             <option value="">No folder</option>
@@ -89,8 +89,8 @@ export default function ReelModal({
               </option>
             ))}
           </select>
-        </label>
-        <button
+        </label>}
+        {!reel && <button
           className="inline-action"
           type="button"
           disabled={busy}
@@ -98,8 +98,8 @@ export default function ReelModal({
         >
           <Plus size={14} />
           Create New Folder
-        </button>
-        {creatingFolder && (
+        </button>}
+        {!reel && creatingFolder && (
           <div className="inline-folder-create">
             <input
               autoFocus

@@ -56,6 +56,7 @@ export default function Home() {
   const [accountGate, setAccountGate] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [folderSort, setFolderSort] = useState("latest");
+  const [viewFilter, setViewFilter] = useState("all");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedReels, setSelectedReels] = useState(() => new Set());
   const feed = useRef(null);
@@ -245,7 +246,7 @@ export default function Home() {
   const apply = useCallback((next) => {
     setData(next);
     setSelected((previous) =>
-      ["all", "pinned", "favorites", "shared", "trash"].includes(previous) ||
+      ["all", "shared", "trash"].includes(previous) ||
       next.folders.some((f) => f.id === previous && (!f.pin || f.unlocked))
         ? previous
         : "all",
@@ -262,6 +263,7 @@ export default function Home() {
     setDeletedFolders([]);
     setSelectionMode(false);
     setSelectedReels(new Set());
+    setViewFilter("all");
     setTrashUnlocked(false);
     trashPinRef.current = "";
   }, []);
@@ -500,6 +502,7 @@ export default function Home() {
     setSelected(id);
     setShowHidden(false);
     setFolderSort("latest");
+    setViewFilter("all");
     setSearch("");
   }
   async function saveFolder(folder) {
@@ -603,14 +606,12 @@ export default function Home() {
     setSelectedReels(new Set());
   }
   async function runBulkAction(action, folderId) {
-    const items = (data?.reels || []).filter((reel) => selectedReels.has(reel.id));
+    const items = [...new Map((data?.reels || []).filter((reel) => selectedReels.has(reel.id)).map((reel) => [reel.id, reel])).values()];
     if (!items.length) return;
     if (action === "delete") {
       await Promise.all(items.map((reel) => api(`reels/${reel.id}/trash`, { method: "POST", body: {} })));
-    } else if (action === "add") {
-      await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
     } else {
-      await Promise.all(items.map((reel) => api(`reels/${reel.id}`, { method: "PATCH", body: { title: reel.title, url: reel.url, folderId } })));
+      await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
     }
     await mutate("library", "GET");
     cancelSelection();
@@ -653,14 +654,9 @@ export default function Home() {
       (r) =>
         (showHidden
           ? r.folderId === selected
-          : selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && !r.folderId) ||
-          (selected === "pinned"
-            ? r.isPinned && r.canManage && !r.isDirectShared
-            : selected === "favorites"
-              ? r.isFavorite && r.canManage && !r.isDirectShared
-              : selected === "shared"
-                ? r.isDirectShared
-                : r.folderId === selected && !r.isDirectShared)) &&
+          : selected === "trash" || (selected === "all" && r.viewScope === "all") ||
+            (selected === "shared" ? r.viewScope === "shared" : r.folderId === selected && r.viewScope === `folder:${selected}`)) &&
+        (selected === "trash" || viewFilter === "all" || (viewFilter === "pinned" ? r.isPinned : r.isFavorite)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
     if (data?.folders?.some((folder) => folder.id === selected)) {
@@ -673,34 +669,18 @@ export default function Home() {
       });
     }
     return filtered;
-  }, [data, deletedReels, selected, search, showHidden, folderSort]);
+  }, [data, deletedReels, selected, search, showHidden, folderSort, viewFilter]);
 
   const activeFolder = data?.folders.find((folder) => folder.id === selected);
   const sectionTitle =
-    selected === "pinned"
-      ? "Pinned Reels"
-      : selected === "favorites"
-        ? "Favorites"
-        : selected === "shared"
+    selected === "shared"
           ? "Shared with Me"
         : selected === "trash"
           ? "Recently Deleted"
         : activeFolder?.name
           ? `${activeFolder.name}${showHidden ? " · Hidden" : ""}`
           : "All Reels";
-  const sectionCount = showHidden
-    ? (data?.hiddenReels || []).filter((reel) => reel.folderId === selected).length
-    : selected === "trash" ? deletedReels.length + deletedFolders.length : (data?.reels || []).filter(
-    (reel) =>
-      (selected === "all" && reel.canManage && !reel.isDirectShared && !reel.folderId) ||
-      (selected === "pinned"
-        ? reel.isPinned && reel.canManage && !reel.isDirectShared
-        : selected === "favorites"
-          ? reel.isFavorite && reel.canManage && !reel.isDirectShared
-          : selected === "shared"
-            ? reel.isDirectShared
-            : reel.folderId === selected && !reel.isDirectShared),
-  ).length;
+  const sectionCount = selected === "trash" ? deletedReels.length + deletedFolders.length : reels.length;
 
   return (
     <>
@@ -732,12 +712,10 @@ export default function Home() {
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}
             folders={data.folders}
-            reelCount={data.reels.filter((reel) => reel.canManage && !reel.isDirectShared && !reel.folderId).length}
+            reelCount={data.reels.filter((reel) => reel.viewScope === "all").length}
             selected={selected}
             onSelect={selectFolder}
-            pinnedCount={data.reels.filter((reel) => reel.isPinned && reel.canManage && !reel.isDirectShared).length}
-            favoriteCount={data.reels.filter((reel) => reel.isFavorite && reel.canManage && !reel.isDirectShared).length}
-            sharedCount={data.reels.filter((reel) => reel.isDirectShared).length}
+            sharedCount={data.reels.filter((reel) => reel.viewScope === "shared").length}
             onRename={(folder) => manageFolder(folder, "rename")}
             onShare={(folder) => manageFolder(folder, "share")}
             onDelete={(folder) => manageFolder(folder, "delete")}
@@ -782,6 +760,8 @@ export default function Home() {
               onStartSelection={startSelection}
               onCancelSelection={cancelSelection}
               onBulkAction={(action) => action === "delete" ? runBulkAction("delete") : setModal({ type: "bulkFolder", action })}
+              viewFilter={viewFilter}
+              onViewFilter={setViewFilter}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -817,7 +797,7 @@ export default function Home() {
                     onPermanentDelete={() => updateDeletedFolder(folder, "permanent")} />)}
                   {reels.map((reel) => (
                     <ReelCard
-                      key={reel.id}
+                      key={`${reel.id}:${reel.viewScope || "trash"}`}
                       reel={reel}
                       folder={data.folders.find((f) => f.id === reel.folderId)}
                       onShare={() =>
@@ -828,12 +808,12 @@ export default function Home() {
                         try {
                           await mutate(`reels/${reel.id}/flags`, "PATCH", {
                             [flag]: !reel[flag],
+                            scope: reel.viewScope || "all",
                           });
                         } catch (err) {
                           setError(err.message);
                         }
                       }}
-                      onMove={() => setModal({ type: "moveReel", reel })}
                       onAddToFolder={() => setModal({ type: "addToFolder", reel })}
                       onDelete={() => deleteReel(reel)}
                       hiddenMode={showHidden}
@@ -912,10 +892,10 @@ export default function Home() {
                       ? "Try another title."
                       : showHidden
                         ? "Reels you hide from this shared folder will appear here."
-                      : selected === "pinned"
-                        ? "Pin a reel to find it here."
-                        : selected === "favorites"
-                          ? "Star a reel to add it to your favorites."
+                      : viewFilter === "pinned"
+                        ? "No pinned Reels in this view."
+                        : viewFilter === "favorites"
+                          ? "No favorite Reels in this view."
                           : selected === "shared"
                             ? "Reels sent by your friends will appear here automatically."
                           : selected === "trash"
@@ -927,7 +907,8 @@ export default function Home() {
                     onClick={() => {
                       if (search) setSearch("");
                       else if (showHidden) setShowHidden(false);
-                      else if (["pinned", "favorites", "shared", "trash"].includes(selected)) setSelected("all");
+                      else if (viewFilter !== "all") setViewFilter("all");
+                      else if (["shared", "trash"].includes(selected)) setSelected("all");
                       else setModal({ type: "reel" });
                     }}
                   >
@@ -935,7 +916,9 @@ export default function Home() {
                       ? "Clear search"
                       : showHidden
                         ? "Back to folder"
-                      : ["pinned", "favorites", "shared", "trash"].includes(selected)
+                      : viewFilter !== "all"
+                        ? "Clear filter"
+                      : ["shared", "trash"].includes(selected)
                         ? "Browse all reels"
                         : "Add your first reel"}
                   </button>
@@ -1015,16 +998,6 @@ export default function Home() {
           onChange={() => mutate("library", "GET")}
         />
       )}
-      {data?.user && modal?.type === "moveReel" && (
-        <MoveReelModal
-          reel={modal.reel}
-          folders={data.folders.filter((folder) => folder.role === "owner")}
-          onClose={() => setModal(null)}
-          initialFolderId={modal.createdFolderId}
-          onCreateFolder={() => setModal({ type: "folder", returnTo: modal })}
-          onSave={(folderId) => saveReel({ ...modal.reel, folderId })}
-        />
-      )}
       {data?.user && modal?.type === "addToFolder" && (
         <MoveReelModal
           copy
@@ -1037,16 +1010,16 @@ export default function Home() {
             await mutate(`reels/${modal.reel.id}/copy`, "POST", { folderId, favorite: false });
             setModal(null);
             setSelected(folderId);
-            setNotice("A separate copy was added to the folder.");
+            setNotice("Reel added to the folder.");
           }}
         />
       )}
       {data?.user && modal?.type === "bulkFolder" && (
         <MoveReelModal
-          copy={modal.action === "add"}
+          copy
           reel={{ title: `${selectedReels.size} selected ${selectedReels.size === 1 ? "Reel" : "Reels"}`, folderId: selected }}
-          title={modal.action === "add" ? "Add selected to folder" : "Move selected Reels"}
-          folders={data.folders.filter((folder) => folder.role === "owner" || (modal.action === "add" && folder.role === "collaborator"))}
+          title="Add selected to folder"
+          folders={data.folders.filter((folder) => folder.role === "owner" || folder.role === "collaborator")}
           initialFolderId={modal.createdFolderId}
           onClose={() => setModal(null)}
           onCreateFolder={() => setModal({ type: "folder", returnTo: modal })}

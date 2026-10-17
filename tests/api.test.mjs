@@ -585,7 +585,7 @@ test("two devices see the same Postgres reels while a different account cannot r
   });
   assert.equal(
     (await call("library", "GET", null, device.cookie, {}, cold)).data.reels
-      .length,
+      .filter((reel) => reel.viewScope === "all").length,
     1,
   );
   await call("auth/logout", "POST", {}, alice.cookie);
@@ -672,7 +672,7 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   );
   assert.equal(
     (await call(`folders/${id}/unlock`, "POST", { pin: "4567" }, device.cookie))
-      .data.reels.length,
+      .data.reels.filter((reel) => reel.viewScope === "all").length,
     1,
   );
   const change = await call(
@@ -703,7 +703,7 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   assert.match(stored.pin_code, /^\$2[aby]\$12\$/);
   const removed = await call(`folders/${id}`, "DELETE", {}, user.cookie);
   assert.equal(removed.status, 200, JSON.stringify(removed.data));
-  assert.equal(removed.data.reels.length, 0);
+  assert.equal(removed.data.reels.filter((reel) => reel.viewScope === "all").length, 1);
   assert.equal(removed.data.folders.length, 0);
   const trash = await call("trash/open", "POST", {}, user.cookie);
   assert.equal(trash.status, 200, JSON.stringify(trash.data));
@@ -717,7 +717,8 @@ test("folder PINs are enforced on the server, grants are per session, and changi
   assert.equal((await call(`trash/folder/${id}/permanent`, "POST", {}, user.cookie)).status, 200);
   const emptied = await call("library", "GET", null, user.cookie);
   assert.equal(emptied.data.folders.length, 0);
-  assert.equal(emptied.data.reels.length, 0);
+  assert.equal(emptied.data.reels.length, 1);
+  assert.equal(emptied.data.reels[0].viewScope, "all");
 });
 
 test("expired and forged sessions, CSRF, malformed inputs, and oversized bodies are rejected", async () => {
@@ -822,13 +823,13 @@ test("portable backups contain no credential hashes; imports append atomically w
   };
   const imported = await call("library/import", "POST", payload, user.cookie);
   assert.equal(imported.status, 200, JSON.stringify(imported.data));
-  assert.equal(imported.data.reels.length, 2);
+  assert.equal(imported.data.reels.filter((reel) => reel.viewScope === "all").length, 2);
   assert.notEqual(imported.data.folders[0].id, "source-folder");
   const repeated = await call("library/import", "POST", payload, user.cookie);
-  assert.equal(repeated.data.reels.length, 4);
+  assert.equal(repeated.data.reels.filter((reel) => reel.viewScope === "all").length, 4);
   assert.equal(repeated.data.folders[1].name, "Favorites (2)");
   const exported = await call("library/export", "GET", null, user.cookie);
-  assert.equal(exported.data.version, 3);
+  assert.equal(exported.data.version, 4);
   assert.doesNotMatch(JSON.stringify(exported.data), /password|hash|pin/);
   const bad = structuredClone(payload);
   bad.reels[0].folderId = "missing";
@@ -837,7 +838,7 @@ test("portable backups contain no credential hashes; imports append atomically w
     400,
   );
   assert.equal(
-    (await call("library", "GET", null, user.cookie)).data.reels.length,
+    (await call("library", "GET", null, user.cookie)).data.reels.filter((reel) => reel.viewScope === "all").length,
     4,
   );
 });
@@ -1199,6 +1200,43 @@ test("pin and favorite flags persist, sort pinned reels first, and enforce owner
     ).status,
     423,
   );
+});
+
+test("one owned Reel can use multiple folders with independent view flags and clean restore", async () => {
+  const user = await account();
+  const first = await call("folders", "POST", { name: "First", protected: false, pin: "" }, user.cookie);
+  const second = await call("folders", "POST", { name: "Second", protected: false, pin: "" }, user.cookie);
+  const created = await call("reels", "POST", {
+    title: "One source Reel", url: "https://instagram.com/reel/ONE_SOURCE/", folderId: null,
+  }, user.cookie);
+  const reelId = created.data.reels.find((reel) => reel.viewScope === "all").id;
+  await call(`reels/${reelId}/copy`, "POST", { folderId: first.data.folderId, favorite: false }, user.cookie);
+  await call(`reels/${reelId}/copy`, "POST", { folderId: second.data.folderId, favorite: false }, user.cookie);
+  await call(`reels/${reelId}/flags`, "PATCH", { scope: "all", isPinned: true }, user.cookie);
+  await call(`reels/${reelId}/flags`, "PATCH", {
+    scope: `folder:${first.data.folderId}`, isFavorite: true,
+  }, user.cookie);
+
+  let library = (await call("library", "GET", null, user.cookie)).data;
+  const contexts = library.reels.filter((reel) => reel.id === reelId);
+  assert.equal(contexts.length, 3);
+  assert.equal(new Set(contexts.map((reel) => reel.id)).size, 1);
+  assert.equal(contexts.find((reel) => reel.viewScope === "all").isPinned, true);
+  assert.equal(contexts.find((reel) => reel.viewScope === `folder:${first.data.folderId}`).isPinned, false);
+  assert.equal(contexts.find((reel) => reel.viewScope === `folder:${first.data.folderId}`).isFavorite, true);
+  assert.equal(contexts.find((reel) => reel.viewScope === `folder:${second.data.folderId}`).isFavorite, false);
+
+  await call(`reels/${reelId}/trash`, "POST", {}, user.cookie);
+  library = (await call("library", "GET", null, user.cookie)).data;
+  assert.equal(library.reels.some((reel) => reel.id === reelId), false);
+  await call(`trash/${reelId}/restore`, "POST", {}, user.cookie);
+  library = (await call("library", "GET", null, user.cookie)).data;
+  const restored = library.reels.filter((reel) => reel.id === reelId);
+  assert.equal(restored.length, 1);
+  assert.equal(restored[0].viewScope, "all");
+  assert.equal(restored[0].isPinned, false);
+  assert.equal(restored[0].isFavorite, false);
+  assert.deepEqual(restored[0].folderNames, []);
 });
 
 test("avatar and optional hint persist across devices with validation, isolation, and no backup leakage", async () => {

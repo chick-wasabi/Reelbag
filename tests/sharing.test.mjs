@@ -210,7 +210,7 @@ test("folder invites require recipient acceptance, enforce roles at SQL writes, 
       await call(
         `reels/${reelId}/flags`,
         "PATCH",
-        { isPinned: true },
+        { isPinned: true, scope: `folder:${id}` },
         recipient.cookie,
       )
     ).status,
@@ -431,12 +431,16 @@ test("collaborators can pin shared reels, keep personal copies, and hide without
   const pinned = await call(
     `reels/${reelId}/flags`,
     "PATCH",
-    { isPinned: true },
+    { isPinned: true, scope: `folder:${folderId}` },
     collaborator.cookie,
   );
   assert.equal(pinned.status, 200, JSON.stringify(pinned.data));
   assert.equal(
-    (await call("library", "GET", null, owner.cookie)).data.reels[0].isPinned,
+    (await call("library", "GET", null, owner.cookie)).data.reels.find((item) => item.viewScope === `folder:${folderId}`).isPinned,
+    false,
+  );
+  assert.equal(
+    (await call("library", "GET", null, collaborator.cookie)).data.reels.find((item) => item.viewScope === `folder:${folderId}`).isPinned,
     true,
   );
 

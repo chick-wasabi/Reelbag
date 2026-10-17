@@ -1,5 +1,5 @@
 "use client";
-import { Search, Folder, FolderInput, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X } from "lucide-react";
+import { Search, Folder, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -39,6 +39,8 @@ export default function Header({
   onStartSelection,
   onCancelSelection,
   onBulkAction,
+  viewFilter = "all",
+  onViewFilter,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -69,6 +71,12 @@ export default function Header({
             onChange={(e) => onSearch(e.target.value)}
           />
         </label>
+        {sectionKind !== "trash" && <select className="folder-sort-select" value={viewFilter} onChange={(event) => onViewFilter(event.target.value)}
+          aria-label="Filter Reels" title="Filter Reels">
+          <option value="all">All Reels</option>
+          <option value="pinned">Pinned</option>
+          <option value="favorites">Favorites</option>
+        </select>}
         {sectionKind === "folder" && (
           <select className="folder-sort-select" value={folderSort} onChange={(event) => onFolderSort(event.target.value)}
             aria-label="Sort folder Reels" title="Sort folder Reels">
@@ -89,7 +97,6 @@ export default function Header({
         {selectionMode && <div className="bulk-reel-actions" aria-label={`${selectionCount} selected`}>
           <span>{selectionCount} selected</span>
           <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("add")} title="Add selected to folder"><FolderPlus size={17} /></button>
-          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("move")} title="Move selected to folder"><FolderInput size={17} /></button>
           <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>
           <button className="icon-button" onClick={onCancelSelection} title="Cancel selection"><X size={17} /></button>
         </div>}
