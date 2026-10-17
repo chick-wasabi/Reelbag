@@ -458,17 +458,18 @@ test("collaborators can pin shared reels, keep personal copies, and hide without
     { folderId, favorite: false },
     collaborator.cookie,
   );
-  assert.equal(folderCopy.status, 201, JSON.stringify(folderCopy.data));
+  assert.equal(folderCopy.status, 200, JSON.stringify(folderCopy.data));
   assert.equal(
     folderCopy.data.reels.filter((item) => item.folderId === folderId).length,
-    2,
+    1,
   );
 
-  const hidden = await call(`reels/${reelId}/hide`, "POST", {}, collaborator.cookie);
+  const scope = `folder:${folderId}`;
+  const hidden = await call(`reels/${reelId}/hide`, "POST", { scope }, collaborator.cookie);
   assert.equal(hidden.status, 200, JSON.stringify(hidden.data));
-  assert.equal(hidden.data.reels.some((item) => item.id === reelId), false);
+  assert.equal(hidden.data.reels.some((item) => item.id === reelId && item.isHidden), true);
   assert.equal(hidden.data.hiddenReels.some((item) => item.id === reelId), true);
-  const restored = await call(`reels/${reelId}/unhide`, "POST", {}, collaborator.cookie);
+  const restored = await call(`reels/${reelId}/unhide`, "POST", { scope }, collaborator.cookie);
   assert.equal(restored.status, 200, JSON.stringify(restored.data));
   assert.equal(restored.data.hiddenReels.length, 0);
   assert.equal(restored.data.reels.some((item) => item.id === reelId), true);

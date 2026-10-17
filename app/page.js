@@ -55,7 +55,6 @@ export default function Home() {
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [accountGate, setAccountGate] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const [folderSort, setFolderSort] = useState("latest");
   const [viewFilter, setViewFilter] = useState("all");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedReels, setSelectedReels] = useState(() => new Set());
@@ -606,10 +605,12 @@ export default function Home() {
     setSelectedReels(new Set());
   }
   async function runBulkAction(action, folderId) {
-    const items = [...new Map((data?.reels || []).filter((reel) => selectedReels.has(reel.id)).map((reel) => [reel.id, reel])).values()];
+    const items = [...new Map(reels.filter((reel) => selectedReels.has(reel.id)).map((reel) => [reel.id, reel])).values()];
     if (!items.length) return;
     if (action === "delete") {
       await Promise.all(items.map((reel) => api(`reels/${reel.id}/trash`, { method: "POST", body: {} })));
+    } else if (action === "hide" || action === "unhide") {
+      await Promise.all(items.map((reel) => api(`reels/${reel.id}/${action}`, { method: "POST", body: { scope: reel.viewScope || "all" } })));
     } else {
       await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
     }
@@ -642,34 +643,26 @@ export default function Home() {
       setError(err.message);
     }
   }
-  const reels = useMemo(() => {
+  const reels = (() => {
     const query = search.trim().toLowerCase();
-    const source = selected === "trash"
-      ? deletedReels
-      : showHidden
-        ? (data?.hiddenReels || [])
-        : (data?.reels || []);
-    const folderById = new Map((data?.folders || []).map((folder) => [folder.id, folder]));
+    const source = selected === "trash" ? deletedReels : (data?.reels || []);
     const filtered = source.filter(
       (r) =>
-        (showHidden
-          ? r.folderId === selected
-          : selected === "trash" || (selected === "all" && r.viewScope === "all") ||
-            (selected === "shared" ? r.viewScope === "shared" : r.folderId === selected && r.viewScope === `folder:${selected}`)) &&
-        (selected === "trash" || viewFilter === "all" || (viewFilter === "pinned" ? r.isPinned : r.isFavorite)) &&
+        (selected === "trash" || (selected === "all" && r.viewScope === "all") ||
+          (selected === "shared" ? r.viewScope === "shared" : r.folderId === selected && r.viewScope === `folder:${selected}`)) &&
+        (selected === "trash" || Boolean(r.isHidden) === showHidden) &&
+        (selected === "trash" || viewFilter === "all" || viewFilter === "top-rated" ||
+          (viewFilter === "pinned" ? r.isPinned : r.isFavorite)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
-    if (data?.folders?.some((folder) => folder.id === selected)) {
+    if (viewFilter === "top-rated") {
       filtered.sort((a, b) => {
-        if (folderSort === "reactions") {
-          const total = (reel) => Object.values(reel.reactionCounts || {}).reduce((sum, count) => sum + count, 0);
-          return total(b) - total(a) || new Date(b.createdAt) - new Date(a.createdAt);
-        }
-        return new Date(b.createdAt) - new Date(a.createdAt);
+        const total = (reel) => Object.values(reel.reactionCounts || {}).reduce((sum, count) => sum + count, 0);
+        return total(b) - total(a) || new Date(b.createdAt) - new Date(a.createdAt);
       });
     }
     return filtered;
-  }, [data, deletedReels, selected, search, showHidden, folderSort, viewFilter]);
+  })();
 
   const activeFolder = data?.folders.find((folder) => folder.id === selected);
   const sectionTitle =
@@ -739,13 +732,11 @@ export default function Home() {
               onLogout={logout}
               onLibraryChange={() => mutate("library", "GET")}
               appUpdate={appUpdate}
-              hiddenAvailable={activeFolder?.role === "collaborator"}
+              hiddenAvailable={selected !== "trash"}
               showingHidden={showHidden}
-              hiddenCount={(data.hiddenReels || []).filter((reel) => reel.folderId === selected).length}
+              hiddenCount={(data.reels || []).filter((reel) => reel.isHidden && (selected === "all" ? reel.viewScope === "all" : selected === "shared" ? reel.viewScope === "shared" : reel.viewScope === `folder:${selected}`)).length}
               onToggleHidden={() => setShowHidden((value) => !value)}
               friendRequestCount={data.friendRequests?.length || 0}
-              folderSort={folderSort}
-              onFolderSort={setFolderSort}
               activeFolder={activeFolder}
               onChangeFolderRole={changeFolderMemberRole}
               onRevokeFolderMember={revokeFolderMember}
@@ -759,7 +750,8 @@ export default function Home() {
               selectionCount={selectedReels.size}
               onStartSelection={startSelection}
               onCancelSelection={cancelSelection}
-              onBulkAction={(action) => action === "delete" ? runBulkAction("delete") : setModal({ type: "bulkFolder", action })}
+              onBulkAction={(action) => action === "add" ? setModal({ type: "bulkFolder", action }) : runBulkAction(action)}
+              selectionCanDelete={selectedReels.size > 0 && reels.filter((reel) => selectedReels.has(reel.id)).every((reel) => reel.canManage)}
               viewFilter={viewFilter}
               onViewFilter={setViewFilter}
             />
@@ -788,7 +780,7 @@ export default function Home() {
             >
               {reels.length || (selected === "trash" && deletedFolders.length) ? (
                 <div
-                  className="reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fit,270px)] justify-evenly gap-x-0 gap-y-6"
+                  className="reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fill,270px)] justify-between gap-x-0 gap-y-6"
                   role="region"
                   aria-label="Saved Reels"
                 >
@@ -819,13 +811,13 @@ export default function Home() {
                       hiddenMode={showHidden}
                       onHide={async () => {
                         try {
-                          await mutate(`reels/${reel.id}/hide`, "POST");
+                          await mutate(`reels/${reel.id}/hide`, "POST", { scope: reel.viewScope || "all" });
                           setNotice("Reel hidden from your view.");
                         } catch (err) { setError(err.message); }
                       }}
                       onUnhide={async () => {
                         try {
-                          await mutate(`reels/${reel.id}/unhide`, "POST");
+                          await mutate(`reels/${reel.id}/unhide`, "POST", { scope: reel.viewScope || "all" });
                           setNotice("Reel is visible again.");
                         } catch (err) { setError(err.message); }
                       }}

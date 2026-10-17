@@ -44,7 +44,6 @@ export default function ReelCard({
   onSelect,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
-  const isFolderGuest = !canManage && Boolean(folder?.role && folder.role !== "owner");
   const isCollaborator = folder?.role === "collaborator" && !canManage;
   const ref = useRef(null);
   const menu = useRef(null);
@@ -190,7 +189,7 @@ export default function ReelCard({
                       </button>
                     </>
                   ) : <>
-                  {canManage && <button
+                  <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -199,8 +198,8 @@ export default function ReelCard({
                   >
                     <Star size={15} fill={reel.isFavorite ? "currentColor" : "none"} />
                     {reel.isFavorite ? "Remove Favorite" : "Add to Favorites"}
-                  </button>}
-                  {canManage && <button
+                  </button>
+                  <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -209,14 +208,7 @@ export default function ReelCard({
                   >
                     <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
                     {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
-                  </button>}
-                  {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(true); }}>
-                    <Star size={15} /> Add to Favorites
-                  </button>}
-                  {isCollaborator && <button disabled={toggling} onClick={async () => { closeMenu(); await toggle("isPinned"); }}>
-                    <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
-                    {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
-                  </button>}
+                  </button>
                   {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(false); }}>
                     <Library size={15} /> Add to My Reels
                   </button>}
@@ -249,9 +241,10 @@ export default function ReelCard({
                   </button>}
                   {hiddenMode ? <button onClick={() => { closeMenu(); onUnhide?.(); }}>
                     <EyeOff size={15} /> Unhide Reel
-                  </button> : isFolderGuest ? <button onClick={() => { closeMenu(); onHide?.(); }}>
+                  </button> : <button onClick={() => { closeMenu(); onHide?.(); }}>
                     <EyeOff size={15} /> Hide Reel
-                  </button> : <button
+                  </button>}
+                  {canManage && <button
                     className="danger"
                     onClick={() => {
                       closeMenu();

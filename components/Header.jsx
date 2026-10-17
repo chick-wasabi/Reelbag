@@ -1,5 +1,5 @@
 "use client";
-import { Search, Folder, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X } from "lucide-react";
+import { Search, Folder, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X, MoreHorizontal } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -23,8 +23,6 @@ export default function Header({
   hiddenCount = 0,
   onToggleHidden,
   friendRequestCount = 0,
-  folderSort = "latest",
-  onFolderSort,
   activeFolder,
   onChangeFolderRole,
   onRevokeFolderMember,
@@ -39,6 +37,7 @@ export default function Header({
   onStartSelection,
   onCancelSelection,
   onBulkAction,
+  selectionCanDelete = false,
   viewFilter = "all",
   onViewFilter,
 }) {
@@ -76,33 +75,32 @@ export default function Header({
           <option value="all">All Reels</option>
           <option value="pinned">Pinned</option>
           <option value="favorites">Favorites</option>
+          <option value="top-rated">Top Rated</option>
         </select>}
-        {sectionKind === "folder" && (
-          <select className="folder-sort-select" value={folderSort} onChange={(event) => onFolderSort(event.target.value)}
-            aria-label="Sort folder Reels" title="Sort folder Reels">
-            <option value="latest">Latest</option>
-            <option value="reactions">Most reactions</option>
-          </select>
-        )}
         {activeFolder && <FolderMembersPopover folder={activeFolder} onChangeRole={onChangeFolderRole} onRevoke={onRevokeFolderMember}
           onInvite={activeFolder.role === "owner" ? onOpenFolderShare : undefined} inline />}
         {hiddenAvailable && (
           <button className={`hidden-reels-toggle ${showingHidden ? "is-active" : ""}`} onClick={onToggleHidden}
             aria-pressed={showingHidden} title={showingHidden ? "Show folder Reels" : "Show Reels hidden by me"}>
             {showingHidden ? <EyeOff size={17} /> : <Eye size={17} />}
-            <span>{showingHidden ? "Folder Reels" : "Hidden"}</span>
+            <span>{showingHidden ? "Visible" : "Hidden"}</span>
             {hiddenCount > 0 && <small>{hiddenCount}</small>}
           </button>
         )}
         {selectionMode && <div className="bulk-reel-actions" aria-label={`${selectionCount} selected`}>
           <span>{selectionCount} selected</span>
           <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("add")} title="Add selected to folder"><FolderPlus size={17} /></button>
-          <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>
+          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction(showingHidden ? "unhide" : "hide")} title={showingHidden ? "Unhide selected" : "Hide selected"}>{showingHidden ? <Eye size={17} /> : <EyeOff size={17} />}</button>
+          {selectionCanDelete && <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>}
           <button className="icon-button" onClick={onCancelSelection} title="Cancel selection"><X size={17} /></button>
         </div>}
-        {activeFolder && !selectionMode && <FolderMenu folder={activeFolder} inline onSelectReels={activeFolder.role === "owner" ? onStartSelection : undefined}
+        {activeFolder && !selectionMode && <FolderMenu folder={activeFolder} inline onSelectReels={onStartSelection}
           onRename={onFolderSettings} onShare={onOpenFolderShare} onDelete={onFolderDelete} onLock={onFolderLock}
           onSelect={() => {}} onLeave={onLeaveFolder} onProtect={onProtectSharedFolder} />}
+        {!activeFolder && !selectionMode && ["all", "shared"].includes(sectionKind) && <details className="reel-menu">
+          <summary className="icon-button" title="View menu" aria-label="View menu"><MoreHorizontal size={18} /></summary>
+          <div className="reel-menu-panel"><button onClick={onStartSelection}>Select Reels</button></div>
+        </details>}
       </div>
       <div className="header-actions">
         <NotificationCenter key={user.id} onChange={onLibraryChange} />
