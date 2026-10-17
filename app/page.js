@@ -52,6 +52,7 @@ export default function Home() {
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [accountGate, setAccountGate] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [folderSort, setFolderSort] = useState("latest");
   const feed = useRef(null);
   const epoch = useRef(0);
   const pending = useRef(0);
@@ -487,6 +488,7 @@ export default function Home() {
     }
     setSelected(id);
     setShowHidden(false);
+    setFolderSort("latest");
     setSearch("");
   }
   async function saveFolder(folder) {
@@ -564,15 +566,6 @@ export default function Home() {
       setError(err.message);
     }
   }
-  async function shareWithFriend(friend, reelId) {
-    try {
-      await mutate(`friends/${friend.id}/share/${reelId}`, "POST");
-      setNotice(`Shared with @${friend.username}. Your Reel stayed in its original folder.`);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
   async function changeFolderMemberRole(folder, member, role) {
     await api(`sharing/folder/${folder.id}/members/${member.recipientId}`, {
       method: "PATCH",
@@ -600,11 +593,11 @@ export default function Home() {
         ? (data?.hiddenReels || [])
         : (data?.reels || []);
     const folderById = new Map((data?.folders || []).map((folder) => [folder.id, folder]));
-    return source.filter(
+    const filtered = source.filter(
       (r) =>
         (showHidden
           ? r.folderId === selected
-          : selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && (!r.folderId || !folderById.get(r.folderId)?.pin)) ||
+          : selected === "trash" || (selected === "all" && r.canManage && !r.isDirectShared && !r.folderId) ||
           (selected === "pinned"
             ? r.isPinned && r.canManage && !r.isDirectShared
             : selected === "favorites"
@@ -614,7 +607,17 @@ export default function Home() {
                 : r.folderId === selected && !r.isDirectShared)) &&
         (!query || r.title.toLowerCase().includes(query)),
     );
-  }, [data, deletedReels, selected, search, showHidden]);
+    if (data?.folders?.some((folder) => folder.id === selected)) {
+      filtered.sort((a, b) => {
+        if (folderSort === "reactions") {
+          const total = (reel) => Object.values(reel.reactionCounts || {}).reduce((sum, count) => sum + count, 0);
+          return total(b) - total(a) || new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+    }
+    return filtered;
+  }, [data, deletedReels, selected, search, showHidden, folderSort]);
 
   const activeFolder = data?.folders.find((folder) => folder.id === selected);
   const sectionTitle =
@@ -633,7 +636,7 @@ export default function Home() {
     ? (data?.hiddenReels || []).filter((reel) => reel.folderId === selected).length
     : selected === "trash" ? deletedReels.length : (data?.reels || []).filter(
     (reel) =>
-      (selected === "all" && reel.canManage && !reel.isDirectShared && (!reel.folderId || !data.folders.find((folder) => folder.id === reel.folderId)?.pin)) ||
+      (selected === "all" && reel.canManage && !reel.isDirectShared && !reel.folderId) ||
       (selected === "pinned"
         ? reel.isPinned && reel.canManage && !reel.isDirectShared
         : selected === "favorites"
@@ -673,7 +676,7 @@ export default function Home() {
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed((value) => !value)}
             folders={data.folders}
-            reelCount={data.reels.filter((reel) => reel.canManage && !reel.isDirectShared && (!reel.folderId || !data.folders.find((folder) => folder.id === reel.folderId)?.pin)).length}
+            reelCount={data.reels.filter((reel) => reel.canManage && !reel.isDirectShared && !reel.folderId).length}
             selected={selected}
             onSelect={selectFolder}
             pinnedCount={data.reels.filter((reel) => reel.isPinned && reel.canManage && !reel.isDirectShared).length}
@@ -686,10 +689,6 @@ export default function Home() {
             onLock={(folder) => selectFolder(selected, folder.id)}
             onChangeRole={changeFolderMemberRole}
             onLeaveFolder={leaveSharedFolder}
-            friends={data.friends || []}
-            friendRequestCount={data.friendRequests?.length || 0}
-            onOpenFriends={() => setModal({ type: "friends" })}
-            onDropReel={shareWithFriend}
             onTrashSettings={() => setModal({ type: "trashSettings" })}
           />
           <div className="workspace">
@@ -709,6 +708,9 @@ export default function Home() {
               showingHidden={showHidden}
               hiddenCount={(data.hiddenReels || []).filter((reel) => reel.folderId === selected).length}
               onToggleHidden={() => setShowHidden((value) => !value)}
+              friendRequestCount={data.friendRequests?.length || 0}
+              folderSort={folderSort}
+              onFolderSort={setFolderSort}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -757,6 +759,7 @@ export default function Home() {
                         }
                       }}
                       onMove={() => setModal({ type: "moveReel", reel })}
+                      onAddToFolder={() => setModal({ type: "addToFolder", reel })}
                       onDelete={() => deleteReel(reel)}
                       hiddenMode={showHidden}
                       onHide={async () => {
@@ -776,6 +779,22 @@ export default function Home() {
                           await mutate(`reels/${reel.id}/copy`, "POST", { favorite });
                           setNotice(favorite ? "Saved a personal copy to Favorites." : "Saved a personal copy to All Reels.");
                         } catch (err) { setError(err.message); }
+                      }}
+                      onExternalShare={async () => {
+                        try {
+                          if (navigator.share) await navigator.share({ title: reel.title, url: reel.url });
+                          else {
+                            await navigator.clipboard.writeText(reel.url);
+                            setNotice("Instagram Reel link copied.");
+                          }
+                        } catch (err) {
+                          if (err?.name !== "AbortError") {
+                            try {
+                              await navigator.clipboard.writeText(reel.url);
+                              setNotice("Instagram Reel link copied.");
+                            } catch { setError("Could not share this Reel."); }
+                          }
+                        }
                       }}
                       onRevokeShare={async (person) => {
                         try {
@@ -923,6 +942,20 @@ export default function Home() {
           folders={data.folders.filter((folder) => folder.role === "owner")}
           onClose={() => setModal(null)}
           onSave={(folderId) => saveReel({ ...modal.reel, folderId })}
+        />
+      )}
+      {data?.user && modal?.type === "addToFolder" && (
+        <MoveReelModal
+          copy
+          reel={modal.reel}
+          folders={data.folders.filter((folder) => folder.role === "owner" || folder.role === "collaborator")}
+          onClose={() => setModal(null)}
+          onSave={async (folderId) => {
+            await mutate(`reels/${modal.reel.id}/copy`, "POST", { folderId, favorite: false });
+            setModal(null);
+            setSelected(folderId);
+            setNotice("A separate copy was added to the folder.");
+          }}
         />
       )}
       {data?.user && modal?.type === "reel" && (

@@ -18,7 +18,7 @@ export default function SidebarFolderItem({
   const owner = folder.role === "owner";
   const active = selected === folder.id;
   return (
-    <div className={`sidebar-folder-row ${active ? "is-active" : ""} ${folder.isShared ? "has-members" : ""}`}>
+    <div className={`sidebar-folder-row ${active ? "is-active" : ""} ${owner && folder.isShared ? "has-members" : ""}`}>
       <button
         className={`sidebar-link folder-link ${active ? "active" : ""}`}
         aria-label={`Open ${owner ? "" : "shared "}folder ${folder.name}`}
@@ -33,7 +33,7 @@ export default function SidebarFolderItem({
         )}
         <span className="sidebar-label">{folder.name}</span>
       </button>
-      {folder.isShared && (
+      {owner && folder.isShared && (
         <FolderMembersPopover folder={folder} onChangeRole={onChangeRole} />
       )}
       <FolderMenu

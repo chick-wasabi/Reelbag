@@ -1,5 +1,5 @@
 "use client";
-import { Search, Folder, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff } from "lucide-react";
+import { Search, Folder, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -20,6 +20,9 @@ export default function Header({
   showingHidden = false,
   hiddenCount = 0,
   onToggleHidden,
+  friendRequestCount = 0,
+  folderSort = "latest",
+  onFolderSort,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
@@ -58,9 +61,21 @@ export default function Header({
             {hiddenCount > 0 && <small>{hiddenCount}</small>}
           </button>
         )}
+        {sectionKind === "folder" && (
+          <select className="folder-sort-select" value={folderSort} onChange={(event) => onFolderSort(event.target.value)}
+            aria-label="Sort folder Reels" title="Sort folder Reels">
+            <option value="latest">Latest</option>
+            <option value="reactions">Most reactions</option>
+          </select>
+        )}
       </div>
       <div className="header-actions">
         <NotificationCenter key={user.id} onChange={onLibraryChange} />
+        <button className="icon-button header-friends-button" onClick={() => onOpen("friends")}
+          aria-label="Friends" title="Friends">
+          <UserRoundPlus size={19} />
+          {friendRequestCount > 0 && <small>{friendRequestCount}</small>}
+        </button>
         <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} appUpdate={appUpdate} />
       </div>
     </header>

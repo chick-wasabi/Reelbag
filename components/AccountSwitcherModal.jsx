@@ -12,10 +12,12 @@ export default function AccountSwitcherModal({ currentUser, onSwitch, onAdd, onC
   const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    api("auth/accounts", { signal: controller.signal }).then((result) => setAccounts(result.accounts))
+    api("auth/accounts", { signal: controller.signal }).then((result) => setAccounts(
+      [...result.accounts].sort((a, b) => Number(b.id === currentUser.id) - Number(a.id === currentUser.id)),
+    ))
       .catch((reason) => reason.name !== "AbortError" && setError(reason.message));
     return () => controller.abort();
-  }, []);
+  }, [currentUser.id]);
   return <Modal title="Switch account" description="Accounts saved securely on this device." onClose={onClose}>
     <div className="account-switch-list">
       {accounts.map((account) => {

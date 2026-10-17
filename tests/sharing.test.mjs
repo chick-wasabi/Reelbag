@@ -448,6 +448,17 @@ test("collaborators can pin shared reels, keep personal copies, and hide without
   );
   assert.equal(copied.status, 201, JSON.stringify(copied.data));
   assert.ok(copied.data.reels.some((item) => item.canManage && item.isFavorite));
+  const folderCopy = await call(
+    `reels/${reelId}/copy`,
+    "POST",
+    { folderId, favorite: false },
+    collaborator.cookie,
+  );
+  assert.equal(folderCopy.status, 201, JSON.stringify(folderCopy.data));
+  assert.equal(
+    folderCopy.data.reels.filter((item) => item.folderId === folderId).length,
+    2,
+  );
 
   const hidden = await call(`reels/${reelId}/hide`, "POST", {}, collaborator.cookie);
   assert.equal(hidden.status, 200, JSON.stringify(hidden.data));

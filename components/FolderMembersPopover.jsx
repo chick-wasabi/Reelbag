@@ -56,6 +56,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
     clearTimeout(openTimer.current);
   }, []);
   const groups = [
+    ["owner", "Owner"],
     ["collaborator", "Collaborators"],
     ["viewer", "Viewers"],
   ];
@@ -88,10 +89,11 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
           onPointerLeave={!mobile ? scheduleClose : undefined}
         >
           <header><strong>{folder.name}</strong><span>{folder.memberCount} people</span></header>
-          {!owner && <p className="folder-owner-line">Owned by @{folder.owner}</p>}
           {error && <p className="folder-members-error" role="alert">{error}</p>}
           {groups.map(([role, label]) => {
-            const members = (folder.members || []).filter((member) => member.role === role);
+            const members = role === "owner"
+              ? [folder.ownerMember].filter(Boolean)
+              : (folder.members || []).filter((member) => member.role === role);
             return (
               <div className="folder-member-group" key={role}>
                 <h4>{label} <span>{members.length}</span></h4>
@@ -99,7 +101,7 @@ export default function FolderMembersPopover({ folder, onChangeRole, mobile = fa
                   <div className="folder-member-person" key={member.recipientId}>
                     <Avatar url={member.avatarUrl} frame={member.avatarFrame} name={member.displayName} size={28} />
                     <span><strong>{member.displayName}</strong><small>@{member.username}</small></span>
-                    {owner && onChangeRole && (
+                    {role !== "owner" && owner && onChangeRole && (
                       <select
                         aria-label={`Role for ${member.username}`}
                         value={member.role}

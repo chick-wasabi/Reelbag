@@ -12,7 +12,6 @@ import {
 import Avatar from "./Avatar";
 const ITEMS = [
   { id: "profile", label: "Profile", icon: UserRound },
-  { id: "friends", label: "Friends", icon: UsersRound },
   { id: "security", label: "Account Security", icon: ShieldCheck },
   { id: "appearance", label: "Appearance & Settings", icon: Palette },
   { id: "data", label: "Data & Backups", icon: Database },

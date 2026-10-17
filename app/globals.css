@@ -1680,10 +1680,35 @@ select option {
   filter: drop-shadow(0 0 2px rgb(250 204 21 / 0.58));
 }
 .reel-actions .active-flag {
-  background: rgb(255 255 255 / 0.025);
+  background: transparent;
+  box-shadow: none;
 }
 .reel-actions .flag-toggle:hover {
-  background: rgb(var(--accent-rgb) / 0.063);
+  background: transparent;
+  filter: brightness(1.15);
+}
+.folder-sort-select {
+  width: auto;
+  min-height: 39px;
+  padding: 0 30px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-strong);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.header-friends-button { position: relative; }
+.header-friends-button small {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 15px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 8px;
+  line-height: 13px;
 }
 
 /* Shared branding, profile controls, and a single Add Reel entry point. */
@@ -2430,7 +2455,7 @@ select option {
   grid-column: 2;
   grid-row: 1;
 }
-.topbar .search-box {
+.topbar .search-tools {
   grid-column: 1 / -1;
   grid-row: 2;
   max-width: none;
@@ -2452,7 +2477,7 @@ select option {
     grid-column: 1 / -1;
     grid-row: 2;
   }
-  .topbar .search-box {
+  .topbar .search-tools {
     grid-row: 3;
   }
 }

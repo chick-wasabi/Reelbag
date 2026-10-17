@@ -3,13 +3,13 @@ import { useState } from "react";
 import { FolderInput } from "lucide-react";
 import Modal from "./Modal";
 
-export default function MoveReelModal({ reel, folders, onSave, onClose }) {
-  const [folderId, setFolderId] = useState(reel.folderId || "");
+export default function MoveReelModal({ reel, folders, onSave, onClose, copy = false }) {
+  const [folderId, setFolderId] = useState(copy ? "" : (reel.folderId || ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <Modal
-      title="Move reel"
+      title={copy ? "Add to folder" : "Move reel"}
       description={reel.title}
       onClose={() => {
         if (!busy) onClose();
@@ -31,7 +31,7 @@ export default function MoveReelModal({ reel, folders, onSave, onClose }) {
         }}
       >
         <label className="field-label">
-          Move to folder
+          {copy ? "Add a separate copy to" : "Move to folder"}
           <select
             aria-label="Move to folder"
             data-autofocus
@@ -39,7 +39,7 @@ export default function MoveReelModal({ reel, folders, onSave, onClose }) {
             onChange={(event) => setFolderId(event.target.value)}
             disabled={busy}
           >
-            <option value="">No folder</option>
+            <option value="">{copy ? "Choose a folder" : "No folder"}</option>
             {folders.map((folder) => (
               <option key={folder.id} value={folder.id}>
                 {folder.pin ? "🔒 " : ""}
@@ -53,9 +53,9 @@ export default function MoveReelModal({ reel, folders, onSave, onClose }) {
             {error}
           </p>
         )}
-        <button className="button-primary" disabled={busy}>
+        <button className="button-primary" disabled={busy || (copy && !folderId)}>
           <FolderInput size={17} />
-          {busy ? "Moving…" : "Move reel"}
+          {busy ? (copy ? "Adding…" : "Moving…") : (copy ? "Add copy" : "Move reel")}
         </button>
       </form>
     </Modal>

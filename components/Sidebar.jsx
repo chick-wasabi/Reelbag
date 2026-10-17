@@ -7,14 +7,11 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
-  UserRoundPlus,
   Trash2,
   MoreHorizontal,
 } from "lucide-react";
 import SidebarFolderItem from "./SidebarFolderItem";
 import Brand from "./Brand";
-import Avatar from "./Avatar";
-import { useState } from "react";
 
 export default function Sidebar({
   collapsed,
@@ -33,13 +30,10 @@ export default function Sidebar({
   onLock,
   onChangeRole,
   onLeaveFolder,
-  friends = [],
-  friendRequestCount = 0,
-  onOpenFriends,
-  onDropReel,
   onTrashSettings,
 }) {
-  const [dropTarget, setDropTarget] = useState(null);
+  const ownedFolders = folders.filter((folder) => folder.role === "owner");
+  const sharedFolders = folders.filter((folder) => folder.role !== "owner");
   return (
     <aside
       className={`sidebar sidebar-ambient hidden md:flex ${collapsed ? "sidebar-collapsed" : ""}`}
@@ -77,9 +71,7 @@ export default function Sidebar({
         >
           <Grid2X2 size={18} />
           <span className="sidebar-label">All Reels</span>
-          <span className="sidebar-count" aria-hidden="true">
-            {reelCount}
-          </span>
+          {selected === "all" && <span className="sidebar-count" aria-hidden="true">{reelCount}</span>}
         </button>
         {[
           { id: "pinned", label: "Pinned", icon: Pin, count: pinnedCount },
@@ -101,9 +93,7 @@ export default function Sidebar({
           >
             <item.icon size={18} />
             <span className="sidebar-label">{item.label}</span>
-            <span className="sidebar-count" aria-hidden="true">
-              {item.count}
-            </span>
+            {selected === item.id && <span className="sidebar-count" aria-hidden="true">{item.count}</span>}
           </button>
         ))}
         <div className={`sidebar-trash-row ${selected === "trash" ? "is-active" : ""}`}>
@@ -141,7 +131,7 @@ export default function Sidebar({
             </button>
           </div>
           <div className="sidebar-folder-list">
-            {folders.map((folder) => (
+            {ownedFolders.map((folder) => (
                 <SidebarFolderItem
                   key={folder.id}
                   folder={folder}
@@ -155,68 +145,22 @@ export default function Sidebar({
                   onLeave={onLeaveFolder}
                 />
               ))}
-            {!folders.length && (
+            {!ownedFolders.length && (
               <p className="sidebar-empty sidebar-label">
                 A folder for every kind of inspiration.
               </p>
             )}
           </div>
-          <div className="sidebar-folder-heading sidebar-friends-heading">
-            <span className="sidebar-label">FRIENDS</span>
-            {friendRequestCount > 0 && (
-              <span className="friend-request-count" title={`${friendRequestCount} pending request${friendRequestCount === 1 ? "" : "s"}`}>
-                {friendRequestCount}
-              </span>
-            )}
-            <button
-              className="icon-button sidebar-add-button"
-              aria-label="Add or manage friends"
-              title="Add or manage friends"
-              onClick={onOpenFriends}
-            >
-              <UserRoundPlus size={20} strokeWidth={2.5} />
-            </button>
-          </div>
-          <div className="sidebar-friend-list">
-            {friends.map((friend) => (
-              <button
-                key={friend.id}
-                className={`sidebar-friend ${dropTarget === friend.id ? "is-drop-target" : ""}`}
-                onClick={onOpenFriends}
-                onDragEnter={(event) => {
-                  if (event.dataTransfer.types.includes("application/x-reelbag-reel")) {
-                    event.preventDefault();
-                    setDropTarget(friend.id);
-                  }
-                }}
-                onDragOver={(event) => {
-                  if (event.dataTransfer.types.includes("application/x-reelbag-reel")) {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "copy";
-                  }
-                }}
-                onDragLeave={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(null);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const reelId = event.dataTransfer.getData("application/x-reelbag-reel");
-                  setDropTarget(null);
-                  if (reelId) onDropReel(friend, reelId);
-                }}
-                title={`Drop a Reel to share with @${friend.username}`}
-              >
-                <Avatar url={friend.avatarUrl} frame={friend.avatarFrame} name={friend.displayName} size={28} />
-                <span className="sidebar-label">{friend.displayName}</span>
-                <span className="friend-drop-hint">Drop</span>
-              </button>
-            ))}
-            {!friends.length && (
-              <button className="sidebar-empty friend-empty-button sidebar-label" onClick={onOpenFriends}>
-                Add a friend, then drop Reels here.
-              </button>
-            )}
-          </div>
+          {sharedFolders.length > 0 && <>
+            <div className="sidebar-folder-heading">
+              <span className="sidebar-label">SHARED FOLDERS</span>
+            </div>
+            <div className="sidebar-folder-list">
+              {sharedFolders.map((folder) => <SidebarFolderItem key={folder.id} folder={folder} selected={selected}
+                onSelect={onSelect} onRename={onRename} onShare={onShare} onDelete={onDelete} onLock={onLock}
+                onChangeRole={onChangeRole} onLeave={onLeaveFolder} />)}
+            </div>
+          </>}
         </div>
       </nav>
     </aside>

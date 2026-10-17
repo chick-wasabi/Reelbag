@@ -38,6 +38,8 @@ export default function ReelCard({
   onCopyToLibrary,
   onHide,
   onUnhide,
+  onExternalShare,
+  onAddToFolder,
   hiddenMode = false,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
@@ -180,7 +182,7 @@ export default function ReelCard({
                       </button>
                     </>
                   ) : <>
-                  {(canManage || isCollaborator) && <button
+                  {canManage && <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -210,15 +212,7 @@ export default function ReelCard({
                   {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(false); }}>
                     <Library size={15} /> Add to My Reels
                   </button>}
-                  {isCollaborator && <button onClick={async () => {
-                    closeMenu();
-                    try {
-                      if (navigator.share) await navigator.share({ title: reel.title, url: reel.url });
-                      else await navigator.clipboard.writeText(reel.url);
-                    } catch (error) {
-                      if (error?.name !== "AbortError") console.error("Could not share Reel", error);
-                    }
-                  }}>
+                  {isCollaborator && <button onClick={() => { closeMenu(); onExternalShare?.(); }}>
                     <Send size={15} /> Share Reel
                   </button>}
                   {canManage && onShare && (
@@ -251,6 +245,9 @@ export default function ReelCard({
                   >
                     <FolderInput size={15} />
                     Move Folder
+                  </button>}
+                  {canManage && <button onClick={() => { closeMenu(); onAddToFolder?.(); }}>
+                    <Library size={15} /> Add to Folder
                   </button>}
                   {hiddenMode ? <button onClick={() => { closeMenu(); onUnhide?.(); }}>
                     <EyeOff size={15} /> Unhide Reel
