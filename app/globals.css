@@ -20,7 +20,7 @@ body {
   margin: 0;
   background: var(--background);
   color: #e8e9ed;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Nunito", Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button,
@@ -271,8 +271,8 @@ select option {
   background: linear-gradient(135deg, #1c222af5, #131820f5);
   border-radius: 12px 12px 0 0;
   margin-bottom: 8px;
-  height: 92px;
-  min-height: 92px;
+  height: 78px;
+  min-height: 78px;
   overflow: visible;
 }
 .reel-heading h2 {
@@ -1413,16 +1413,28 @@ select option {
   filter: drop-shadow(0 0 5px rgb(var(--accent-rgb) / 0.8));
 }
 .reel-shared-by {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 3px;
+  margin: 0;
   overflow: hidden;
   color: var(--accent);
   font-size: 10px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .reel-heading {
+    height: 78px;
+    min-height: 78px;
+    padding: 12px 13px;
+  }
+  .embed-viewport,
+  .embed-shell,
+  .reel-iframe {
+    overscroll-behavior: none;
+  }
 }
 .reel-actions .is-favorite {
   color: #facc15;

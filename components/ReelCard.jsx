@@ -113,13 +113,14 @@ export default function ReelCard({
     >
       <div className="reel-heading">
         <div className="min-w-0">
-          {reel.isDirectShared && (
-            <span className="reel-shared-by">
-              <UserRound size={11} /> Shared by {reel.sharedByDisplayName || `@${reel.sharedBy}`}
-            </span>
-          )}
           <h2 title={reel.title}>{reel.title}</h2>
-          <span className="reel-folder">{folder?.name || "\u00a0"}</span>
+          <span className="reel-folder">
+            {reel.isDirectShared ? (
+              <span className="reel-shared-by">
+                <UserRound size={11} /> Shared by {reel.sharedByDisplayName || `@${reel.sharedBy}`}
+              </span>
+            ) : folder?.name || "\u00a0"}
+          </span>
         </div>
         <div className="reel-actions">
           {canManage && reel.isPinned && (
@@ -263,6 +264,7 @@ export default function ReelCard({
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
+              scrolling="no"
               onLoad={() => {
                 setFailed(false);
                 setPlayerReady(true);
