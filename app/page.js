@@ -56,6 +56,8 @@ export default function Home() {
   const [accountGate, setAccountGate] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [viewFilter, setViewFilter] = useState("all");
+  const [mobileGrid, setMobileGrid] = useState(false);
+  const [mobileHeaderCompact, setMobileHeaderCompact] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedReels, setSelectedReels] = useState(() => new Set());
   const feed = useRef(null);
@@ -72,6 +74,28 @@ export default function Home() {
     modalRef.current = modal;
   }, [modal]);
   useEffect(() => { accountGateRef.current = accountGate; }, [accountGate]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try { setMobileGrid(localStorage.getItem("reelbag-mobile-grid") === "true"); } catch {}
+    });
+    let previous = window.scrollY;
+    function trackMobileScroll() {
+      if (window.innerWidth >= 768) {
+        setMobileHeaderCompact(false);
+        previous = window.scrollY;
+        return;
+      }
+      const current = window.scrollY;
+      if (current > previous + 8 && current > 90) setMobileHeaderCompact(true);
+      else if (current < previous - 8 || current < 36) setMobileHeaderCompact(false);
+      previous = current;
+    }
+    window.addEventListener("scroll", trackMobileScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", trackMobileScroll);
+    };
+  }, []);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let active = true;
@@ -754,6 +778,13 @@ export default function Home() {
               selectionCanDelete={selectedReels.size > 0 && reels.filter((reel) => selectedReels.has(reel.id)).every((reel) => reel.canManage)}
               viewFilter={viewFilter}
               onViewFilter={setViewFilter}
+              mobileGrid={mobileGrid}
+              mobileCompact={mobileHeaderCompact}
+              onMobileGrid={() => setMobileGrid((value) => {
+                const next = !value;
+                try { localStorage.setItem("reelbag-mobile-grid", String(next)); } catch {}
+                return next;
+              })}
             />
             <div className="stream-navigation md:hidden">
               <FolderBar
@@ -780,7 +811,7 @@ export default function Home() {
             >
               {reels.length || (selected === "trash" && deletedFolders.length) ? (
                 <div
-                  className="reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fill,270px)] justify-between gap-x-0 gap-y-6"
+                  className={`reel-grid mx-auto w-full max-w-[1600px] grid-cols-[repeat(auto-fill,270px)] justify-between gap-x-0 gap-y-6 ${mobileGrid ? "is-mobile-grid" : ""}`}
                   role="region"
                   aria-label="Saved Reels"
                 >

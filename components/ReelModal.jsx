@@ -30,7 +30,7 @@ export default function ReelModal({
     event.preventDefault();
     const parsed = parseReelUrl(url);
     if (!parsed) {
-      setError("Enter a valid Instagram Reel link.");
+      setError("Enter a valid Instagram Reel or post link.");
       return;
     }
     setBusy(true);
@@ -58,7 +58,7 @@ export default function ReelModal({
     >
       <form className="form-stack" onSubmit={submit}>
         <label className="field-label">
-          Instagram Reel Link
+          Instagram Reel or Post Link
           <input
             data-autofocus={!draft}
             required
@@ -66,7 +66,7 @@ export default function ReelModal({
             maxLength={2048}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://www.instagram.com/reel/…"
+            placeholder="https://www.instagram.com/reel/… or /p/…"
           />
         </label>
         <label className="field-label">
@@ -153,7 +153,7 @@ export default function ReelModal({
           className="button-primary w-full"
           disabled={busy || !parseReelUrl(url)}
         >
-          {busy ? "Checking Reel…" : reel ? "Save changes" : "Save reel"}
+          {busy ? "Checking Instagram…" : reel ? "Save changes" : "Save to Reelbag"}
         </button>
       </form>
     </Modal>

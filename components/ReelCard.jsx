@@ -49,7 +49,7 @@ export default function ReelCard({
   const menu = useRef(null);
   const parsed = parseReelUrl(reel.url);
   const embedUrl = parsed
-    ? `https://www.instagram.com/reel/${parsed.shortcode}/embed/`
+    ? `https://www.instagram.com/${parsed.type === "post" ? "p" : "reel"}/${parsed.shortcode}/embed/`
     : null;
   const [toggling, setToggling] = useState(false);
   async function toggle(flag) {
@@ -302,7 +302,7 @@ export default function ReelCard({
         {!trashMode && onReact && (
           <ReelReactions reel={reel} onReact={onReact} />
         )}
-        <button
+        {parsed?.type !== "post" && <button
           className={`replay-icon-button ${playerReady ? "is-ready" : ""}`}
           aria-label={`Replay ${reel.title}`}
           title={playerReady ? "Replay" : "Player loading"}
@@ -310,7 +310,7 @@ export default function ReelCard({
           onClick={replay}
         >
           <RefreshCw size={14} />
-        </button>
+        </button>}
       </footer>
       {failed && (
         <div className="embed-error">

@@ -82,7 +82,7 @@ async function login(page, name) {
 async function addReel(page, title, code, folderId) {
   await page.getByRole("button", { name: "Add Reel", exact: true }).click();
   await page
-    .getByLabel("Instagram Reel Link")
+    .getByLabel("Instagram Reel or Post Link")
     .fill(`https://instagram.com/reel/${code}/?igsh=tracking`);
   await page.getByLabel("Title / Name").fill(title);
   if (folderId !== undefined)
@@ -145,7 +145,7 @@ test("cloud signup, three-field inline folder creation, reel and folder CRUD, an
   await page.getByRole("button", { name: "Add Reel", exact: true }).click();
   await expect(page.getByRole("dialog").locator("input,select")).toHaveCount(3);
   await page
-    .getByLabel("Instagram Reel Link")
+    .getByLabel("Instagram Reel or Post Link")
     .fill("https://instagram.com/reel/BIKE/");
   await page.getByLabel("Title / Name").fill("Sunset ride");
   await page
@@ -431,7 +431,7 @@ test("server write errors keep reel drafts available and never show an unsaved c
   );
   await page.getByRole("button", { name: "Add Reel", exact: true }).click();
   await page
-    .getByLabel("Instagram Reel Link")
+    .getByLabel("Instagram Reel or Post Link")
     .fill("https://instagram.com/reel/UNSAVED/");
   await page.getByLabel("Title / Name").fill("Keep my draft");
   await page.getByRole("button", { name: "Save reel", exact: true }).click();

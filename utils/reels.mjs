@@ -13,11 +13,12 @@ export function parseReelUrl(input) {
       url.password
     )
       return null;
-    const match = url.pathname.match(/^\/reels?\/([A-Za-z0-9_-]{1,100})\/?$/);
+    const match = url.pathname.match(/^\/(reels?|p)\/([A-Za-z0-9_-]{1,100})\/?$/);
     return match
       ? {
-          shortcode: match[1],
-          url: `https://www.instagram.com/reel/${match[1]}/`,
+          type: match[1] === "p" ? "post" : "reel",
+          shortcode: match[2],
+          url: `https://www.instagram.com/${match[1] === "p" ? "p" : "reel"}/${match[2]}/`,
         }
       : null;
   } catch {

@@ -357,6 +357,19 @@ test("reels without a custom title use the Reelbag fallback", async () => {
   assert.equal(created.data.reels[0].title, "Reelbag");
 });
 
+test("Instagram photo and carousel posts can be saved with their canonical post URL", async () => {
+  const user = await account();
+  const saved = await call("reels", "POST", {
+    title: "Carousel inspiration",
+    url: "https://www.instagram.com/p/DdlzMA8iXG7/?img_index=9&obrf=tracking",
+    folderId: null,
+  }, user.cookie);
+  assert.equal(saved.status, 201, JSON.stringify(saved.data));
+  const post = saved.data.reels.find((item) => item.title === "Carousel inspiration");
+  assert.equal(post.url, "https://www.instagram.com/p/DdlzMA8iXG7/");
+  assert.equal(post.shortcode, "DdlzMA8iXG7");
+});
+
 test("a new reel can be pinned as part of creation", async () => {
   const user = await account();
   const created = await call(

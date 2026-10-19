@@ -1,7 +1,7 @@
 "use client";
 
 import FolderMenu from "./FolderMenu";
-import { FolderPlus, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
+import { Folder, Grid2X2, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
 import FolderGlyph from "./FolderGlyph";
 
 export default function FolderBar({
@@ -9,7 +9,6 @@ export default function FolderBar({
   selected,
   unlocked,
   onSelect,
-  onCreate,
   onRename,
   onDelete,
   onLock,
@@ -21,29 +20,42 @@ export default function FolderBar({
   const current = folders.find((f) => f.id === selected);
   return (
     <div className="folder-controls">
-      <nav className="folder-tabs" aria-label="Reel filters">
-        {[
-          { id: "all", name: "All reels" },
-          { id: "shared", name: "Shared with me", virtual: true },
-          { id: "trash", name: "Recently deleted", trash: true },
-          ...folders,
-        ].map((folder) => (
+      <nav className="folder-tabs" aria-label="Library navigation">
+        <button className={selected === "all" ? "active" : ""} aria-pressed={selected === "all"} onClick={() => onSelect("all")}>
+          <Grid2X2 size={17} /><span>All</span>
+        </button>
+        <button className={selected === "shared" ? "active" : ""} aria-pressed={selected === "shared"} onClick={() => onSelect("shared")}>
+          <Users size={17} /><span>Shared</span>
+        </button>
+        <details className="mobile-folder-picker">
+          <summary className={current ? "active" : ""} aria-label="Choose folder">
+            <Folder size={17} /><span>Folders</span>
+          </summary>
+          <div className="mobile-folder-picker-panel">
+            {folders.length ? folders.map((folder) => (
           <button
             key={folder.id}
             className={selected === folder.id ? "active" : ""}
             aria-label={`Filter ${folder.name}`}
             aria-pressed={selected === folder.id}
-            onClick={() => onSelect(folder.id)}
+            onClick={(event) => {
+              onSelect(folder.id);
+              const picker = event.currentTarget.closest("details");
+              if (picker) picker.open = false;
+            }}
           >
-            {folder.virtual && <Users size={13} />}
-            {folder.trash && <Trash2 size={13} />}
             {folder.pin && !unlocked.has(folder.id) && (
               <LockKeyhole size={13} />
             )}
-            {!folder.virtual && !folder.trash && !(folder.pin && !unlocked.has(folder.id)) && <FolderGlyph icon={folder.icon} size={13} />}
+            {!(folder.pin && !unlocked.has(folder.id)) && <FolderGlyph icon={folder.icon} size={13} />}
             {folder.name}
           </button>
-        ))}
+            )) : <p>No folders yet</p>}
+          </div>
+        </details>
+        <button className={selected === "trash" ? "active" : ""} aria-pressed={selected === "trash"} onClick={() => onSelect("trash")}>
+          <Trash2 size={17} /><span>Deleted</span>
+        </button>
       </nav>
       {current && (
         <>
@@ -64,14 +76,6 @@ export default function FolderBar({
           <MoreHorizontal size={17} />
         </button>
       )}
-      <button
-        className="icon-button folder-create"
-        onClick={onCreate}
-        aria-label="New folder"
-        title="New folder"
-      >
-        <FolderPlus size={20} strokeWidth={2.5} />
-      </button>
     </div>
   );
 }

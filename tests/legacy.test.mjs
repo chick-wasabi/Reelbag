@@ -70,6 +70,17 @@ test("old local files are validated, URLs normalized, and unsupported fields rem
   extreme.masterPin = { ...pin, iterations: 999999999 };
   assert.throws(() => validateData(extreme));
 });
+
+test("Instagram carousel and photo post links normalize without tracking parameters", () => {
+  assert.deepEqual(
+    parseReelUrl("https://www.instagram.com/p/DdlzMA8iXG7/?img_index=9&obrf=tracking"),
+    {
+      type: "post",
+      shortcode: "DdlzMA8iXG7",
+      url: "https://www.instagram.com/p/DdlzMA8iXG7/",
+    },
+  );
+});
 test("legacy profile conversion preserves reels and remaps colliding IDs and folder names", () => {
   const original = legacyFixture();
   const result = migrateLegacy(validateLegacy(original), pin);

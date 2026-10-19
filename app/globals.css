@@ -222,6 +222,7 @@ select option {
   width: 100%;
 }
 .search-tools .search-box { flex: 1; }
+.mobile-grid-toggle { display: none; }
 .hidden-reels-toggle {
   display: inline-flex;
   align-items: center;
@@ -2059,6 +2060,57 @@ select option {
   .reel-fab {
     right: 24px;
   }
+  .mobile-folder-picker {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .mobile-folder-picker > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 12px;
+    list-style: none;
+    cursor: pointer;
+  }
+  .mobile-folder-picker > summary::-webkit-details-marker { display: none; }
+  .mobile-folder-picker > summary.active { color: var(--accent); }
+  .mobile-folder-picker-panel {
+    position: absolute;
+    z-index: 80;
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(280px, calc(100vw - 36px));
+    max-height: 45vh;
+    overflow-y: auto;
+    padding: 7px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgb(18 22 27 / 0.98);
+    box-shadow: 0 18px 45px rgb(0 0 0 / 0.46);
+  }
+  .mobile-folder-picker-panel button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 9px;
+    padding: 11px;
+    border-radius: 9px;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+  .mobile-folder-picker-panel button.active {
+    color: var(--accent);
+    background: rgb(var(--accent-rgb) / 0.1);
+  }
+  .mobile-folder-picker-panel p {
+    padding: 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
 }
 
 .sidebar-link.active .sidebar-count {
@@ -3176,6 +3228,155 @@ select option {
   .pull-refresh-indicator.is-refreshing,
   .pull-refresh-indicator.is-visible {
     opacity: 1;
+  }
+
+  .mobile-grid-toggle { display: none; }
+
+  :root[data-native-app="true"] .mobile-grid-toggle { display: inline-flex; }
+
+  :root[data-native-app="true"] .topbar {
+    padding-bottom: 10px;
+  }
+
+  :root[data-native-app="true"] .topbar .search-tools {
+    max-height: 52px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 260ms ease, opacity 180ms ease, transform 260ms ease;
+  }
+
+  :root[data-native-app="true"] .topbar.is-mobile-compact .search-tools {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+  }
+
+  :root[data-native-app="true"] .stream-navigation {
+    position: fixed;
+    z-index: 70;
+    right: 12px;
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    padding: 0;
+  }
+
+  :root[data-native-app="true"] .folder-controls {
+    margin: 0;
+    padding: 7px;
+    border: 1px solid rgb(255 255 255 / 0.09);
+    border-radius: 20px;
+    background: rgb(14 16 18 / 0.96);
+    box-shadow: 0 14px 45px rgb(0 0 0 / 0.48);
+    backdrop-filter: blur(22px);
+  }
+
+  :root[data-native-app="true"] .folder-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    gap: 4px;
+    overflow: visible;
+  }
+
+  :root[data-native-app="true"] .folder-tabs > button,
+  :root[data-native-app="true"] .mobile-folder-picker > summary {
+    display: flex;
+    min-width: 0;
+    min-height: 51px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 3px;
+    border: 0;
+    border-radius: 14px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  :root[data-native-app="true"] .folder-tabs .active {
+    color: var(--accent);
+    background: rgb(var(--accent-rgb) / 0.11);
+  }
+
+  :root[data-native-app="true"] .mobile-folder-picker {
+    position: relative;
+  }
+
+  :root[data-native-app="true"] .mobile-folder-picker > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  :root[data-native-app="true"] .mobile-folder-picker > summary::-webkit-details-marker { display: none; }
+
+  :root[data-native-app="true"] .mobile-folder-picker-panel {
+    position: absolute;
+    right: -78px;
+    top: auto;
+    left: auto;
+    bottom: calc(100% + 14px);
+    width: min(290px, calc(100vw - 32px));
+    max-height: min(420px, 55vh);
+    overflow-y: auto;
+    padding: 8px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 16px;
+    background: rgb(18 22 27 / 0.98);
+    box-shadow: 0 20px 55px rgb(0 0 0 / 0.58);
+  }
+
+  :root[data-native-app="true"] .mobile-folder-picker-panel button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+
+  :root[data-native-app="true"] .mobile-folder-picker-panel button.active {
+    color: var(--accent);
+    background: rgb(var(--accent-rgb) / 0.1);
+  }
+
+  :root[data-native-app="true"] .folder-controls > .reel-menu,
+  :root[data-native-app="true"] .folder-controls > .icon-button { display: none; }
+
+  :root[data-native-app="true"] .mobile-feed-padding {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+
+  :root[data-native-app="true"] .reel-grid:not(.is-mobile-grid) {
+    grid-template-columns: 270px;
+    justify-content: center;
+  }
+
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    column-gap: 12px;
+    row-gap: 16px;
+  }
+
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .reel-heading {
+    height: 56px;
+    min-height: 56px;
+    padding: 11px 9px 9px;
+  }
+
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .reel-heading h2 { font-size: 12px; }
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .reel-folder { font-size: 9px; }
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .embed-viewport { height: 210px; }
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .embed-shell { height: 230px; }
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .reel-card-footer { min-height: 36px; }
+  :root[data-native-app="true"] .reel-grid.is-mobile-grid .reel-reactions-label { display: none; }
+
+  :root[data-native-app="true"] .reel-fab {
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
   }
 }
 @media (min-width: 768px) {

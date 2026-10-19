@@ -1,5 +1,5 @@
 "use client";
-import { Search, Folder, FolderPlus, Grid2X2, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X, MoreHorizontal } from "lucide-react";
+import { Search, Folder, FolderPlus, Grid2X2, List, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X, MoreHorizontal } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
@@ -40,11 +40,14 @@ export default function Header({
   selectionCanDelete = false,
   viewFilter = "all",
   onViewFilter,
+  mobileGrid = false,
+  onMobileGrid,
+  mobileCompact = false,
 }) {
   const SectionIcon =
     { folder: Folder, pinned: Pin, favorites: Star, shared: Users, trash: Trash2 }[sectionKind] || Grid2X2;
   return (
-    <header className="topbar safe-area-header">
+    <header className={`topbar safe-area-header ${mobileCompact ? "is-mobile-compact" : ""}`}>
       <div className="mobile-brand">
         <Brand slogan />
       </div>
@@ -77,6 +80,11 @@ export default function Header({
           <option value="favorites">Favorites</option>
           <option value="top-rated">Top Rated</option>
         </select>}
+        {sectionKind !== "trash" && <button className="icon-button mobile-grid-toggle" onClick={onMobileGrid}
+          aria-label={mobileGrid ? "Use single-column view" : "Use two-column grid view"}
+          title={mobileGrid ? "Single-column view" : "Two-column grid view"}>
+          {mobileGrid ? <List size={18} /> : <Grid2X2 size={18} />}
+        </button>}
         {activeFolder && <FolderMembersPopover folder={activeFolder} onChangeRole={onChangeFolderRole} onRevoke={onRevokeFolderMember}
           onInvite={activeFolder.role === "owner" ? onOpenFolderShare : undefined} inline />}
         {hiddenAvailable && (
