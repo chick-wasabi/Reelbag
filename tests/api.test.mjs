@@ -1406,7 +1406,7 @@ test("display name and appearance persist independently of the login username an
     columns: "5",
     spacing: "compact",
     avatarFrame: "sovereign",
-    design: "editorial-archive",
+    design: "neo-brutalism",
   };
   const saved = await call(
     "account/profile",

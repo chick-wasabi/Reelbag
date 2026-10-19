@@ -190,7 +190,7 @@ export default function ReelCard({
                       </button>
                     </>
                   ) : <>
-                  <button
+                  {canManage ? <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -199,8 +199,10 @@ export default function ReelCard({
                   >
                     <Star size={15} fill={reel.isFavorite ? "currentColor" : "none"} />
                     {reel.isFavorite ? "Remove Favorite" : "Add to Favorites"}
-                  </button>
-                  <button
+                  </button> : onCopyToLibrary && <button onClick={() => { closeMenu(); onCopyToLibrary(false); }}>
+                    <Library size={15} /> Bag it
+                  </button>}
+                  {(canManage || isCollaborator) && <button
                     disabled={toggling}
                     onClick={async () => {
                       closeMenu();
@@ -209,9 +211,6 @@ export default function ReelCard({
                   >
                     <Pin size={15} fill={reel.isPinned ? "currentColor" : "none"} />
                     {reel.isPinned ? "Unpin Reel" : "Pin Reel"}
-                  </button>
-                  {isCollaborator && <button onClick={() => { closeMenu(); onCopyToLibrary?.(false); }}>
-                    <Library size={15} /> Add to My Reels
                   </button>}
                   {isCollaborator && <button onClick={() => { closeMenu(); onExternalShare?.(); }}>
                     <Send size={15} /> Share Reel

@@ -9,10 +9,10 @@ import {
   UsersRound,
   Download,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import Avatar from "./Avatar";
 const ITEMS = [
-  { id: "profile", label: "Profile", icon: UserRound },
   { id: "security", label: "Account Security", icon: ShieldCheck },
   { id: "appearance", label: "Appearance & Settings", icon: Palette },
   { id: "data", label: "Data & Backups", icon: Database },
@@ -111,6 +111,12 @@ export default function ProfileDropdown({ user, onOpen, onOpenTrash, onLogout, a
             <strong>{user.displayName || user.username}</strong>
             <span>@{user.username}</span>
           </div>
+          <a role="menuitem" href={`/profile/${user.username}`} onClick={() => close(false)}>
+            <UserRound size={17} aria-hidden="true" /> View Profile
+          </a>
+          <button role="menuitem" onClick={() => { close(true); onOpen("profile"); }}>
+            <Pencil size={17} aria-hidden="true" /> Edit Profile
+          </button>
           {appUpdate && (
             <button
               role="menuitem"

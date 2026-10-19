@@ -19,18 +19,6 @@ const NEO_SWATCHES = {
     ["Hot Pink", "#d93683"], ["Burnt Orange", "#cf651f"],
   ],
 };
-const EDITORIAL_SWATCHES = {
-  dark: [
-    ["Archive Red", "#d05b45"], ["Ochre", "#d2a84a"],
-    ["Sage", "#8fac82"], ["Dusty Blue", "#7297b7"],
-    ["Mauve", "#b7849b"], ["Burnt Orange", "#cf7848"],
-  ],
-  light: [
-    ["Archive Red", "#9f382c"], ["Oxford Blue", "#345570"],
-    ["Forest Ink", "#3f684e"], ["Aubergine", "#694357"],
-    ["Burnt Sienna", "#a95232"], ["Antique Gold", "#86651f"],
-  ],
-};
 function normalizeHex(value) {
   const hex = value.trim().replace(/^#/, "");
   if (/^[a-f0-9]{6}$/i.test(hex)) return `#${hex.toLowerCase()}`;
@@ -45,9 +33,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const swatches = draft.design === "neo-brutalism"
-    ? NEO_SWATCHES[draft.theme]
-    : draft.design === "editorial-archive" ? EDITORIAL_SWATCHES[draft.theme] : BASIC_SWATCHES;
+  const swatches = draft.design === "neo-brutalism" ? NEO_SWATCHES[draft.theme] : BASIC_SWATCHES;
   useEffect(() => {
     onPreview(draft);
   }, [draft, onPreview]);
@@ -87,33 +73,27 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
           <div className="interface-style-options">
             <button type="button" className={draft.design === "basic" ? "is-selected" : ""} onClick={() => update("design", "basic")}>
               <span className="style-preview style-preview-basic"><i /><i /><i /></span>
-              <strong>Basic</strong>
+              <strong>Reelbag Classic</strong>
               <small>The original clean glass interface</small>
             </button>
             <button type="button" className={draft.design === "neo-brutalism" ? "is-selected" : ""} onClick={() => update("design", "neo-brutalism")}>
               <span className="style-preview style-preview-brutal"><i /><i /><i /></span>
-              <strong>Neo Brutalism</strong>
+              <strong>Bold Grid</strong>
               <small>Bold blocks, hard shadows and playful contrast</small>
-            </button>
-            <button type="button" className={draft.design === "editorial-archive" ? "is-selected" : ""} onClick={() => update("design", "editorial-archive")}>
-              <span className="style-preview style-preview-editorial"><i /><i /><i /></span>
-              <strong>Editorial Archive</strong>
-              <small>Magazine typography, warm paper and archival structure</small>
             </button>
           </div>
         </fieldset>
-        <label className="field-label">
-          Theme
-          <select
-            aria-label="Theme"
-            value={draft.theme}
-            disabled={busy}
-            onChange={(e) => update("theme", e.target.value)}
-          >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </label>
+        <fieldset className="theme-mode-picker" disabled={busy}>
+          <legend className="field-label">Theme</legend>
+          <div className="theme-mode-options">
+            <button type="button" className={draft.theme === "dark" ? "is-selected" : ""} aria-pressed={draft.theme === "dark"} onClick={() => update("theme", "dark")}>
+              <span className="theme-mode-preview is-dark" /> Dark
+            </button>
+            <button type="button" className={draft.theme === "light" ? "is-selected" : ""} aria-pressed={draft.theme === "light"} onClick={() => update("theme", "light")}>
+              <span className="theme-mode-preview is-light" /> Light
+            </button>
+          </div>
+        </fieldset>
         <fieldset className="accent-picker" disabled={busy}>
           <legend className="field-label">Accent color</legend>
           <div className="accent-swatches" aria-label="Preset accent colors">

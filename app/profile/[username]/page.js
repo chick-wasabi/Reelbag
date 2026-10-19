@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { ArrowLeft, LockKeyhole, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, LockKeyhole, Pencil, UserPlus } from "lucide-react";
 import Avatar from "../../../components/Avatar";
 import Brand from "../../../components/Brand";
 import { api } from "../../../utils/api.mjs";
@@ -26,8 +27,11 @@ export default function PublicProfilePage({ params }) {
     {error ? <section className="public-profile-state"><h1>Profile unavailable</h1><p>{error}</p></section> : !person ?
       <section className="public-profile-state"><p>Loading profile…</p></section> : <>
       <section className="public-profile-hero">
-        <Avatar url={person.avatarUrl} frame={person.avatarFrame} name={person.displayName} size={92} />
+        {person.isSelf ? <Link href="/?editProfile=1" aria-label="Edit profile avatar" title="Edit profile">
+          <Avatar url={person.avatarUrl} frame={person.avatarFrame} name={person.displayName} size={92} />
+        </Link> : <Avatar url={person.avatarUrl} frame={person.avatarFrame} name={person.displayName} size={92} />}
         <div><h1>{person.displayName}</h1><p>@{person.username}</p></div>
+        {person.isSelf && <Link className="button-secondary" href="/?editProfile=1"><Pencil size={16} /> Edit Profile</Link>}
         {!person.isSelf && !person.isFriend && person.friendStatus !== "pending" && data.authenticated && <button className="button-primary" disabled={busy} onClick={async () => {
           setBusy(true); setError("");
           try { await api("friends/request", { method: "POST", body: { username: person.username } }); setData((current) => ({ ...current, profile: { ...current.profile, friendStatus: "pending", requestSentByViewer: true } })); }

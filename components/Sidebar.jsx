@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import {
   Users,
   Grid2X2,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import SidebarFolderItem from "./SidebarFolderItem";
 import Brand from "./Brand";
+import Avatar from "./Avatar";
 
 export default function Sidebar({
   collapsed,
@@ -27,7 +29,11 @@ export default function Sidebar({
   onLeaveFolder,
   onTrashSettings,
   onProtectSharedFolder,
+  friends = [],
+  onOpenFriends,
+  onShareWithFriend,
 }) {
+  const [dropTarget, setDropTarget] = useState(null);
   const ownedFolders = folders.filter((folder) => folder.role === "owner");
   const sharedFolders = folders.filter((folder) => folder.role !== "owner");
   return (
@@ -144,6 +150,29 @@ export default function Sidebar({
                 onChangeRole={onChangeRole} onRevoke={onRevokeMember} onLeave={onLeaveFolder} onProtect={onProtectSharedFolder} />)}
             </div>
           </>}
+          <div className="sidebar-folder-heading sidebar-friends-heading">
+            <span className="sidebar-label">FRIENDS</span>
+          </div>
+          <div className="sidebar-friend-list">
+            {friends.map((friend) => (
+              <div key={friend.id} className={`sidebar-friend ${dropTarget === friend.id ? "is-drop-target" : ""}`}
+                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setDropTarget(friend.id); }}
+                onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDropTarget(null); }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const reelId = event.dataTransfer.getData("application/x-reelbag-reel") || event.dataTransfer.getData("text/plain");
+                  setDropTarget(null);
+                  if (reelId) onShareWithFriend?.(reelId, friend);
+                }}>
+                <a href={`/profile/${friend.username}`} title={`Open ${friend.displayName || friend.username}'s profile`}>
+                  <Avatar url={friend.avatarUrl} frame={friend.avatarFrame} name={friend.displayName} size={30} />
+                </a>
+                <span className="sidebar-label">{friend.displayName || friend.username}</span>
+                <small className="friend-drop-hint">Share</small>
+              </div>
+            ))}
+            {!friends.length && <button className="friend-empty-button muted-copy sidebar-label" onClick={onOpenFriends}>Add friends</button>}
+          </div>
         </div>
       </nav>
     </aside>

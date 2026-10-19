@@ -72,6 +72,12 @@ export default function Home() {
   const suppressAccountGatePop = useRef(false);
   const userId = data?.user?.id;
   useEffect(() => {
+    if (!userId || new URLSearchParams(window.location.search).get("editProfile") !== "1") return;
+    history.replaceState(history.state, "", window.location.pathname);
+    const timer = window.setTimeout(() => setModal({ type: "profile" }), 0);
+    return () => window.clearTimeout(timer);
+  }, [userId]);
+  useEffect(() => {
     modalRef.current = modal;
   }, [modal]);
   useEffect(() => { accountGateRef.current = accountGate; }, [accountGate]);
@@ -652,17 +658,24 @@ export default function Home() {
   async function runBulkAction(action, folderId) {
     const items = [...new Map(reels.filter((reel) => selectedReels.has(reel.id)).map((reel) => [reel.id, reel])).values()];
     if (!items.length) return;
-    if (action === "delete") {
-      await Promise.all(items.map((reel) => api(`reels/${reel.id}/trash`, { method: "POST", body: {} })));
-    } else if (action === "hide" || action === "unhide") {
-      await Promise.all(items.map((reel) => api(`reels/${reel.id}/${action}`, { method: "POST", body: { scope: reel.viewScope || "all" } })));
-    } else {
-      await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
-    }
-    await mutate("library", "GET");
-    cancelSelection();
-    setModal(null);
-    setNotice(`${items.length} ${items.length === 1 ? "Reel" : "Reels"} updated.`);
+    if (action === "permanent" && !window.confirm(`Permanently delete ${items.length} selected ${items.length === 1 ? "Reel" : "Reels"}? This cannot be undone.`)) return;
+    try {
+      if (action === "restore" || action === "permanent") {
+        await Promise.all(items.map((reel) => api(`trash/${reel.id}/${action}`, { method: "POST", body: {} })));
+        const ids = new Set(items.map((reel) => reel.id));
+        setDeletedReels((current) => current.filter((reel) => !ids.has(reel.id)));
+      } else if (action === "delete") {
+        await Promise.all(items.map((reel) => api(`reels/${reel.id}/trash`, { method: "POST", body: {} })));
+      } else if (action === "hide" || action === "unhide") {
+        await Promise.all(items.map((reel) => api(`reels/${reel.id}/${action}`, { method: "POST", body: { scope: reel.viewScope || "all" } })));
+      } else {
+        await Promise.all(items.map((reel) => api(`reels/${reel.id}/copy`, { method: "POST", body: { folderId, favorite: false } })));
+      }
+      await mutate("library", "GET");
+      cancelSelection();
+      setModal(null);
+      setNotice(`${items.length} ${items.length === 1 ? "Reel" : "Reels"} ${action === "restore" ? "restored" : action === "permanent" ? "permanently deleted" : "updated"}.`);
+    } catch (err) { setError(err.message); }
   }
   async function changeFolderMemberRole(folder, member, role) {
     await api(`sharing/folder/${folder.id}/members/${member.recipientId}`, {
@@ -763,6 +776,15 @@ export default function Home() {
             onLeaveFolder={leaveSharedFolder}
             onTrashSettings={() => setModal({ type: "trashSettings" })}
             onProtectSharedFolder={(folder) => setModal({ type: "sharedFolderPin", folder })}
+            friends={data.friends || []}
+            onOpenFriends={() => setModal({ type: "friends" })}
+            onShareWithFriend={async (reelId, friend) => {
+              try {
+                await api(`sharing/reel/${reelId}/send`, { method: "POST", body: { username: friend.username, role: "viewer" } });
+                await mutate("library", "GET");
+                setNotice(`Reel shared with ${friend.displayName || `@${friend.username}`}.`);
+              } catch (err) { setError(err.message); }
+            }}
           />
           <div className="workspace">
             <Header

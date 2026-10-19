@@ -1,11 +1,12 @@
 "use client";
-import { Search, Folder, FolderPlus, Grid2X2, List, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X, MoreHorizontal } from "lucide-react";
+import { Search, Folder, FolderPlus, Grid2X2, List, Pin, Star, Trash2, Users, Eye, EyeOff, UserRoundPlus, X, RotateCcw } from "lucide-react";
 import Brand from "./Brand";
 import NotificationCenter from "./NotificationCenter";
 import ProfileDropdown from "./ProfileDropdown";
 import FolderGlyph from "./FolderGlyph";
 import FolderMembersPopover from "./FolderMembersPopover";
 import FolderMenu from "./FolderMenu";
+import ViewMenu from "./ViewMenu";
 export default function Header({
   user,
   search,
@@ -98,18 +99,20 @@ export default function Header({
         )}
         {selectionMode && <div className="bulk-reel-actions" aria-label={`${selectionCount} selected`}>
           <span>{selectionCount} selected</span>
-          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("add")} title="Add selected to folder"><FolderPlus size={17} /></button>
-          <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction(showingHidden ? "unhide" : "hide")} title={showingHidden ? "Unhide selected" : "Hide selected"}>{showingHidden ? <Eye size={17} /> : <EyeOff size={17} />}</button>
-          {selectionCanDelete && <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>}
+          {sectionKind === "trash" ? <>
+            <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("restore")} title="Restore selected"><RotateCcw size={17} /></button>
+            <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("permanent")} title="Delete selected permanently"><Trash2 size={17} /></button>
+          </> : <>
+            <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction("add")} title="Add selected to folder"><FolderPlus size={17} /></button>
+            <button className="icon-button" disabled={!selectionCount} onClick={() => onBulkAction(showingHidden ? "unhide" : "hide")} title={showingHidden ? "Unhide selected" : "Hide selected"}>{showingHidden ? <Eye size={17} /> : <EyeOff size={17} />}</button>
+            {selectionCanDelete && <button className="icon-button danger" disabled={!selectionCount} onClick={() => onBulkAction("delete")} title="Delete selected"><Trash2 size={17} /></button>}
+          </>}
           <button className="icon-button" onClick={onCancelSelection} title="Cancel selection"><X size={17} /></button>
         </div>}
         {activeFolder && !selectionMode && <FolderMenu folder={activeFolder} inline onSelectReels={onStartSelection}
           onRename={onFolderSettings} onShare={onOpenFolderShare} onDelete={onFolderDelete} onLock={onFolderLock}
           onSelect={() => {}} onLeave={onLeaveFolder} onProtect={onProtectSharedFolder} />}
-        {!activeFolder && !selectionMode && ["all", "shared"].includes(sectionKind) && <details className="reel-menu">
-          <summary className="icon-button" title="View menu" aria-label="View menu"><MoreHorizontal size={18} /></summary>
-          <div className="reel-menu-panel"><button onClick={onStartSelection}>Select Reels</button></div>
-        </details>}
+        {!activeFolder && !selectionMode && ["all", "shared", "trash"].includes(sectionKind) && <ViewMenu onSelectReels={onStartSelection} />}
       </div>
       <div className="header-actions">
         <NotificationCenter key={user.id} onChange={onLibraryChange} />
