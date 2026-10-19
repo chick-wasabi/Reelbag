@@ -137,6 +137,9 @@ export default function ProfileDropdown({ user, onOpen, onOpenTrash, onLogout, a
               {item.label}
             </button>
           ))}
+          <button role="menuitem" onClick={() => { close(true); onOpen("friends"); }}>
+            <UsersRound size={17} aria-hidden="true" /> Friends
+          </button>
           <button role="menuitem" className="native-trash-menu-item" onClick={() => {
             close(true);
             onOpenTrash?.();

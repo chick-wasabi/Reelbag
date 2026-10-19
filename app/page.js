@@ -68,6 +68,7 @@ export default function Home() {
   const pullDistanceRef = useRef(0);
   const trashPinRef = useRef("");
   const accountGateRef = useRef(false);
+  const mobileHeaderState = useRef({ compact: false, lastY: 0, direction: null, directionStart: 0, lockedUntil: 0 });
   const suppressAccountGatePop = useRef(false);
   const userId = data?.user?.id;
   useEffect(() => {
@@ -78,17 +79,35 @@ export default function Home() {
     const frame = requestAnimationFrame(() => {
       try { setMobileGrid(localStorage.getItem("reelbag-mobile-grid") === "true"); } catch {}
     });
-    let previous = window.scrollY;
+    const state = mobileHeaderState.current;
+    state.lastY = window.scrollY;
+    state.directionStart = window.scrollY;
     function trackMobileScroll() {
       if (window.innerWidth >= 768) {
-        setMobileHeaderCompact(false);
-        previous = window.scrollY;
+        if (state.compact) { state.compact = false; setMobileHeaderCompact(false); }
+        state.lastY = window.scrollY;
         return;
       }
       const current = window.scrollY;
-      if (current > previous + 8 && current > 90) setMobileHeaderCompact(true);
-      else if (current < previous - 8 || current < 36) setMobileHeaderCompact(false);
-      previous = current;
+      const delta = current - state.lastY;
+      if (Math.abs(delta) < 2) return;
+      const direction = delta > 0 ? "down" : "up";
+      if (direction !== state.direction) {
+        state.direction = direction;
+        state.directionStart = current;
+      }
+      if (Date.now() >= state.lockedUntil) {
+        if (!state.compact && direction === "down" && current > 110 && current - state.directionStart >= 44) {
+          state.compact = true;
+          state.lockedUntil = Date.now() + 420;
+          setMobileHeaderCompact(true);
+        } else if (state.compact && (current < 24 || direction === "up" && state.directionStart - current >= 64)) {
+          state.compact = false;
+          state.lockedUntil = Date.now() + 420;
+          setMobileHeaderCompact(false);
+        }
+      }
+      state.lastY = current;
     }
     window.addEventListener("scroll", trackMobileScroll, { passive: true });
     return () => {
@@ -840,6 +859,12 @@ export default function Home() {
                         }
                       }}
                       onAddToFolder={() => setModal({ type: "addToFolder", reel })}
+                      onFeature={async () => {
+                        try {
+                          await mutate(`reels/${reel.id}/feature`, "PATCH", { featured: !reel.isFeatured });
+                          setNotice(reel.isFeatured ? "Removed from your profile." : "Featured on your profile.");
+                        } catch (err) { setError(err.message); }
+                      }}
                       onDelete={() => deleteReel(reel)}
                       hiddenMode={showHidden}
                       onHide={async () => {

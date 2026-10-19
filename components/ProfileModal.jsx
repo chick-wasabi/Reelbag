@@ -15,6 +15,7 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
   const [displayName, setDisplayName] = useState(
     user.displayName || user.username,
   );
+  const [profileVisibility, setProfileVisibility] = useState(user.profileVisibility || "friends");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -41,6 +42,7 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
                 ...user.appearance,
                 avatarFrame,
               },
+              profileVisibility,
             });
             setSaved(true);
           } catch (err) {
@@ -70,6 +72,15 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
         <p className="fine-print !mt-0">
           Your login username stays @{user.username}.
         </p>
+        <label className="field-label">
+          Who can view your profile
+          <select value={profileVisibility} disabled={busy} onChange={(event) => setProfileVisibility(event.target.value)}>
+            <option value="public">Everyone</option>
+            <option value="friends">Friends only</option>
+            <option value="private">Only me</option>
+          </select>
+        </label>
+        <p className="fine-print !mt-0">Choose “Feature on Profile” from any Reel menu to build your profile showcase.</p>
         {error && (
           <p className="error-text" role="alert">
             {error}

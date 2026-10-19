@@ -370,6 +370,31 @@ test("Instagram photo and carousel posts can be saved with their canonical post 
   assert.equal(post.shortcode, "DdlzMA8iXG7");
 });
 
+test("profiles expose only featured reels and enforce public, friends, and private visibility", async () => {
+  const owner = await account();
+  const saved = await call("reels", "POST", {
+    title: "Profile showcase",
+    url: "https://www.instagram.com/reel/DProfileShowcase1/",
+    folderId: null,
+  }, owner.cookie);
+  const reelId = saved.data.reels.find((item) => item.title === "Profile showcase").id;
+  await call(`reels/${reelId}/feature`, "PATCH", { featured: true }, owner.cookie);
+
+  const friendsOnly = await call(`profiles/${owner.username}`);
+  assert.equal(friendsOnly.status, 200);
+  assert.equal(friendsOnly.data.profile.canView, false);
+  assert.equal(friendsOnly.data.reels.length, 0);
+
+  await call("account/profile", "PATCH", { profileVisibility: "public" }, owner.cookie);
+  const publicProfile = await call(`profiles/${owner.username}`);
+  assert.equal(publicProfile.data.profile.canView, true);
+  assert.deepEqual(publicProfile.data.reels.map((item) => item.id), [reelId]);
+
+  await call("account/profile", "PATCH", { profileVisibility: "private" }, owner.cookie);
+  const privateProfile = await call(`profiles/${owner.username}`);
+  assert.equal(privateProfile.data.profile.canView, false);
+});
+
 test("a new reel can be pinned as part of creation", async () => {
   const user = await account();
   const created = await call(

@@ -38,6 +38,7 @@ export default function ReelCard({
   onUnhide,
   onExternalShare,
   onAddToFolder,
+  onFeature,
   hiddenMode = false,
   selectionMode = false,
   selected = false,
@@ -238,6 +239,9 @@ export default function ReelCard({
                   </button>}
                   {canManage && <button onClick={() => { closeMenu(); onAddToFolder?.(); }}>
                     <Library size={15} /> Add to Folder
+                  </button>}
+                  {canManage && <button onClick={() => { closeMenu(); onFeature?.(); }}>
+                    <UserRound size={15} /> {reel.isFeatured ? "Remove from Profile" : "Feature on Profile"}
                   </button>}
                   {hiddenMode ? <button onClick={() => { closeMenu(); onUnhide?.(); }}>
                     <EyeOff size={15} /> Unhide Reel

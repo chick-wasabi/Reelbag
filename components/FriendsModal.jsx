@@ -125,16 +125,10 @@ export default function FriendsModal({ data, onClose, onMutate, onNotice }) {
         <div className="friend-modal-list">
           {data.friends?.map((friend) => (
             <div className="friend-modal-row" key={friend.id}>
-              <Avatar
-                url={friend.avatarUrl}
-                frame={friend.avatarFrame}
-                name={friend.displayName}
-                size={42}
-              />
-              <div className="friend-modal-identity">
-                <strong>{friend.displayName}</strong>
-                <span>@{friend.username}</span>
-              </div>
+              <a className="friend-profile-link" href={`/profile/${friend.username}`}>
+                <Avatar url={friend.avatarUrl} frame={friend.avatarFrame} name={friend.displayName} size={42} />
+                <span className="friend-modal-identity"><strong>{friend.displayName}</strong><span>@{friend.username}</span></span>
+              </a>
               <button
                 className="icon-button danger"
                 aria-label={`Remove @${friend.username} from friends`}
