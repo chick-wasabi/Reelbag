@@ -1406,7 +1406,7 @@ test("display name and appearance persist independently of the login username an
     columns: "5",
     spacing: "compact",
     avatarFrame: "sovereign",
-    design: "game-inventory",
+    design: "editorial-archive",
   };
   const saved = await call(
     "account/profile",

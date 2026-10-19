@@ -10,6 +10,8 @@ export const DEFAULT_APPEARANCE = Object.freeze({
 });
 export function validateAppearance(value) {
   const normalized = { ...DEFAULT_APPEARANCE, ...value };
+  if (normalized.design === "game-inventory")
+    normalized.design = "editorial-archive";
   if (
     !value ||
     typeof value !== "object" ||
@@ -22,7 +24,7 @@ export function validateAppearance(value) {
     !/^#[a-f0-9]{6}$/i.test(normalized.accent || "") ||
     !["auto", "4", "5"].includes(normalized.columns) ||
     !["compact", "comfortable", "spacious"].includes(normalized.spacing) ||
-    !["basic", "neo-brutalism", "game-inventory"].includes(normalized.design) ||
+    !["basic", "neo-brutalism", "editorial-archive"].includes(normalized.design) ||
     !isAvatarFrame(normalized.avatarFrame)
   )
     throw new Error(

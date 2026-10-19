@@ -19,11 +19,18 @@ const NEO_SWATCHES = {
     ["Hot Pink", "#d93683"], ["Burnt Orange", "#cf651f"],
   ],
 };
-const INVENTORY_SWATCHES = [
-  ["Arcane Gold", "#e7b84b"], ["Aether Cyan", "#42d9c8"],
-  ["Rare Violet", "#9d72ff"], ["Health Ruby", "#ef5b66"],
-  ["Emerald Loot", "#5ccb7f"], ["Mythic Orange", "#f08a45"],
-];
+const EDITORIAL_SWATCHES = {
+  dark: [
+    ["Archive Red", "#d05b45"], ["Ochre", "#d2a84a"],
+    ["Sage", "#8fac82"], ["Dusty Blue", "#7297b7"],
+    ["Mauve", "#b7849b"], ["Burnt Orange", "#cf7848"],
+  ],
+  light: [
+    ["Archive Red", "#9f382c"], ["Oxford Blue", "#345570"],
+    ["Forest Ink", "#3f684e"], ["Aubergine", "#694357"],
+    ["Burnt Sienna", "#a95232"], ["Antique Gold", "#86651f"],
+  ],
+};
 function normalizeHex(value) {
   const hex = value.trim().replace(/^#/, "");
   if (/^[a-f0-9]{6}$/i.test(hex)) return `#${hex.toLowerCase()}`;
@@ -40,7 +47,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
   const [saved, setSaved] = useState(false);
   const swatches = draft.design === "neo-brutalism"
     ? NEO_SWATCHES[draft.theme]
-    : draft.design === "game-inventory" ? INVENTORY_SWATCHES : BASIC_SWATCHES;
+    : draft.design === "editorial-archive" ? EDITORIAL_SWATCHES[draft.theme] : BASIC_SWATCHES;
   useEffect(() => {
     onPreview(draft);
   }, [draft, onPreview]);
@@ -88,10 +95,10 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
               <strong>Neo Brutalism</strong>
               <small>Bold blocks, hard shadows and playful contrast</small>
             </button>
-            <button type="button" className={draft.design === "game-inventory" ? "is-selected" : ""} onClick={() => update("design", "game-inventory")}>
-              <span className="style-preview style-preview-inventory"><i /><i /><i /></span>
-              <strong>Game Inventory</strong>
-              <small>Arcane panels, item slots and premium vault details</small>
+            <button type="button" className={draft.design === "editorial-archive" ? "is-selected" : ""} onClick={() => update("design", "editorial-archive")}>
+              <span className="style-preview style-preview-editorial"><i /><i /><i /></span>
+              <strong>Editorial Archive</strong>
+              <small>Magazine typography, warm paper and archival structure</small>
             </button>
           </div>
         </fieldset>
