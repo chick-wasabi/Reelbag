@@ -243,6 +243,7 @@ export default function Home() {
       luminance > 0.179 ? LOGO_DARK : "#ffffff",
     );
     root.dataset.theme = appearance.theme;
+    root.dataset.design = appearance.design || "basic";
     const favicon = document.createElement("link");
     favicon.rel = "icon";
     favicon.type = "image/svg+xml";
@@ -261,6 +262,7 @@ export default function Home() {
       for (const name of ["--accent", "--accent-rgb", "--on-accent"])
         root.style.removeProperty(name);
       delete root.dataset.theme;
+      delete root.dataset.design;
     };
   }, [appearance]);
   function manageFolder(folder, action) {

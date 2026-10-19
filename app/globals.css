@@ -306,6 +306,292 @@ select option {
   .hidden-reels-toggle span { display: none; }
   .hidden-reels-toggle { padding-inline: 10px; }
 }
+
+/* Interface style selector */
+.interface-style-picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.interface-style-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.interface-style-options > button {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / .025);
+  color: var(--text-secondary);
+  text-align: left;
+}
+.interface-style-options > button.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .13);
+}
+.interface-style-options small { color: var(--text-muted); font-size: 10px; line-height: 1.35; }
+.style-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 58px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--background);
+}
+.style-preview i { position: absolute; display: block; }
+.style-preview-basic i:first-child { inset: 8px 42% 8px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.style-preview-basic i:nth-child(2) { top: 8px; right: 8px; width: 34%; height: 16px; border-radius: 5px; background: var(--accent); }
+.style-preview-basic i:last-child { right: 8px; bottom: 8px; width: 34%; height: 22px; border: 1px solid var(--line); border-radius: 5px; }
+.style-preview-brutal { border: 2px solid currentColor; border-radius: 3px; }
+.style-preview-brutal i:first-child { inset: 7px 44% 9px 7px; border: 2px solid currentColor; background: var(--accent); box-shadow: 4px 4px 0 currentColor; }
+.style-preview-brutal i:nth-child(2) { top: 7px; right: 7px; width: 34%; height: 16px; border: 2px solid currentColor; background: #fff; }
+.style-preview-brutal i:last-child { right: 7px; bottom: 7px; width: 34%; height: 19px; border: 2px solid currentColor; background: var(--accent); box-shadow: 3px 3px 0 currentColor; }
+
+/* Neo Brutalism is deliberately isolated so Basic remains the exact original interface. */
+:root[data-design="neo-brutalism"] {
+  --nb-ink: #050505;
+  --nb-border: #f2f2ec;
+  --nb-paper: #17191c;
+  --nb-paper-2: #202327;
+  --line: rgb(242 242 236 / .72);
+  --surface: var(--nb-paper);
+  --panel-strong: var(--nb-paper-2);
+}
+:root[data-design="neo-brutalism"][data-theme="light"] {
+  --nb-ink: #101010;
+  --nb-border: #101010;
+  --nb-paper: #fffdf2;
+  --nb-paper-2: #ffffff;
+  --line: #101010;
+  --surface: var(--nb-paper);
+  --panel-strong: var(--nb-paper-2);
+}
+:root[data-design="neo-brutalism"] body {
+  background-color: var(--background);
+  background-image: linear-gradient(rgb(var(--accent-rgb) / .055) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--accent-rgb) / .055) 1px, transparent 1px);
+  background-size: 28px 28px;
+  font-weight: 600;
+}
+:root[data-design="neo-brutalism"] button,
+:root[data-design="neo-brutalism"] a,
+:root[data-design="neo-brutalism"] input,
+:root[data-design="neo-brutalism"] select,
+:root[data-design="neo-brutalism"] summary {
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, color 120ms ease;
+}
+:root[data-design="neo-brutalism"] input,
+:root[data-design="neo-brutalism"] select,
+:root[data-design="neo-brutalism"] textarea {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  background: var(--nb-paper);
+  box-shadow: 3px 3px 0 var(--nb-ink);
+  font-weight: 650;
+}
+:root[data-design="neo-brutalism"] input:focus,
+:root[data-design="neo-brutalism"] select:focus,
+:root[data-design="neo-brutalism"] textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+:root[data-design="neo-brutalism"] .button-primary,
+:root[data-design="neo-brutalism"] .button-secondary,
+:root[data-design="neo-brutalism"] .button-danger,
+:root[data-design="neo-brutalism"] .button-quiet,
+:root[data-design="neo-brutalism"] .inline-action,
+:root[data-design="neo-brutalism"] .reel-pin-on-add {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  box-shadow: 4px 4px 0 var(--nb-ink);
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+:root[data-design="neo-brutalism"] .button-primary { border-color: var(--nb-border); background: var(--accent); color: var(--on-accent); }
+:root[data-design="neo-brutalism"] .button-secondary,
+:root[data-design="neo-brutalism"] .button-quiet { background: var(--nb-paper-2); color: var(--text-primary); }
+:root[data-design="neo-brutalism"] button:active,
+:root[data-design="neo-brutalism"] summary:active,
+:root[data-design="neo-brutalism"] .button-primary:active,
+:root[data-design="neo-brutalism"] .button-secondary:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .icon-button {
+  border: 2px solid transparent;
+  border-radius: 5px;
+}
+:root[data-design="neo-brutalism"] .icon-button:hover,
+:root[data-design="neo-brutalism"] .icon-button:focus-visible {
+  border-color: var(--nb-border);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 3px 3px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .brand { font-weight: 900; letter-spacing: -1.2px; }
+:root[data-design="neo-brutalism"] .brand-mark {
+  border: 2px solid var(--nb-border);
+  border-radius: 4px;
+  background: var(--nb-ink);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+:root[data-design="neo-brutalism"] .topbar {
+  border-bottom: 3px solid var(--nb-border);
+  background: var(--background);
+  backdrop-filter: none;
+}
+:root[data-design="neo-brutalism"] .section-heading h1 { font-weight: 900; letter-spacing: -.04em; text-transform: uppercase; }
+:root[data-design="neo-brutalism"] .section-count {
+  border: 2px solid var(--nb-border);
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 3px 3px 0 var(--nb-ink);
+  font-weight: 900;
+}
+:root[data-design="neo-brutalism"] .search-box,
+:root[data-design="neo-brutalism"] .folder-sort-select,
+:root[data-design="neo-brutalism"] .hidden-reels-toggle,
+:root[data-design="neo-brutalism"] .bulk-reel-actions {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  background: var(--nb-paper);
+  box-shadow: 4px 4px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .search-box input { border: 0; box-shadow: none; background: transparent; }
+:root[data-design="neo-brutalism"] .sidebar {
+  border-right: 3px solid var(--nb-border);
+  background: var(--background);
+  box-shadow: 8px 0 0 rgb(var(--accent-rgb) / .18);
+}
+:root[data-design="neo-brutalism"] .sidebar::before { opacity: .16; filter: none; }
+:root[data-design="neo-brutalism"] .sidebar-link,
+:root[data-design="neo-brutalism"] .sidebar-folder-row {
+  border-radius: 4px;
+}
+:root[data-design="neo-brutalism"] .sidebar-link:hover {
+  background: var(--nb-paper-2);
+  outline: 2px solid var(--nb-border);
+}
+:root[data-design="neo-brutalism"] .sidebar-link.active {
+  border: 2px solid var(--nb-border);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 4px 4px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .sidebar-link.active svg,
+:root[data-design="neo-brutalism"] .sidebar-link.active .sidebar-count { color: var(--on-accent); }
+:root[data-design="neo-brutalism"] .sidebar-folder-heading { font-weight: 900; letter-spacing: .13em; color: var(--text-primary); }
+:root[data-design="neo-brutalism"] .reel-card,
+:root[data-design="neo-brutalism"] .deleted-folder-card {
+  border: 2px solid var(--nb-border);
+  border-radius: 7px;
+  background: var(--nb-paper);
+  box-shadow: 7px 7px 0 var(--nb-ink), 9px 9px 0 var(--accent);
+  backdrop-filter: none;
+}
+:root[data-design="neo-brutalism"] .reel-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 9px 9px 0 var(--nb-ink), 12px 12px 0 var(--accent);
+}
+:root[data-design="neo-brutalism"] .reel-heading {
+  border-bottom: 2px solid var(--nb-border);
+  border-radius: 4px 4px 0 0;
+  background: var(--nb-paper-2);
+}
+:root[data-design="neo-brutalism"] .reel-heading h2 { font-weight: 900; }
+:root[data-design="neo-brutalism"] .embed-viewport,
+:root[data-design="neo-brutalism"] .embed-shell { border-radius: 0; }
+:root[data-design="neo-brutalism"] .reel-card-footer { border-top: 2px solid var(--nb-border); background: var(--nb-paper-2); }
+:root[data-design="neo-brutalism"] .replay-icon-button,
+:root[data-design="neo-brutalism"] .reaction-trigger {
+  border: 2px solid var(--nb-border);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .reel-card.is-selected {
+  outline: 4px solid var(--accent);
+  outline-offset: 4px;
+}
+:root[data-design="neo-brutalism"] .modal,
+:root[data-design="neo-brutalism"] .profile-menu,
+:root[data-design="neo-brutalism"] .reel-menu-panel,
+:root[data-design="neo-brutalism"] .reaction-popover,
+:root[data-design="neo-brutalism"] .folder-members-popover,
+:root[data-design="neo-brutalism"] .mobile-folder-picker-panel {
+  border: 3px solid var(--nb-border);
+  border-radius: 6px;
+  background: var(--nb-paper);
+  box-shadow: 8px 8px 0 var(--nb-ink), 11px 11px 0 var(--accent);
+  backdrop-filter: none;
+}
+:root[data-design="neo-brutalism"] .modal-backdrop { background: rgb(0 0 0 / .76); backdrop-filter: none; }
+:root[data-design="neo-brutalism"] .modal h2,
+:root[data-design="neo-brutalism"] .profile-menu-identity strong { font-weight: 900; text-transform: uppercase; }
+:root[data-design="neo-brutalism"] .profile-menu button:hover,
+:root[data-design="neo-brutalism"] .reel-menu-panel button:hover { background: var(--accent); color: var(--on-accent); }
+:root[data-design="neo-brutalism"] .accent-swatch { border: 2px solid var(--nb-border); box-shadow: 3px 3px 0 var(--nb-ink); }
+:root[data-design="neo-brutalism"] .interface-style-options > button {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  background: var(--nb-paper-2);
+  box-shadow: 4px 4px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .interface-style-options > button.is-selected { background: var(--accent); color: var(--on-accent); box-shadow: 5px 5px 0 var(--nb-ink); }
+:root[data-design="neo-brutalism"] .friend-modal-row,
+:root[data-design="neo-brutalism"] .folder-browser-row {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  background: var(--nb-paper-2);
+  box-shadow: 3px 3px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .reel-fab {
+  border: 3px solid var(--nb-border);
+  border-radius: 7px;
+  box-shadow: 7px 7px 0 var(--nb-ink);
+}
+:root[data-design="neo-brutalism"] .toast,
+:root[data-design="neo-brutalism"] .error-banner {
+  border: 2px solid var(--nb-border);
+  border-radius: 5px;
+  background: var(--nb-paper);
+  box-shadow: 5px 5px 0 var(--nb-ink);
+  backdrop-filter: none;
+}
+:root[data-design="neo-brutalism"] .loading-brand-card {
+  border: 3px solid #f2f2ec;
+  border-radius: 6px;
+  background: #111;
+  box-shadow: 10px 10px 0 var(--accent);
+  backdrop-filter: none;
+}
+:root[data-design="neo-brutalism"] .public-profile-reel,
+:root[data-design="neo-brutalism"] .public-profile-hero .avatar-frame {
+  border: 3px solid var(--nb-border);
+  border-radius: 6px;
+  box-shadow: 7px 7px 0 var(--nb-ink), 9px 9px 0 var(--accent);
+}
+@media (max-width: 767px) {
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-controls {
+    border: 3px solid var(--nb-border);
+    border-radius: 7px;
+    background: var(--nb-paper);
+    box-shadow: 6px 6px 0 var(--nb-ink);
+    backdrop-filter: none;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > button,
+  :root[data-design="neo-brutalism"][data-native-app="true"] .mobile-folder-picker > summary { border-radius: 4px; font-weight: 900; }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs .active { border: 2px solid var(--nb-border); background: var(--accent); color: var(--on-accent); }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > .mobile-dock-add { border: 2px solid var(--nb-border); box-shadow: 3px 3px 0 var(--nb-ink); }
+}
 .folder-controls,
 .folder-select,
 .header-actions {

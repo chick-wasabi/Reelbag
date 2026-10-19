@@ -6,6 +6,7 @@ export const DEFAULT_APPEARANCE = Object.freeze({
   columns: "auto",
   spacing: "comfortable",
   avatarFrame: DEFAULT_AVATAR_FRAME,
+  design: "basic",
 });
 export function validateAppearance(value) {
   const normalized = { ...DEFAULT_APPEARANCE, ...value };
@@ -21,6 +22,7 @@ export function validateAppearance(value) {
     !/^#[a-f0-9]{6}$/i.test(normalized.accent || "") ||
     !["auto", "4", "5"].includes(normalized.columns) ||
     !["compact", "comfortable", "spacious"].includes(normalized.spacing) ||
+    !["basic", "neo-brutalism"].includes(normalized.design) ||
     !isAvatarFrame(normalized.avatarFrame)
   )
     throw new Error(
@@ -32,5 +34,6 @@ export function validateAppearance(value) {
     columns: normalized.columns,
     spacing: normalized.spacing,
     avatarFrame: normalized.avatarFrame,
+    design: normalized.design,
   };
 }

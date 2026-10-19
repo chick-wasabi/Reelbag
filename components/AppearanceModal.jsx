@@ -54,6 +54,21 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
           }
         }}
       >
+        <fieldset className="interface-style-picker" disabled={busy}>
+          <legend className="field-label">Interface style</legend>
+          <div className="interface-style-options">
+            <button type="button" className={draft.design === "basic" ? "is-selected" : ""} onClick={() => update("design", "basic")}>
+              <span className="style-preview style-preview-basic"><i /><i /><i /></span>
+              <strong>Basic</strong>
+              <small>The original clean glass interface</small>
+            </button>
+            <button type="button" className={draft.design === "neo-brutalism" ? "is-selected" : ""} onClick={() => update("design", "neo-brutalism")}>
+              <span className="style-preview style-preview-brutal"><i /><i /><i /></span>
+              <strong>Neo Brutalism</strong>
+              <small>Bold blocks, hard shadows and playful contrast</small>
+            </button>
+          </div>
+        </fieldset>
         <label className="field-label">
           Theme
           <select
