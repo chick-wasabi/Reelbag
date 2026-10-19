@@ -8,6 +8,7 @@ import {
   LogOut,
   UsersRound,
   Download,
+  Trash2,
 } from "lucide-react";
 import Avatar from "./Avatar";
 const ITEMS = [
@@ -16,7 +17,7 @@ const ITEMS = [
   { id: "appearance", label: "Appearance & Settings", icon: Palette },
   { id: "data", label: "Data & Backups", icon: Database },
 ];
-export default function ProfileDropdown({ user, onOpen, onLogout, appUpdate }) {
+export default function ProfileDropdown({ user, onOpen, onOpenTrash, onLogout, appUpdate }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const trigger = useRef(null);
@@ -136,6 +137,13 @@ export default function ProfileDropdown({ user, onOpen, onLogout, appUpdate }) {
               {item.label}
             </button>
           ))}
+          <button role="menuitem" className="native-trash-menu-item" onClick={() => {
+            close(true);
+            onOpenTrash?.();
+          }}>
+            <Trash2 size={17} aria-hidden="true" />
+            Recently Deleted
+          </button>
           <div className="profile-menu-divider" />
           <a
             role="menuitem"

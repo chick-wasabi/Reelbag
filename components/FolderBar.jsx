@@ -1,7 +1,7 @@
 "use client";
 
 import FolderMenu from "./FolderMenu";
-import { Folder, Grid2X2, LockKeyhole, MoreHorizontal, Trash2, Users } from "lucide-react";
+import { Folder, Grid2X2, LockKeyhole, MoreHorizontal, Plus, Users } from "lucide-react";
 import FolderGlyph from "./FolderGlyph";
 
 export default function FolderBar({
@@ -16,6 +16,7 @@ export default function FolderBar({
   onTrashSettings,
   onLeaveFolder,
   onProtectSharedFolder,
+  onAdd,
 }) {
   const current = folders.find((f) => f.id === selected);
   return (
@@ -53,8 +54,8 @@ export default function FolderBar({
             )) : <p>No folders yet</p>}
           </div>
         </details>
-        <button className={selected === "trash" ? "active" : ""} aria-pressed={selected === "trash"} onClick={() => onSelect("trash")}>
-          <Trash2 size={17} /><span>Deleted</span>
+        <button className="mobile-dock-add" onClick={onAdd}>
+          <Plus size={20} /><span>Add</span>
         </button>
       </nav>
       {current && (

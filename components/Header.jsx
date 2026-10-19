@@ -17,6 +17,7 @@ export default function Header({
   sectionCount,
   sectionKind,
   appUpdate,
+  onOpenTrash,
   sectionIcon,
   hiddenAvailable = false,
   showingHidden = false,
@@ -117,7 +118,7 @@ export default function Header({
           <UserRoundPlus size={19} />
           {friendRequestCount > 0 && <small>{friendRequestCount}</small>}
         </button>
-        <ProfileDropdown user={user} onOpen={onOpen} onLogout={onLogout} appUpdate={appUpdate} />
+        <ProfileDropdown user={user} onOpen={onOpen} onOpenTrash={onOpenTrash} onLogout={onLogout} appUpdate={appUpdate} />
       </div>
     </header>
   );

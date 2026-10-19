@@ -756,6 +756,7 @@ export default function Home() {
               onLogout={logout}
               onLibraryChange={() => mutate("library", "GET")}
               appUpdate={appUpdate}
+              onOpenTrash={() => selectFolder("trash")}
               hiddenAvailable={selected !== "trash"}
               showingHidden={showHidden}
               hiddenCount={(data.reels || []).filter((reel) => reel.isHidden && (selected === "all" ? reel.viewScope === "all" : selected === "shared" ? reel.viewScope === "shared" : reel.viewScope === `folder:${selected}`)).length}
@@ -801,6 +802,7 @@ export default function Home() {
                 onChangeRole={changeFolderMemberRole}
                 onLeaveFolder={leaveSharedFolder}
                 onProtectSharedFolder={(folder) => setModal({ type: "sharedFolderPin", folder })}
+                onAdd={() => setModal({ type: "reel" })}
               />
             </div>
             <main

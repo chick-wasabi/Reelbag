@@ -113,7 +113,7 @@ export default function ReelCard({
   }, []);
   return (
     <article
-      className={`reel-card ambient-glass-card justify-self-center ${canManage ? "reel-card-draggable" : ""} ${selectionMode ? "is-selectable" : ""} ${selected ? "is-selected" : ""}`}
+      className={`reel-card ambient-glass-card justify-self-center ${parsed?.type === "post" ? "is-instagram-post" : ""} ${canManage ? "reel-card-draggable" : ""} ${selectionMode ? "is-selectable" : ""} ${selected ? "is-selected" : ""}`}
       style={{ width: "270px", maxWidth: "100%" }}
       ref={ref}
       draggable={canManage && !selectionMode}
