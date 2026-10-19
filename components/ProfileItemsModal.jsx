@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Folder, LoaderCircle, Play, Search } from "lucide-react";
+import { Check, Folder, LoaderCircle, Search } from "lucide-react";
 import Modal from "./Modal";
 import FolderGlyph from "./FolderGlyph";
 import { api } from "../utils/api.mjs";
+import { parseReelUrl } from "../utils/reels.mjs";
 
 export default function ProfileItemsModal({ onClose, onSaved }) {
   const [library, setLibrary] = useState(null);
@@ -48,7 +49,7 @@ export default function ProfileItemsModal({ onClose, onSaved }) {
     return next;
   });
 
-  return <Modal title="Add profile items" description="Show up to four folders, then feature as many individual Reels as you like." onClose={onClose} wide>
+  return <Modal title="Add profile items" description="Show up to four folders, then feature as many individual Reels as you like." onClose={onClose} wide className="profile-items-modal">
     <div className="profile-items-editor">
       <label className="profile-items-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your library" /></label>
       {error && <p className="error-text" role="alert">{error}</p>}
@@ -63,11 +64,17 @@ export default function ProfileItemsModal({ onClose, onSaved }) {
           </div>
         </section>
         <section>
-          <div className="profile-items-heading"><div><Play size={18} /><h3>Reels</h3></div><span>{reelIds.size} selected</span></div>
+          <div className="profile-items-heading"><div><span className="profile-items-reel-glyph">▶</span><h3>Reels</h3></div><span>{reelIds.size} selected</span></div>
           <div className="profile-reel-choices">
-            {reels.map((reel) => <button key={reel.id} type="button" className={reelIds.has(reel.id) ? "selected" : ""} onClick={() => toggleReel(reel.id)} aria-pressed={reelIds.has(reel.id)}>
-              <span className="profile-choice-play"><Play size={16} /></span><span><strong>{reel.title}</strong><small>{reel.folderNames?.length ? reel.folderNames.join(" · ") : "All Reels"}</small></span>{reelIds.has(reel.id) && <Check size={17} />}
-            </button>)}
+            {reels.map((reel) => {
+              const parsed = parseReelUrl(reel.url);
+              const embedUrl = parsed ? `https://www.instagram.com/${parsed.type === "post" ? "p" : "reel"}/${parsed.shortcode}/embed/` : null;
+              return <button key={reel.id} type="button" className={reelIds.has(reel.id) ? "selected" : ""} onClick={() => toggleReel(reel.id)} aria-pressed={reelIds.has(reel.id)}>
+                <span className="profile-choice-preview">{embedUrl ? <iframe src={embedUrl} title="" tabIndex={-1} sandbox="allow-scripts allow-same-origin" loading="lazy" /> : null}</span>
+                <span className="profile-choice-copy"><strong>{reel.title}</strong><small>{reel.folderNames?.length ? reel.folderNames.join(" · ") : "All Reels"}</small></span>
+                <span className="profile-choice-check">{reelIds.has(reel.id) && <Check size={18} />}</span>
+              </button>;
+            })}
             {!reels.length && <p className="fine-print">No Reels match this search.</p>}
           </div>
         </section>

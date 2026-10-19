@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { ArrowLeft, FolderOpen, LockKeyhole, Pencil, Plus, UserPlus } from "lucide-react";
+import { ArrowLeft, FolderOpen, LockKeyhole, Pencil, Plus, UserPlus, X } from "lucide-react";
 import Avatar from "../../../components/Avatar";
 import Brand from "../../../components/Brand";
 import ProfileModal from "../../../components/ProfileModal";
@@ -21,7 +21,22 @@ export default function PublicProfilePage({ params }) {
   const [editing, setEditing] = useState(false);
   const [editingItems, setEditingItems] = useState(false);
   const [openFolder, setOpenFolder] = useState(null);
-  const loadProfile = () => api(`profiles/${encodeURIComponent(username)}`).then(setData);
+  const loadProfile = async () => {
+    const next = await api(`profiles/${encodeURIComponent(username)}`);
+    setData(next);
+    return next;
+  };
+  const removeFeatured = async ({ reelId, folderId }) => {
+    const reelIds = data.reels.map((reel) => reel.id).filter((id) => id !== reelId);
+    const folderIds = (data.folders || []).map((folder) => folder.id).filter((id) => id !== folderId);
+    await api("account/featured", { method: "PATCH", body: { reelIds, folderIds } });
+    await loadProfile();
+  };
+  const react = async (reel, emoji) => {
+    await api(`reels/${reel.id}/reaction`, { method: "POST", body: { emoji } });
+    const next = await loadProfile();
+    setOpenFolder((current) => current ? (next.folders || []).find((folder) => folder.id === current.id) || current : null);
+  };
   useEffect(() => {
     let active = true;
     api(`profiles/${encodeURIComponent(username)}`).then((next) => active && setData(next)).catch((err) => active && setError(err.message));
@@ -82,13 +97,13 @@ export default function PublicProfilePage({ params }) {
       <section className="public-profile-library">
         {data.folders?.length > 0 && <section className="public-profile-folders">
           <div><h2>Featured Folders</h2><span>{data.folders.length}</span></div>
-          <div className="public-profile-folder-grid">{data.folders.map((folder) => <button type="button" key={folder.id} onClick={() => setOpenFolder(folder)}>
+          <div className="public-profile-folder-grid">{data.folders.map((folder) => <div className="public-profile-folder-wrap" key={folder.id}><button type="button" onClick={() => setOpenFolder(folder)}>
             <span><FolderGlyph icon={folder.icon} size={25} /></span><strong>{folder.name}</strong><small>{folder.reelCount} {folder.reelCount === 1 ? "Reel" : "Reels"}</small><FolderOpen size={17} />
-          </button>)}</div>
+          </button>{person.isSelf && <button className="public-profile-remove" title={`Remove ${folder.name} from profile`} aria-label={`Remove ${folder.name} from profile`} onClick={() => removeFeatured({ folderId: folder.id })}><X size={14} /></button>}</div>)}</div>
         </section>}
-        <div><h2>Featured Reels</h2><span>{data.reels.length}</span></div>
+        <div className="public-profile-section-heading"><h2>Featured Reels</h2><span>{data.reels.length}</span></div>
         {data.reels.length ? <div className="public-profile-grid">{data.reels.map((reel) =>
-          <ReelCard key={reel.id} reel={{ ...reel, canManage: false }} readOnly />
+          <div className="public-profile-reel-wrap" key={reel.id}><ReelCard reel={{ ...reel, canManage: false }} readOnly onReact={data.authenticated ? (emoji) => react(reel, emoji) : undefined} />{person.isSelf && <button className="public-profile-remove" title={`Remove ${reel.title} from profile`} aria-label={`Remove ${reel.title} from profile`} onClick={() => removeFeatured({ reelId: reel.id })}><X size={14} /></button>}</div>
         )}</div> : <div className="public-profile-state"><p>No featured Reels yet.</p></div>}
       </section>}
     </>}
@@ -106,8 +121,8 @@ export default function PublicProfilePage({ params }) {
       }}
     />}
     {editingItems && person?.isSelf && <ProfileItemsModal onClose={() => setEditingItems(false)} onSaved={loadProfile} />}
-    {openFolder && <Modal title={openFolder.name} description={`${openFolder.reels.length} ${openFolder.reels.length === 1 ? "Reel" : "Reels"}`} onClose={() => setOpenFolder(null)} wide>
-      {openFolder.reels.length ? <div className="public-profile-grid">{openFolder.reels.map((reel) => <ReelCard key={reel.id} reel={{ ...reel, canManage: false }} readOnly />)}</div> : <div className="public-profile-state"><p>This folder is empty.</p></div>}
+    {openFolder && <Modal title={openFolder.name} description={`${openFolder.reels.length} ${openFolder.reels.length === 1 ? "Reel" : "Reels"}`} onClose={() => setOpenFolder(null)} wide className="public-folder-modal">
+      {openFolder.reels.length ? <div className="public-profile-grid">{openFolder.reels.map((reel) => <ReelCard key={reel.id} reel={{ ...reel, canManage: false }} readOnly onReact={data.authenticated ? (emoji) => react(reel, emoji) : undefined} />)}</div> : <div className="public-profile-state"><p>This folder is empty.</p></div>}
     </Modal>}
   </main>;
 }

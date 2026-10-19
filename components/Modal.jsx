@@ -8,6 +8,7 @@ export default function Modal({
   onClose,
   children,
   wide = false,
+  className = "",
 }) {
   const titleId = useId();
   const descriptionId = useId();
@@ -87,7 +88,7 @@ export default function Modal({
   }, []);
   return (
     <div
-      className="modal-backdrop"
+      className={`modal-backdrop ${className ? `${className}-backdrop` : ""}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -99,7 +100,7 @@ export default function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`modal ${wide ? "modal-wide" : ""}`}
+        className={`modal ${wide ? "modal-wide" : ""} ${className}`}
       >
         <div className="flex items-start justify-between gap-4">
           <div>

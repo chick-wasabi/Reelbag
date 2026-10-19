@@ -379,6 +379,12 @@ test("profiles expose only featured reels and enforce public, friends, and priva
     folderId: null,
   }, owner.cookie);
   const reelId = saved.data.reels.find((item) => item.title === "Profile showcase").id;
+  const folderSaved = await call("reels", "POST", {
+    title: "Folder showcase",
+    url: "https://www.instagram.com/reel/DProfileFolderShow/",
+    folderId: folder.data.folderId,
+  }, owner.cookie);
+  const folderReelId = folderSaved.data.reels.find((item) => item.title === "Folder showcase").id;
   const curated = await call("account/featured", "PATCH", {
     reelIds: [reelId], folderIds: [folder.data.folderId],
   }, owner.cookie);
@@ -396,6 +402,16 @@ test("profiles expose only featured reels and enforce public, friends, and priva
   assert.deepEqual(publicProfile.data.reels.map((item) => item.id), [reelId]);
   assert.deepEqual(publicProfile.data.folders.map((item) => item.id), [folder.data.folderId]);
   assert.equal(publicProfile.data.folders[0].name, "Public ideas");
+
+  const viewer = await account();
+  const reaction = await call(`reels/${reelId}/reaction`, "POST", { emoji: "🔥" }, viewer.cookie);
+  assert.equal(reaction.status, 200, JSON.stringify(reaction.data));
+  const folderReaction = await call(`reels/${folderReelId}/reaction`, "POST", { emoji: "👏" }, viewer.cookie);
+  assert.equal(folderReaction.status, 200, JSON.stringify(folderReaction.data));
+  const reactedProfile = await call(`profiles/${owner.username}`, "GET", null, viewer.cookie);
+  assert.equal(reactedProfile.data.reels[0].reaction, "🔥");
+  assert.equal(reactedProfile.data.reels[0].reactionCounts["🔥"], 1);
+  assert.equal(reactedProfile.data.folders[0].reels[0].reaction, "👏");
 
   await call("account/profile", "PATCH", { profileVisibility: "private" }, owner.cookie);
   const privateProfile = await call(`profiles/${owner.username}`);
