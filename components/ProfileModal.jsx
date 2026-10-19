@@ -80,7 +80,7 @@ export default function ProfileModal({ user, onClose, onSaveProfile }) {
             <option value="private">Only me</option>
           </select>
         </label>
-        <p className="fine-print !mt-0">Choose “Feature on Profile” from any Reel menu to build your profile showcase.</p>
+        <p className="fine-print !mt-0">Use Add Items on your profile to choose public folders and featured Reels.</p>
         {error && (
           <p className="error-text" role="alert">
             {error}

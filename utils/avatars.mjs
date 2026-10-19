@@ -66,11 +66,11 @@ export const isAvatarUrl = (value) =>
   AVATARS.some((avatar) => avatar.url === value);
 
 export const AVATAR_FRAMES = [
-  { id: "accent", name: "Accent", description: "Your active theme color" },
-  { id: "radiant", name: "Radiant", description: "A slow prismatic shimmer" },
-  { id: "sovereign", name: "Sovereign", description: "Royal gold and crown points" },
-  { id: "arcane", name: "Arcane", description: "Mystic violet and cyan energy" },
-  { id: "obsidian", name: "Obsidian", description: "Dark forged prestige" },
+  { id: "accent", name: "Bronze", description: "Forged bronze starter frame" },
+  { id: "radiant", name: "Silver", description: "Polished silver tier" },
+  { id: "sovereign", name: "Gold", description: "Ornate gold prestige" },
+  { id: "arcane", name: "Emerald", description: "Animated accent energy" },
+  { id: "obsidian", name: "Mythic", description: "Animated prismatic crown" },
 ];
 export const DEFAULT_AVATAR_FRAME = AVATAR_FRAMES[0].id;
 export const isAvatarFrame = (value) =>

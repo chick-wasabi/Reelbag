@@ -372,13 +372,17 @@ test("Instagram photo and carousel posts can be saved with their canonical post 
 
 test("profiles expose only featured reels and enforce public, friends, and private visibility", async () => {
   const owner = await account();
+  const folder = await call("folders", "POST", { name: "Public ideas", protected: false, pin: "" }, owner.cookie);
   const saved = await call("reels", "POST", {
     title: "Profile showcase",
     url: "https://www.instagram.com/reel/DProfileShowcase1/",
     folderId: null,
   }, owner.cookie);
   const reelId = saved.data.reels.find((item) => item.title === "Profile showcase").id;
-  await call(`reels/${reelId}/feature`, "PATCH", { featured: true }, owner.cookie);
+  const curated = await call("account/featured", "PATCH", {
+    reelIds: [reelId], folderIds: [folder.data.folderId],
+  }, owner.cookie);
+  assert.equal(curated.status, 200, JSON.stringify(curated.data));
 
   const friendsOnly = await call(`profiles/${owner.username}`);
   assert.equal(friendsOnly.status, 200);
@@ -390,6 +394,8 @@ test("profiles expose only featured reels and enforce public, friends, and priva
   assert.equal(publicProfile.data.profile.canView, true);
   assert.deepEqual(publicProfile.data.profile.appearance, owner.data.user.appearance);
   assert.deepEqual(publicProfile.data.reels.map((item) => item.id), [reelId]);
+  assert.deepEqual(publicProfile.data.folders.map((item) => item.id), [folder.data.folderId]);
+  assert.equal(publicProfile.data.folders[0].name, "Public ideas");
 
   await call("account/profile", "PATCH", { profileVisibility: "private" }, owner.cookie);
   const privateProfile = await call(`profiles/${owner.username}`);
