@@ -355,6 +355,18 @@ select option {
 .style-preview-brutal i:first-child { inset: 7px 44% 9px 7px; border: 2px solid currentColor; background: var(--accent); box-shadow: 4px 4px 0 currentColor; }
 .style-preview-brutal i:nth-child(2) { top: 7px; right: 7px; width: 34%; height: 16px; border: 2px solid currentColor; background: #fff; }
 .style-preview-brutal i:last-child { right: 7px; bottom: 7px; width: 34%; height: 19px; border: 2px solid currentColor; background: var(--accent); box-shadow: 3px 3px 0 currentColor; }
+.style-preview-inventory {
+  border: 1px solid #806a3a;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #111a26, #202b3c);
+  box-shadow: inset 0 0 18px #0009;
+}
+.style-preview-inventory::before { content: ""; position: absolute; inset: 5px; border: 1px solid #e7b84b66; }
+.style-preview-inventory i:first-child { inset: 10px 52% 10px 10px; border: 1px solid #e7b84b; background: #172334; box-shadow: inset 0 0 12px #42d9c833; }
+.style-preview-inventory i:nth-child(2),
+.style-preview-inventory i:last-child { right: 10px; width: 31%; height: 15px; border: 1px solid #52657d; background: #121c29; }
+.style-preview-inventory i:nth-child(2) { top: 10px; }
+.style-preview-inventory i:last-child { bottom: 10px; border-color: #e7b84b; }
 
 /* Neo Brutalism is deliberately isolated so Basic remains the exact original interface. */
 :root[data-design="neo-brutalism"] {
@@ -675,6 +687,228 @@ select option {
     padding: 0 10px 0 6px;
     color: var(--text-primary);
   }
+}
+
+/* Game Inventory keeps the layout intact while treating every surface as part of a premium item vault. */
+:root[data-design="game-inventory"] {
+  color-scheme: dark;
+  --background: #08111d;
+  --surface: #111d2b;
+  --panel-strong: #142235;
+  --text-primary: #edf5ff;
+  --text-secondary: #b9c7d8;
+  --text-muted: #72849a;
+  --line: #38506b;
+  --reel-edge-mask: #101b29;
+  --gi-deep: #07101a;
+  --gi-panel: #111d2b;
+  --gi-raised: #18283b;
+  --gi-line: #38506b;
+  --gi-gold: #e7b84b;
+  --gi-shadow: rgb(0 0 0 / .62);
+}
+:root[data-design="game-inventory"][data-theme="light"] {
+  color-scheme: light;
+  --background: #d9e0e5;
+  --surface: #edf1f2;
+  --panel-strong: #f6f8f7;
+  --text-primary: #172332;
+  --text-secondary: #3f5368;
+  --text-muted: #6b7a89;
+  --line: #8ca0b2;
+  --reel-edge-mask: #edf1f2;
+  --gi-deep: #b8c4ce;
+  --gi-panel: #edf1f2;
+  --gi-raised: #f8faf9;
+  --gi-line: #72889c;
+  --gi-gold: #9b6d12;
+  --gi-shadow: rgb(25 39 54 / .28);
+}
+:root[data-design="game-inventory"] body {
+  color: var(--text-primary);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 50% -10%, rgb(var(--accent-rgb) / .12), transparent 35%),
+    linear-gradient(rgb(var(--accent-rgb) / .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--accent-rgb) / .025) 1px, transparent 1px);
+  background-size: auto, 36px 36px, 36px 36px;
+}
+:root[data-design="game-inventory"] .sidebar,
+:root[data-design="game-inventory"] .topbar,
+:root[data-design="game-inventory"] .modal {
+  color: var(--text-primary);
+  border-color: var(--gi-line);
+  background: linear-gradient(145deg, var(--gi-raised), var(--gi-panel));
+  box-shadow: inset 0 1px rgb(255 255 255 / .06), inset 0 -1px rgb(0 0 0 / .3);
+  backdrop-filter: none;
+}
+:root[data-design="game-inventory"] .sidebar { border-right: 1px solid var(--gi-gold); box-shadow: 5px 0 24px var(--gi-shadow); }
+:root[data-design="game-inventory"] .topbar { border-bottom: 1px solid var(--gi-line); box-shadow: 0 5px 24px var(--gi-shadow); }
+:root[data-design="game-inventory"] .brand-mark {
+  border: 1px solid var(--gi-gold);
+  border-radius: 3px;
+  background: var(--gi-deep);
+  box-shadow: inset 0 0 10px rgb(var(--accent-rgb) / .2), 0 0 10px rgb(var(--accent-rgb) / .12);
+}
+:root[data-design="game-inventory"] .brand { font-weight: 800; letter-spacing: -.7px; }
+:root[data-design="game-inventory"] .section-heading h1,
+:root[data-design="game-inventory"] .modal h2 { font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
+:root[data-design="game-inventory"] .section-count {
+  border: 1px solid var(--gi-gold);
+  border-radius: 2px;
+  color: var(--gi-gold);
+  background: var(--gi-deep);
+  box-shadow: inset 0 0 9px rgb(var(--accent-rgb) / .12);
+}
+:root[data-design="game-inventory"] input,
+:root[data-design="game-inventory"] select,
+:root[data-design="game-inventory"] textarea,
+:root[data-design="game-inventory"] .search-box,
+:root[data-design="game-inventory"] .folder-sort-select,
+:root[data-design="game-inventory"] .hidden-reels-toggle,
+:root[data-design="game-inventory"] .bulk-reel-actions {
+  border: 1px solid var(--gi-line);
+  border-radius: 3px;
+  color: var(--text-primary);
+  background: var(--gi-deep);
+  box-shadow: inset 0 0 12px rgb(0 0 0 / .22), 0 1px rgb(255 255 255 / .04);
+}
+:root[data-design="game-inventory"] .search-box input { border: 0; background: transparent; box-shadow: none; }
+:root[data-design="game-inventory"] input:focus,
+:root[data-design="game-inventory"] select:focus,
+:root[data-design="game-inventory"] textarea:focus,
+:root[data-design="game-inventory"] .search-box:focus-within { border-color: var(--accent); box-shadow: inset 0 0 14px rgb(var(--accent-rgb) / .1), 0 0 0 1px rgb(var(--accent-rgb) / .32); }
+:root[data-design="game-inventory"] .sidebar-link,
+:root[data-design="game-inventory"] .sidebar-folder-row { border-radius: 2px; }
+:root[data-design="game-inventory"] .sidebar-link:hover { background: rgb(var(--accent-rgb) / .08); box-shadow: inset 3px 0 var(--accent); }
+:root[data-design="game-inventory"] .sidebar-link.active {
+  border: 1px solid var(--gi-gold);
+  color: var(--accent);
+  background: linear-gradient(90deg, rgb(var(--accent-rgb) / .2), rgb(var(--accent-rgb) / .04));
+  box-shadow: inset 3px 0 var(--accent), 0 4px 15px var(--gi-shadow);
+}
+:root[data-design="game-inventory"] .sidebar-folder-heading { color: var(--gi-gold); font-weight: 800; letter-spacing: .14em; }
+:root[data-design="game-inventory"] .reel-card,
+:root[data-design="game-inventory"] .deleted-folder-card,
+:root[data-design="game-inventory"] .public-profile-reel {
+  border: 1px solid var(--gi-line);
+  border-radius: 4px;
+  background: var(--gi-panel);
+  box-shadow: 0 12px 30px var(--gi-shadow), inset 0 0 0 1px rgb(255 255 255 / .025);
+  backdrop-filter: none;
+}
+:root[data-design="game-inventory"] .reel-card::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  z-index: 0;
+  border: 1px solid rgb(var(--accent-rgb) / .11);
+  border-radius: 1px;
+  pointer-events: none;
+}
+:root[data-design="game-inventory"] .reel-card > * { position: relative; z-index: 1; }
+:root[data-design="game-inventory"] .reel-card:hover { border-color: var(--accent); box-shadow: 0 14px 34px var(--gi-shadow), 0 0 18px rgb(var(--accent-rgb) / .12); transform: translateY(-2px); }
+:root[data-design="game-inventory"] .reel-heading {
+  border-bottom: 1px solid var(--gi-gold);
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(135deg, var(--gi-raised), var(--gi-panel));
+}
+:root[data-design="game-inventory"] .reel-heading h2 { font-weight: 800; }
+:root[data-design="game-inventory"] .embed-viewport,
+:root[data-design="game-inventory"] .embed-shell { border-radius: 1px; }
+:root[data-design="game-inventory"] .reel-card-footer { border-top: 1px solid var(--gi-line); background: var(--gi-deep); }
+:root[data-design="game-inventory"] .replay-icon-button,
+:root[data-design="game-inventory"] .reaction-trigger,
+:root[data-design="game-inventory"] .icon-button {
+  border-radius: 2px;
+}
+:root[data-design="game-inventory"] .icon-button:hover,
+:root[data-design="game-inventory"] .icon-button:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgb(var(--accent-rgb) / .08);
+  box-shadow: inset 0 0 10px rgb(var(--accent-rgb) / .1);
+}
+:root[data-design="game-inventory"] .button-primary,
+:root[data-design="game-inventory"] .button-secondary,
+:root[data-design="game-inventory"] .button-quiet,
+:root[data-design="game-inventory"] .button-danger,
+:root[data-design="game-inventory"] .inline-action {
+  border: 1px solid var(--gi-line);
+  border-radius: 3px;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+:root[data-design="game-inventory"] .button-primary { border-color: var(--gi-gold); background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent), #000 18%)); box-shadow: 0 5px 16px rgb(var(--accent-rgb) / .2); }
+:root[data-design="game-inventory"] .button-secondary,
+:root[data-design="game-inventory"] .button-quiet { color: var(--text-secondary); background: var(--gi-deep); }
+:root[data-design="game-inventory"] .profile-menu,
+:root[data-design="game-inventory"] .reel-menu-panel,
+:root[data-design="game-inventory"] .reaction-popover,
+:root[data-design="game-inventory"] .folder-members-popover,
+:root[data-design="game-inventory"] .mobile-folder-picker-panel {
+  border: 1px solid var(--gi-gold);
+  border-radius: 3px;
+  color: var(--text-primary);
+  background: linear-gradient(145deg, var(--gi-raised), var(--gi-panel));
+  box-shadow: 0 18px 45px var(--gi-shadow), inset 0 0 0 1px rgb(255 255 255 / .035);
+  backdrop-filter: none;
+}
+:root[data-design="game-inventory"] .profile-menu button:hover,
+:root[data-design="game-inventory"] .reel-menu-panel button:hover { color: var(--accent); background: rgb(var(--accent-rgb) / .09); }
+:root[data-design="game-inventory"] .interface-style-options > button,
+:root[data-design="game-inventory"] .friend-modal-row,
+:root[data-design="game-inventory"] .folder-browser-row {
+  border: 1px solid var(--gi-line);
+  border-radius: 3px;
+  background: var(--gi-deep);
+  box-shadow: inset 0 0 12px rgb(0 0 0 / .2);
+}
+:root[data-design="game-inventory"] .interface-style-options > button.is-selected { border-color: var(--gi-gold); color: var(--text-primary); box-shadow: inset 3px 0 var(--accent), 0 0 15px rgb(var(--accent-rgb) / .12); }
+:root[data-design="game-inventory"] .reel-fab { border: 1px solid var(--gi-gold); border-radius: 4px; box-shadow: 0 9px 25px var(--gi-shadow), 0 0 18px rgb(var(--accent-rgb) / .18); }
+:root[data-design="game-inventory"] .toast,
+:root[data-design="game-inventory"] .error-banner { border: 1px solid var(--gi-gold); border-radius: 3px; background: var(--gi-panel); backdrop-filter: none; }
+
+@media (max-width: 767px) {
+  :root[data-native-app="true"] .modal-backdrop { z-index: 100; }
+  :root[data-native-app="true"] .appearance-form { padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  :root[data-native-app="true"] .appearance-actions {
+    position: sticky;
+    z-index: 3;
+    bottom: -23px;
+    display: grid;
+    gap: 7px;
+    margin: 0 -10px -23px;
+    padding: 12px 10px max(18px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    border-top: 1px solid var(--line);
+    background: var(--panel-strong);
+    box-shadow: 0 -12px 28px rgb(0 0 0 / .32);
+  }
+  :root[data-native-app="true"] .folder-tabs .active svg,
+  :root[data-native-app="true"] .folder-tabs > .mobile-dock-add svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+    stroke: currentColor !important;
+  }
+  :root[data-design="game-inventory"][data-native-app="true"] .folder-controls {
+    border: 1px solid var(--gi-gold);
+    border-radius: 5px;
+    background: var(--gi-panel);
+    box-shadow: 0 10px 28px var(--gi-shadow), inset 0 0 0 1px rgb(255 255 255 / .03);
+    backdrop-filter: none;
+  }
+  :root[data-design="game-inventory"][data-native-app="true"] .folder-tabs > button,
+  :root[data-design="game-inventory"][data-native-app="true"] .mobile-folder-picker > summary { border-radius: 2px; }
+  :root[data-design="game-inventory"][data-native-app="true"] .folder-tabs .active {
+    border: 1px solid var(--gi-gold);
+    color: var(--accent);
+    background: rgb(var(--accent-rgb) / .13);
+    box-shadow: inset 0 0 14px rgb(var(--accent-rgb) / .1);
+  }
+  :root[data-design="game-inventory"][data-native-app="true"] .folder-tabs > .mobile-dock-add { color: var(--on-accent); background: var(--accent); }
 }
 .folder-controls,
 .folder-select,

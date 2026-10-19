@@ -22,7 +22,7 @@ export function validateAppearance(value) {
     !/^#[a-f0-9]{6}$/i.test(normalized.accent || "") ||
     !["auto", "4", "5"].includes(normalized.columns) ||
     !["compact", "comfortable", "spacious"].includes(normalized.spacing) ||
-    !["basic", "neo-brutalism"].includes(normalized.design) ||
+    !["basic", "neo-brutalism", "game-inventory"].includes(normalized.design) ||
     !isAvatarFrame(normalized.avatarFrame)
   )
     throw new Error(

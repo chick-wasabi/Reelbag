@@ -19,6 +19,11 @@ const NEO_SWATCHES = {
     ["Hot Pink", "#d93683"], ["Burnt Orange", "#cf651f"],
   ],
 };
+const INVENTORY_SWATCHES = [
+  ["Arcane Gold", "#e7b84b"], ["Aether Cyan", "#42d9c8"],
+  ["Rare Violet", "#9d72ff"], ["Health Ruby", "#ef5b66"],
+  ["Emerald Loot", "#5ccb7f"], ["Mythic Orange", "#f08a45"],
+];
 function normalizeHex(value) {
   const hex = value.trim().replace(/^#/, "");
   if (/^[a-f0-9]{6}$/i.test(hex)) return `#${hex.toLowerCase()}`;
@@ -33,7 +38,9 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const swatches = draft.design === "neo-brutalism" ? NEO_SWATCHES[draft.theme] : BASIC_SWATCHES;
+  const swatches = draft.design === "neo-brutalism"
+    ? NEO_SWATCHES[draft.theme]
+    : draft.design === "game-inventory" ? INVENTORY_SWATCHES : BASIC_SWATCHES;
   useEffect(() => {
     onPreview(draft);
   }, [draft, onPreview]);
@@ -51,7 +58,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
       }}
     >
       <form
-        className="form-stack"
+        className="form-stack appearance-form"
         onSubmit={async (e) => {
           e.preventDefault();
           if (!validHex) return;
@@ -60,6 +67,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
           try {
             await onSave(draft);
             setSaved(true);
+            onClose();
           } catch (err) {
             setError(err.message);
           } finally {
@@ -79,6 +87,11 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
               <span className="style-preview style-preview-brutal"><i /><i /><i /></span>
               <strong>Neo Brutalism</strong>
               <small>Bold blocks, hard shadows and playful contrast</small>
+            </button>
+            <button type="button" className={draft.design === "game-inventory" ? "is-selected" : ""} onClick={() => update("design", "game-inventory")}>
+              <span className="style-preview style-preview-inventory"><i /><i /><i /></span>
+              <strong>Game Inventory</strong>
+              <small>Arcane panels, item slots and premium vault details</small>
             </button>
           </div>
         </fieldset>
@@ -152,21 +165,23 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
             Appearance saved.
           </p>
         )}
-        <button className="button-primary" disabled={busy || !validHex}>
-          {busy ? "Saving…" : "Save appearance"}
-        </button>
-        <button
-          className="button-quiet"
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            setDraft({ ...DEFAULT_APPEARANCE });
-            setHex(DEFAULT_APPEARANCE.accent);
-            setSaved(false);
-          }}
-        >
-          Restore defaults
-        </button>
+        <div className="appearance-actions">
+          <button className="button-primary" disabled={busy || !validHex}>
+            {busy ? "Saving…" : "Save appearance"}
+          </button>
+          <button
+            className="button-quiet"
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setDraft({ ...DEFAULT_APPEARANCE });
+              setHex(DEFAULT_APPEARANCE.accent);
+              setSaved(false);
+            }}
+          >
+            Restore defaults
+          </button>
+        </div>
       </form>
     </Modal>
   );
