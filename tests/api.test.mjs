@@ -388,6 +388,7 @@ test("profiles expose only featured reels and enforce public, friends, and priva
   await call("account/profile", "PATCH", { profileVisibility: "public" }, owner.cookie);
   const publicProfile = await call(`profiles/${owner.username}`);
   assert.equal(publicProfile.data.profile.canView, true);
+  assert.deepEqual(publicProfile.data.profile.appearance, owner.data.user.appearance);
   assert.deepEqual(publicProfile.data.reels.map((item) => item.id), [reelId]);
 
   await call("account/profile", "PATCH", { profileVisibility: "private" }, owner.cookie);

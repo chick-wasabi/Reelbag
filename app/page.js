@@ -199,7 +199,12 @@ export default function Home() {
     return () => window.removeEventListener("popstate", back);
   }, []);
   useEffect(() => {
-    const timer = window.setTimeout(() => setMinTimeElapsed(true), 3000);
+    let seen = false;
+    try { seen = sessionStorage.getItem("reelbag-splash-seen") === "true"; } catch {}
+    const timer = window.setTimeout(() => {
+      setMinTimeElapsed(true);
+      try { sessionStorage.setItem("reelbag-splash-seen", "true"); } catch {}
+    }, seen ? 0 : 3000);
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {

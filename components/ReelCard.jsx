@@ -43,6 +43,7 @@ export default function ReelCard({
   selectionMode = false,
   selected = false,
   onSelect,
+  readOnly = false,
 }) {
   const canManage = reel.canManage !== false && Boolean(onEdit);
   const isCollaborator = folder?.role === "collaborator" && !canManage;
@@ -117,7 +118,7 @@ export default function ReelCard({
       className={`reel-card ambient-glass-card justify-self-center ${parsed?.type === "post" ? "is-instagram-post" : ""} ${canManage ? "reel-card-draggable" : ""} ${selectionMode ? "is-selectable" : ""} ${selected ? "is-selected" : ""}`}
       style={{ width: "270px", maxWidth: "100%" }}
       ref={ref}
-      draggable={canManage && !selectionMode}
+      draggable={!readOnly && canManage && !selectionMode}
       onDragStart={(event) => {
         if (!canManage) return;
         event.dataTransfer.effectAllowed = "copy";
@@ -145,7 +146,7 @@ export default function ReelCard({
             ) : folder?.name || reel.folderNames?.join(" · ") || "\u00a0"}
           </span>
         </div>
-        <div className="reel-actions">
+        {!readOnly && <div className="reel-actions">
           {canManage && reel.sharedWith?.length > 0 && <ReelSharedPopover reel={reel} onRevoke={onRevokeShare} />}
           {(canManage || isCollaborator) && reel.isPinned && (
               <button
@@ -261,7 +262,7 @@ export default function ReelCard({
                   </>}
                 </div>
             </details>
-        </div>
+        </div>}
       </div>
       <div
         className="embed-viewport relative mb-2 h-[430px] w-full overflow-hidden rounded-xl bg-slate-900 md:h-[460px]"
