@@ -2,11 +2,23 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { DEFAULT_APPEARANCE } from "../utils/preferences.mjs";
-const SWATCHES = [
+const BASIC_SWATCHES = [
   ["Neon Green", "#b5f36d"], ["Electric Blue", "#3b82f6"],
   ["Purple", "#a855f7"], ["Rose", "#f43f5e"],
   ["Amber", "#f59e0b"], ["Cyan", "#06b6d4"],
 ];
+const NEO_SWATCHES = {
+  dark: [
+    ["Bubblegum", "#ff5da2"], ["Electric Lemon", "#f8e748"],
+    ["Pool Blue", "#45d9e8"], ["Tangerine", "#ff8a3d"],
+    ["Orchid", "#bc7aff"], ["Mint", "#69e6a6"],
+  ],
+  light: [
+    ["Cobalt", "#3157d5"], ["Tomato", "#e94f37"],
+    ["Royal Purple", "#7746c8"], ["Forest", "#20845b"],
+    ["Hot Pink", "#d93683"], ["Burnt Orange", "#cf651f"],
+  ],
+};
 function normalizeHex(value) {
   const hex = value.trim().replace(/^#/, "");
   if (/^[a-f0-9]{6}$/i.test(hex)) return `#${hex.toLowerCase()}`;
@@ -21,6 +33,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const swatches = draft.design === "neo-brutalism" ? NEO_SWATCHES[draft.theme] : BASIC_SWATCHES;
   useEffect(() => {
     onPreview(draft);
   }, [draft, onPreview]);
@@ -84,7 +97,7 @@ export default function AppearanceModal({ value, onSave, onClose, onPreview }) {
         <fieldset className="accent-picker" disabled={busy}>
           <legend className="field-label">Accent color</legend>
           <div className="accent-swatches" aria-label="Preset accent colors">
-            {SWATCHES.map(([name, color]) => (
+            {swatches.map(([name, color]) => (
               <button
                 key={color}
                 type="button"

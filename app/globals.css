@@ -358,22 +358,61 @@ select option {
 
 /* Neo Brutalism is deliberately isolated so Basic remains the exact original interface. */
 :root[data-design="neo-brutalism"] {
-  --nb-ink: #050505;
-  --nb-border: #f2f2ec;
-  --nb-paper: #17191c;
-  --nb-paper-2: #202327;
-  --line: rgb(242 242 236 / .72);
+  color-scheme: dark;
+  --background: #171329;
+  --text-primary: #fff8ea;
+  --text-secondary: #ddd2f4;
+  --text-muted: #a99cbd;
+  --reel-edge-mask: #211a36;
+  --nb-ink: #090611;
+  --nb-border: #5c4f76;
+  --nb-paper: #211a36;
+  --nb-paper-2: #2b2243;
+  --line: #5c4f76;
   --surface: var(--nb-paper);
   --panel-strong: var(--nb-paper-2);
 }
 :root[data-design="neo-brutalism"][data-theme="light"] {
-  --nb-ink: #101010;
-  --nb-border: #101010;
-  --nb-paper: #fffdf2;
-  --nb-paper-2: #ffffff;
-  --line: #101010;
+  --background: #f1dfb7;
+  --text-primary: #242034;
+  --text-secondary: #4d435d;
+  --text-muted: #756982;
+  --reel-edge-mask: #fff4d7;
+  --nb-ink: #242034;
+  --nb-border: #242034;
+  --nb-paper: #fff4d7;
+  --nb-paper-2: #f8e8c5;
+  --line: #242034;
   --surface: var(--nb-paper);
   --panel-strong: var(--nb-paper-2);
+}
+:root[data-design="neo-brutalism"][data-theme="dark"] body,
+:root[data-design="neo-brutalism"][data-theme="light"] body {
+  color: var(--text-primary);
+}
+:root[data-design="neo-brutalism"][data-theme="dark"] .sidebar,
+:root[data-design="neo-brutalism"][data-theme="dark"] .topbar,
+:root[data-design="neo-brutalism"][data-theme="dark"] .reel-card,
+:root[data-design="neo-brutalism"][data-theme="dark"] .reel-heading,
+:root[data-design="neo-brutalism"][data-theme="dark"] .modal,
+:root[data-design="neo-brutalism"][data-theme="light"] .sidebar,
+:root[data-design="neo-brutalism"][data-theme="light"] .topbar,
+:root[data-design="neo-brutalism"][data-theme="light"] .reel-card,
+:root[data-design="neo-brutalism"][data-theme="light"] .reel-heading,
+:root[data-design="neo-brutalism"][data-theme="light"] .modal {
+  border-color: var(--nb-border);
+  background: var(--nb-paper);
+  color: var(--text-primary);
+}
+:root[data-design="neo-brutalism"][data-theme="dark"] input,
+:root[data-design="neo-brutalism"][data-theme="dark"] select,
+:root[data-design="neo-brutalism"][data-theme="dark"] .search-box,
+:root[data-design="neo-brutalism"][data-theme="light"] input,
+:root[data-design="neo-brutalism"][data-theme="light"] select,
+:root[data-design="neo-brutalism"][data-theme="light"] .search-box {
+  border-color: var(--nb-border);
+  background: var(--nb-paper);
+  color: var(--text-primary);
 }
 :root[data-design="neo-brutalism"] body {
   background-color: var(--background);
@@ -438,10 +477,10 @@ select option {
 }
 :root[data-design="neo-brutalism"] .brand { font-weight: 900; letter-spacing: -1.2px; }
 :root[data-design="neo-brutalism"] .brand-mark {
-  border: 2px solid var(--nb-border);
+  border: 2px solid var(--accent);
   border-radius: 4px;
   background: var(--nb-ink);
-  box-shadow: 4px 4px 0 var(--accent);
+  box-shadow: 4px 4px 0 var(--nb-ink);
 }
 :root[data-design="neo-brutalism"] .topbar {
   border-bottom: 3px solid var(--nb-border);
@@ -479,7 +518,7 @@ select option {
 }
 :root[data-design="neo-brutalism"] .sidebar-link:hover {
   background: var(--nb-paper-2);
-  outline: 2px solid var(--nb-border);
+  box-shadow: inset 0 0 0 2px var(--nb-border);
 }
 :root[data-design="neo-brutalism"] .sidebar-link.active {
   border: 2px solid var(--nb-border);
@@ -590,7 +629,52 @@ select option {
   :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > button,
   :root[data-design="neo-brutalism"][data-native-app="true"] .mobile-folder-picker > summary { border-radius: 4px; font-weight: 900; }
   :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs .active { border: 2px solid var(--nb-border); background: var(--accent); color: var(--on-accent); }
-  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > .mobile-dock-add { border: 2px solid var(--nb-border); box-shadow: 3px 3px 0 var(--nb-ink); }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs .active svg,
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > .mobile-dock-add svg { color: var(--on-accent); }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > .mobile-dock-add {
+    border: 2px solid var(--nb-border);
+    box-shadow: none;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .folder-tabs > button,
+  :root[data-design="neo-brutalism"][data-native-app="true"] .mobile-folder-picker > summary {
+    width: 100%;
+    min-height: 51px;
+    padding: 5px 3px;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box {
+    width: 48px;
+    min-width: 48px;
+    height: 44px;
+    flex: 0 0 48px;
+    justify-content: center;
+    padding: 0;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    color: transparent;
+    caret-color: var(--accent);
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box > svg {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box input::placeholder { color: transparent; }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box:focus-within {
+    width: min(190px, 42vw);
+    flex-basis: min(190px, 42vw);
+    justify-content: flex-start;
+    padding-left: 12px;
+  }
+  :root[data-design="neo-brutalism"][data-native-app="true"] .search-box:focus-within input {
+    position: static;
+    padding: 0 10px 0 6px;
+    color: var(--text-primary);
+  }
 }
 .folder-controls,
 .folder-select,
